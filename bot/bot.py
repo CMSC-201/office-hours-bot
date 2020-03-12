@@ -30,5 +30,4 @@ def get_props():
 if __name__ == '__main__':
     client = MyClient()
     token = get_props()['token']
-    print(token)
     client.run(token)
