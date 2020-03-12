@@ -1,1 +1,1 @@
-release: python bot.py
+release: python bot/bot.py
