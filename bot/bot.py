@@ -32,13 +32,15 @@ def get_props():
 
 def set_up_logs():
     FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
-    logging.basicConfig(format=FORMAT)
+    logging.basicConfig(format=FORMAT, level=logging.INFO)
+
     handler = logging.FileHandler(filename='discord.log', encoding='utf-8',
                                   mode='a')
-    handler.setFormatter(
-        logging.Formatter(FORMAT))
-    handler.setLevel(logging.DEBUG)
-    logger.addHandler(handler)
+    handler.setFormatter(logging.Formatter(FORMAT))
+    handler.setLevel(logging.INFO)
+
+    logging.getLogger().addHandler(handler)
+
     logger.info("========NEW SESSION=========")
 
 
