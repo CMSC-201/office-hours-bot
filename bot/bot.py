@@ -52,6 +52,7 @@ def get_globals():
             "prefix": os.environ.get("BOT_PREFIX"),
             "mongodb-address": os.environ.get("MONGODB_ADDRESS"),
         }
+    return info
 
 
 def set_up_logs():

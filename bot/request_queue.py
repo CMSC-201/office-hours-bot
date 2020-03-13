@@ -1,17 +1,35 @@
+import json
+
 import pymongo
 
-from bot import get_props
+from bot import get_globals
 
-client = pymongo.MongoClient(get_props()['mongodb-address'])
 
-db = client["botdb"]
-collection = db["queue_test"]
+def using_mongo():
+    return "mongodb-address" in get_globals() and get_globals()[
+        "mongodb-address"]
 
-# collection.insert_one({
-#     "user_id": "biff",
-#     "age": 4,
-# })
 
-x = collection.find_one()
+if using_mongo():
+    client = pymongo.MongoClient(get_globals()['mongodb-address'])
 
-print(x)
+    db = client["botdb"]
+
+
+def read_json(path):
+    if using_mongo():
+        collection = db[path]
+        return collection.find()
+    else:
+        with open(path, "r") as f:
+            return json.load(f)
+
+
+def write_json(path, data):
+    if using_mongo():
+        collection = db[path]
+        collection.delete_many()
+        collection.insert_many(data, ordered=True)
+    else:
+        with open(path, "w+") as f:
+            f.write(json.dumps(data))

@@ -1,9 +1,5 @@
-import json
+from request_queue import read_json, write_json
 
-commands = {"close":office_close,
-            "auth":student_authenticate,
-            "request":request_create,
-            "accept":request_accept}
 
 def parse_arguments(msg, prefix):
     args = []
@@ -12,15 +8,11 @@ def parse_arguments(msg, prefix):
         for param in params:
             args.append(param)
     return args
-    
-def execute_command(msg, args, uuids):
-    cmd = args[0]
-    if cmd in commands:
-        cmd(msg, args, uuids)
+
 
 def office_close(msg, args, uuids):
     room = None
-    queue = read_json('../offices.json')
+    queue = read_json('offices')
     for office in queue["occupied"]:
         if office["room"] == msg.channel.id:
             room = office
@@ -41,11 +33,12 @@ def office_close(msg, args, uuids):
         room_chan.purge(limit=1000)
         # Mark room as vacant
         queue["openRooms"].append(room)
-        
+
     # Remove command from channel immediately
     msg.delete()
     # Save state
-    write_json('../offices.json', queue)
+    write_json('offices', queue)
+
 
 def student_authenticate(msg, args, uuids):
     # No key in command
@@ -56,7 +49,7 @@ def student_authenticate(msg, args, uuids):
         msg.delete()
         return
 
-    students = read_json('../studenthash.json')
+    students = read_json('studenthash')
     name = None
     key = args[1]
     # Find student's hash key
@@ -67,7 +60,8 @@ def student_authenticate(msg, args, uuids):
             students["unauthed"].remove(student)
     # Student exists, begin authentication process
     if name:
-        response = msg.channel.send("You have been authenticated! Please go to <#>")
+        response = msg.channel.send(
+            "You have been authenticated! Please go to <#>")
         response.delete(delay=15)
         author = msg.author.id
         role = msg.guild.get_role(uuids["StudentRole"])
@@ -84,16 +78,22 @@ def student_authenticate(msg, args, uuids):
     # Remove command from channel immediately
     msg.delete()
 
+
 def request_create(msg, args, uuids):
     pass
+
 
 def request_accept(msg, args, uuids):
     pass
 
-def read_json(path):
-    with open(path, "r") as f:
-        return json.load(f)
 
-def write_json(path, data):
-    with open(path, "w+") as f:
-        f.write(json.dumps(data))
+commands = {"close": office_close,
+            "auth": student_authenticate,
+            "request": request_create,
+            "accept": request_accept}
+
+
+def execute_command(msg, args, uuids):
+    cmd = args[0]
+    if cmd in commands:
+        cmd(msg, args, uuids)
