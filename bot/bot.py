@@ -3,6 +3,7 @@ import logging
 import os
 
 import discord
+from discord import Message, Guild, CategoryChannel
 
 import command as com
 
@@ -10,12 +11,27 @@ logger = logging.getLogger('bot_main')
 
 
 class MyClient(discord.Client):
+    def __init__(self, **options):
+        super().__init__(**options)
+
     async def on_ready(self):
         logger.info('Logged on as {0}!'.format(self.user))
 
-    async def on_message(self, message):
-        #if message.content.startswith('hashbot'):
+    async def on_message(self, message: Message):
+        # if message.content.startswith('hashbot'):
         #    await message.channel.send('https://gph.is/28LBdcE')
+        guild: Guild = message.guild
+
+        users_mentioned_in_role = []
+        for role in message.role_mentions:
+            users_mentioned_in_role.extend(role.members)
+
+        if self.user in message.mentions or self.user in users_mentioned_in_role:
+            if "set up" in message.content or "setup" in message.content:
+                await self.setup(guild, message)
+            else:
+                # If nothing else, do this
+                await message.channel.send("Yes?")
 
         # Ignore bot messages
         if message.author.bot:
@@ -31,6 +47,23 @@ class MyClient(discord.Client):
         response = com.execute_command(message, args, uuids)
         if response:
             logger.info(response)
+
+    async def setup(self, guild: Guild, message: Message):
+        if "Bulletin Board" in guild.categories:
+            await message.channel.send(
+                "Foolish mortal, we are already prepared!")
+        else:
+            bulletin: CategoryChannel = await guild.create_category(
+                "Bulletin Board")
+            names = ["landing-pad", "getting-started", "announcements",
+                     "authentication"]
+            bulletin_channels = {}
+            for name in names:
+                bulletin_channels[
+                    name] = await bulletin.create_text_channel(
+                    name)
+                await message.channel.send(
+                    "Righto!  Created channel {}".format(name))
 
 
 def get_globals():
@@ -82,4 +115,3 @@ if __name__ == '__main__':
         client.run(token)
     else:
         print("Something failed (this is very vague)")
-
