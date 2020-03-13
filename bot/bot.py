@@ -14,13 +14,21 @@ class MyClient(discord.Client):
         logger.info('Logged on as {0}!'.format(self.user))
 
     async def on_message(self, message):
+        #if message.content.startswith('hashbot'):
+        #    await message.channel.send('https://gph.is/28LBdcE')
+
+        # Ignore bot messages
         if message.author.bot:
             return
-        if message.content.startswith('hashbot'):
-            await message.channel.send('https://gph.is/28LBdcE')
-        logger.info('Message from {0.author}: {0.content}'.format(message))
-        # 
+        # Split message by spaces
         args = com.parse_arguments(message, prefix)
+        # If not a command, ignore
+        if not args:
+            logger.info('Message from {0.author}: {0.content}'.format(message))
+            return
+
+        logger.info('{0.author} issued command: {0.content}'.format(message))
+        com.execute_command(message, args, uuids)
 
 
 def get_globals():
