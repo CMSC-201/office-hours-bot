@@ -28,7 +28,9 @@ class MyClient(discord.Client):
             return
 
         logger.info('{0.author} issued command: {0.content}'.format(message))
-        com.execute_command(message, args, uuids)
+        response = com.execute_command(message, args, uuids)
+        if response:
+            logger.info(response)
 
 
 def get_globals():

@@ -1,7 +1,7 @@
 {
 	"Server":"",
 	"WaitingRoom":"",
-	"Requests":"",
+	"RequestsRoom":"",
 	"AuthRoom":"",
 	"StudentRole":""
 }
