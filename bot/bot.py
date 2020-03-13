@@ -49,9 +49,11 @@ class MyClient(discord.Client):
             logger.info(response)
 
     async def setup(self, guild: Guild, message: Message):
-        if "Bulletin Board" in guild.categories:
+        if "Bulletin Board" in [c.name for c in guild.categories]:
             await message.channel.send(
-                "Foolish mortal, we are already prepared!")
+                "Foolish mortal, we are already prepared! " +
+                "Delete the Bulletin Board category if you want to remake the world!")
+            return
 
         for channel in guild.channels:
             await channel.delete()
@@ -70,21 +72,25 @@ class MyClient(discord.Client):
                 "voice": ["questions"],
             }
         }
-        last = []
+        first = None
 
         for category, channels in channel_structure.items():
             text, voice = (channels["text"], channels["voice"])
             category_channel: CategoryChannel = await guild.create_category(category)
 
             for name in text:
-                last = await category_channel.create_text_channel(name)
+                channel = await category_channel.create_text_channel(name)
+                if not first:
+                    first = channel
                 logger.info("Created text channel {} in category {}".format(name, category))
 
             for name in voice:
                 await category_channel.create_voice_channel(name)
                 logger.info("Created voice channel {} in category {}".format(name, category))
 
-        await last.send("Righto! You're good to go, boss!")
+
+
+        await first.send("Righto! You're good to go, boss!")
 
 
 def get_globals():
