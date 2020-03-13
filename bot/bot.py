@@ -21,7 +21,7 @@ class MyClient(discord.Client):
         # if message.content.startswith('hashbot'):
         #    await message.channel.send('https://gph.is/28LBdcE')
         guild: Guild = message.guild
-
+        logger.info('Message from {0.author}: {0.content}'.format(message))
         users_mentioned_in_role = []
         for role in message.role_mentions:
             users_mentioned_in_role.extend(role.members)
@@ -40,7 +40,7 @@ class MyClient(discord.Client):
         args = com.parse_arguments(message, prefix)
         # If not a command, ignore
         if not args:
-            logger.info('Message from {0.author}: {0.content}'.format(message))
+
             return
 
         logger.info('{0.author} issued command: {0.content}'.format(message))
@@ -52,18 +52,39 @@ class MyClient(discord.Client):
         if "Bulletin Board" in guild.categories:
             await message.channel.send(
                 "Foolish mortal, we are already prepared!")
-        else:
-            bulletin: CategoryChannel = await guild.create_category(
-                "Bulletin Board")
-            names = ["landing-pad", "getting-started", "announcements",
-                     "authentication"]
-            bulletin_channels = {}
-            for name in names:
-                bulletin_channels[
-                    name] = await bulletin.create_text_channel(
-                    name)
-                await message.channel.send(
-                    "Righto!  Created channel {}".format(name))
+
+        for channel in guild.channels:
+            await channel.delete()
+
+        channel_structure = {
+            "Bulletin Board": {
+                "text": ["landing-pad", "getting-started", "announcements", "authentication"],
+                "voice": [],
+            },
+            "Instructor's Area": {
+                "text": ["course-staff-general", "student"],
+                "voice": ["instructor-lounge", "ta-lounge"],
+            },
+            "Student's Area": {
+                "text": ["general", "tech-support", "memes", "waiting-room"],
+                "voice": ["questions"],
+            }
+        }
+        last = []
+
+        for category, channels in channel_structure.items():
+            text, voice = (channels["text"], channels["voice"])
+            category_channel: CategoryChannel = await guild.create_category(category)
+
+            for name in text:
+                last = await category_channel.create_text_channel(name)
+                logger.info("Created text channel {} in category {}".format(name, category))
+
+            for name in voice:
+                await category_channel.create_voice_channel(name)
+                logger.info("Created voice channel {} in category {}".format(name, category))
+
+        await last.send("Righto! You're good to go, boss!")
 
 
 def get_globals():
