@@ -109,7 +109,7 @@ def request_create(msg, args, uuids):
         return msg.author.nick + " had already created a request."
 
     # Description minus the command
-    description = msg.content.[len(args[0])+1:]
+    description = msg.content[len(args[0])+1:]
     # Build embedded message
     color = discord.Colour().blue()
     embeddedMsg = discord.Embed(description = description,
