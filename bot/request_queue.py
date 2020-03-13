@@ -21,7 +21,7 @@ def read_json(path):
         collection = db[path]
         return collection.find()
     else:
-        with open(path, "r") as f:
+        with open("../" + path + ".json", "r") as f:
             return json.load(f)
 
 
@@ -31,5 +31,5 @@ def write_json(path, data):
         collection.delete_many()
         collection.insert_many(data, ordered=True)
     else:
-        with open(path, "w+") as f:
+        with open("../" + path + ".json", "w+") as f:
             f.write(json.dumps(data))
