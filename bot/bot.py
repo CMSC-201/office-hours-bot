@@ -43,7 +43,7 @@ class MyClient(discord.Client):
             return
 
         logger.info('{0.author} issued command: {0.content}'.format(message))
-        response = com.execute_command(message, args, uuids)
+        response = await com.execute_command(message, args, uuids)
         if response:
             logger.info(response)
 
@@ -163,6 +163,7 @@ def get_globals():
             "prefix": os.environ.get("BOT_PREFIX"),
             "mongodb-address": os.environ.get("MONGODB_ADDRESS"),
         }
+
     return info
 
 

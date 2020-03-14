@@ -1,0 +1,6 @@
+{
+    "room_template":{"room":0, "key":0, "teachers":[], "students":[]},
+    "all_rooms":[],
+    "open_rooms":[],
+    "occupied":[]
+}
