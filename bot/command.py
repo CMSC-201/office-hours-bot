@@ -42,6 +42,8 @@ async def office_close(msg, args, uuids):
     room_chan = msg.guild.get_channel(room["room"])
     room_role = msg.guild.get_role(room["key"])
     room_name = room_chan.name
+    # Clear all message objects from room
+    await room_chan.purge(limit=1000)
     # Take the role from teachers and students
     teacher, student = None, None
     while len(room["teachers"]) > 0:
@@ -50,8 +52,6 @@ async def office_close(msg, args, uuids):
     while len(room["students"]) > 0:
         student = room["students"].pop()
         await msg.guild.get_member(student).remove_roles(room_role)
-    # Clear all message objects from room
-    await room_chan.purge(limit=1000)
     # Mark room as vacant
     queue["open_rooms"].append(room)
 
