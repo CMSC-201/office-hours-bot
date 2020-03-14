@@ -24,6 +24,7 @@ async def safe_delete(msg, delay=None):
     except RuntimeError as e:
         print(e, "\nBot may proceed normally.")
 
+
 async def office_close(msg, args, uuids):
     # Room is room object which contains room id, role (key) id
     # and list of teachers and students
