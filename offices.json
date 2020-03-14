@@ -1,0 +1,9 @@
+{
+    "allRooms":[
+        {"room":0, "key":0, "teachers":[], "students":[]}
+    ],
+    "openRooms":[
+        {"room":0, "key":0, "teachers":[], "students":[]}
+    ],
+    "occupied":[]
+}
