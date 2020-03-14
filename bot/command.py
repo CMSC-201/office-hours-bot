@@ -53,7 +53,7 @@ async def office_close(msg, args, uuids):
     # Clear all message objects from room
     await room_chan.purge(limit=1000)
     # Mark room as vacant
-    queue["openRooms"].append(room)
+    queue["open_rooms"].append(room)
 
     # Save state
     write_json('../offices.json', queue)
@@ -168,17 +168,17 @@ async def request_accept(msg, args, uuids):
         await safe_delete(msg)
         return msg.author.nick + " tried to help, but nobody was there."
 
-    if len(office_queue["openRooms"]) < 1:
+    if len(office_queue["open_rooms"]) < 1:
         response = await msg.channel.send("There are currently no available office hour rooms!")
         await safe_delete(response, delay=10)
         await safe_delete(msg)
         return msg.author.nick + " tried to help, but there was nowhere to go."
 
     # Get resources
-    office = office_queue["openRooms"][0]
+    office = office_queue["open_rooms"][0]
     role = msg.guild.get_role(office["key"])
     # Move room to occupied
-    office_queue["openRooms"].remove(office)
+    office_queue["open_rooms"].remove(office)
     office_queue["occupied"].append(office)
     # Get member ids
     t_id = msg.author.id
