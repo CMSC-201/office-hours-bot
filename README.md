@@ -1,7 +1,13 @@
 # Office Hours Chat Bot
 
-Requires that you run `heroku config:set BOT_TOKEN=[]` token for it to run on heroku.
+##Heroku Deploy
 
-If you are developing locally, you can create a copy of `sample-prop.json` and put in your values.
+1. Copy `heroku.env.sample` to `heroku.env` and add in all the config options.
+2. Run `heroku config:set $(cat heroku.env)`
+3. Use Heroku normally.
 
-Remember not to version private keys!
+## Local Development
+1. Create a copy of `sample-prop.json` called 'prop.json' and put in your values.
+2. `python3 bot.py`
+
+#Remember not to version private keys!
