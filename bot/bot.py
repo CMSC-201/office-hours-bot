@@ -3,7 +3,7 @@ import logging
 import os
 
 import discord
-from discord import Message, Guild, CategoryChannel
+from discord import Message, Guild, CategoryChannel, Role, Permissions, PermissionOverwrite
 
 import command as com
 
@@ -40,7 +40,6 @@ class MyClient(discord.Client):
         args = com.parse_arguments(message, prefix)
         # If not a command, ignore
         if not args:
-
             return
 
         logger.info('{0.author} issued command: {0.content}'.format(message))
@@ -49,7 +48,9 @@ class MyClient(discord.Client):
             logger.info(response)
 
     async def setup(self, guild: Guild, message: Message):
-        if "Bulletin Board" in [c.name for c in guild.categories]:
+        DMZ_category = "Bulletin Board"
+
+        if DMZ_category in [c.name for c in guild.categories]:
             await message.channel.send(
                 "Foolish mortal, we are already prepared! " +
                 "Delete the Bulletin Board category if you want to remake the world!")
@@ -58,25 +59,70 @@ class MyClient(discord.Client):
         for channel in guild.channels:
             await channel.delete()
 
+        first = None
+
+        student_permissions: Permissions = Permissions.none()
+        student_permissions.update(add_reactions=True,
+                                   stream=True,
+                                   read_message_history=True,
+                                   read_messages=True,
+                                   send_messages=True,
+                                   connect=True,
+                                   speak=True,
+                                   use_voice_activation=True)
+
+        admin_permissions: Permissions = Permissions.all()
+
+        un_authed_perms: Permissions = Permissions.none()
+        un_authed_perms.update(read_message_history=True,
+                               read_messages=True,
+                               send_messages=True)
+
+        ta_permissions: Permissions = Permissions.all()
+        ta_permissions.update(administrator=False,
+                              admin_permissions=False,
+                              manage_channels=False,
+                              manage_guild=False,
+                              manage_roles=False,
+                              manage_permissions=False,
+                              manage_webhooks=False, )
+
+        for role in guild.roles:
+            try:
+                await role.delete()
+                logger.info("Deleted role {}".format(role.name))
+            except:
+                logger.warning("Unable to delete role {}".format(role.name))
+
+        student_role: Role = await guild.create_role(name="Student", permissions=student_permissions, mentionable=True)
+        ta_role: Role = await guild.create_role(name="TA", permissions=student_permissions, mentionable=True)
+        admin: Role = await guild.create_role(name="Admin", permissions=admin_permissions, mentionable=True)
+        un_authed: Role = await guild.create_role(name="Unauthed", permissions=un_authed_perms, mentionable=True)
+
+        staff_category = "Instructor's Area"
+        student_category = "Student's Area"
         channel_structure = {
-            "Bulletin Board": {
+            DMZ_category: {
                 "text": ["landing-pad", "getting-started", "announcements", "authentication"],
                 "voice": [],
             },
-            "Instructor's Area": {
-                "text": ["course-staff-general", "student"],
+            staff_category: {
+                "text": ["course-staff-general", "student-requests"],
                 "voice": ["instructor-lounge", "ta-lounge"],
             },
-            "Student's Area": {
+            student_category: {
                 "text": ["general", "tech-support", "memes", "waiting-room"],
                 "voice": ["questions"],
             }
         }
-        first = None
+
+        categories = {}
 
         for category, channels in channel_structure.items():
             text, voice = (channels["text"], channels["voice"])
             category_channel: CategoryChannel = await guild.create_category(category)
+
+            categories[category] = category_channel
 
             for name in text:
                 channel = await category_channel.create_text_channel(name)
@@ -88,7 +134,10 @@ class MyClient(discord.Client):
                 await category_channel.create_voice_channel(name)
                 logger.info("Created voice channel {} in category {}".format(name, category))
 
-
+        overwrite: PermissionOverwrite = PermissionOverwrite(read_messages=False)
+        await categories[staff_category].set_permissions(student_role, overwrite=overwrite)
+        await categories[staff_category].set_permissions(un_authed, overwrite=overwrite)
+        await categories[student_category].set_permissions(un_authed, overwrite=overwrite)
 
         await first.send("Righto! You're good to go, boss!")
 
