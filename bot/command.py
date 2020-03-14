@@ -16,7 +16,7 @@ def student_waiting(queue, id):
         if queue[i].userID == id:
             return True
     return False
-    
+
 
 def office_close(msg, args, uuids):
     room, room_name = None, None
@@ -64,7 +64,7 @@ def student_authenticate(msg, args, uuids):
         msg.delete()
         return
 
-    students = read_json('../studenthash.json')
+    students = read_json('../student_hash.json')
     name = None
     key = args[1]
     # Find student's hash key
@@ -93,7 +93,7 @@ def student_authenticate(msg, args, uuids):
     # Remove command from channel immediately
     msg.delete()
     # Save state
-    write_json('../studenthash.json', students)
+    write_json('../student_hash.json', students)
     # Return log message
     return name + " has been authenticated!"
 
