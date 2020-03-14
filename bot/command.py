@@ -18,6 +18,12 @@ def student_waiting(queue, id):
     return False
 
 
+async def safe_delete(msg, delay=None):
+    try:
+        await msg.delete(delay=delay)
+    except RuntimeError as e:
+        print(e, "\nBot may proceed normally.")
+
 async def office_close(msg, args, uuids):
     # Room is room object which contains room id, role (key) id
     # and list of teachers and students
@@ -29,7 +35,7 @@ async def office_close(msg, args, uuids):
             queue["occupied"].remove(room)
     # Not a valid room
     if not room:
-        await msg.delete()
+        await safe_delete(msg)
         return "Cannot close non-office room!"
     # Begin closing room
     room_chan = msg.guild.get_channel(room["room"])
@@ -57,14 +63,14 @@ async def office_close(msg, args, uuids):
 async def student_authenticate(msg, args, uuids):
     # Wrong Channel
     if msg.channel.id != uuids["AuthRoom"]:
-        await msg.delete()
+        await safe_delete(msg)
         return "Executed in wrong channel."
     # No key in command
     if len(args) < 2:
         response = await msg.channel.send("Please provide your code in this format: " + \
                                           "`!auth (key)`")
-        await response.delete(delay=15)
-        await msg.delete()
+        await safe_delete(response, delay=15)
+        await safe_delete(msg)
         return "Did not have an argument for key."
 
     students = read_json('../student_hash.json')
@@ -79,7 +85,7 @@ async def student_authenticate(msg, args, uuids):
     # Student exists, begin authentication process
     if name:
         response = await msg.channel.send("You have been authenticated! Please go to <#>")
-        await response.delete(delay=15)
+        await safe_delete(response, delay=15)
         author = msg.author.id
         role = msg.guild.get_role(uuids["StudentRole"])
         # Assign student and name
@@ -90,12 +96,12 @@ async def student_authenticate(msg, args, uuids):
         response = await msg.channel.send("You have not given a valid code, or the " + \
                                     "code has already been used.\n" + \
                                     "Please contact a professor or Min.")
-        await response.delete(delay=15)
-        await msg.delete()
+        await safe_delete(response, delay=15)
+        await safe_delete(msg)
         return "Authentication for " + msg.author.name + " has failed."
 
     # Remove command from channel immediately
-    await msg.delete()
+    await safe_delete(msg)
     # Save state
     write_json('../student_hash.json', students)
     # Return log message
@@ -105,7 +111,7 @@ async def student_authenticate(msg, args, uuids):
 async def request_create(msg, args, uuids):
     # Wrong Channel
     if msg.channel.id != uuids["WaitingRoom"]:
-        await msg.delete()
+        await safe_delete(msg)
         return "Executed in wrong channel."
 
     student = msg.author.id
@@ -113,8 +119,8 @@ async def request_create(msg, args, uuids):
     # Student already made a request
     if student_waiting(queue, student):
         response = await msg.channel.send("You have already made a request!")
-        await response.delete(delay=5)
-        await msg.delete()
+        await safe_delete(response, delay=5)
+        await safe_delete(msg)
         return msg.author.nick + " had already created a request."
 
     # Description minus the command
@@ -137,10 +143,10 @@ async def request_create(msg, args, uuids):
 
     # Command finished
     response = await msg.channel.send("Your request will be processed!")
-    await response.delete(delay=15)
+    await safe_delete(response, delay=15)
 
     # Remove command from channel immediately
-    await msg.delete()
+    await safe_delete(msg)
     # Save state
     write_json('../student_queue.json', queue)
     # Return log message
@@ -150,21 +156,21 @@ async def request_create(msg, args, uuids):
 async def request_accept(msg, args, uuids):
     # Wrong Channel
     if msg.channel.id != uuids["RequestsRoom"]:
-        await msg.delete()
+        await safe_delete(msg)
         return "Executed in wrong channel."
     
     student_queue = read_json('../student_queue.json')
     office_queue = read_json('../offices.json')
     if len(student_queue) < 1:
         response = await msg.channel.send("There are currently no students needing help!")
-        await response.delete(delay=10)
-        await msg.delete()
+        await safe_delete(response, delay=10)
+        await safe_delete(msg)
         return msg.author.nick + " tried to help, but nobody was there."
 
     if len(office_queue["openRooms"]) < 1:
         response = await msg.channel.send("There are currently no available office hour rooms!")
-        await response.delete(delay=10)
-        await msg.delete()
+        await safe_delete(response, delay=10)
+        await safe_delete(msg)
         return msg.author.nick + " tried to help, but there was nowhere to go."
 
     # Get resources
@@ -184,7 +190,7 @@ async def request_accept(msg, args, uuids):
     student = msg.guild.get_member(s_id)
     # Delete the request
     requestmsg = await msg.channel.fetch_message(s_info["requestID"])
-    await requestmsg.delete()
+    await safe_delete(requestmsg)
     # Add occupants
     office["teachers"].append(t_id)
     office["students"].append(s_id)
@@ -196,7 +202,7 @@ async def request_accept(msg, args, uuids):
     message = "Here is your room! You may close this room with `!close`."
     await msg.guild.get_channel(office["room"]).send(message)
     # Remove command from channel immediately
-    await msg.delete()
+    await safe_delete(msg)
     # Save state
     write_json('../student_queue.json', student_queue)
     write_json('../offices.json', office_queue)
@@ -226,5 +232,5 @@ async def execute_command(msg, args, uuids):
     cmd = args[0]
     if cmd in commands:
         return await commands[cmd](msg, args, uuids)
-    await msg.delete()
+    await safe_delete(msg)
     return "Command did not exist."
