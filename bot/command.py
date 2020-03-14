@@ -8,7 +8,7 @@ from mongo import read_json, write_json
 supported_commands = []
 
 
-def CommandClass(cls):
+def command_class(cls):
     supported_commands.append(cls)
 
 
@@ -27,7 +27,7 @@ class Command:
         pass
 
 
-@CommandClass
+@command_class
 class SetupCommand(Command):
     def __init__(self, message: Message = None, guild: Guild = None):
         super().__init__(message, guild)
