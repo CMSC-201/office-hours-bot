@@ -1,17 +1,22 @@
 import json
+import logging
 
 import pymongo
 
-from bot import get_globals
+from globals import get_globals
+
+logger = logging.getLogger('mongo')
+db = None
 
 
 def using_mongo():
-    return "mongodb-address" in get_globals() and get_globals()[
+    props = get_globals()["props"]
+    return "mongodb-address" in props and props[
         "mongodb-address"]
 
 
 if using_mongo():
-    client = pymongo.MongoClient(get_globals()['mongodb-address'])
+    client = pymongo.MongoClient(get_globals()["props"]['mongodb-address'])
 
     db = client["botdb"]
 

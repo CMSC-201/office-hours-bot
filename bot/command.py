@@ -1,6 +1,9 @@
-from request_queue import read_json, write_json
-import discord
 from datetime import datetime as dt
+
+import discord
+
+from mongo import read_json, write_json
+
 
 def parse_arguments(msg, prefix):
     args = []
@@ -69,7 +72,7 @@ async def student_authenticate(msg, args, uuids):
     # No key in command
     if len(args) < 2:
         text = msg.author.mention + " Please provide " + \
-                "your code in this format: `!auth (key)`"
+               "your code in this format: `!auth (key)`"
         response = await msg.channel.send(text)
         await safe_delete(response, delay=15)
         await safe_delete(msg)
@@ -98,8 +101,8 @@ async def student_authenticate(msg, args, uuids):
     # Student does not exist, perhaps an incorrect code
     else:
         text = msg.author.mention + " You have not given a valid code, " + \
-                "or the code has already been used.\n" + \
-                "Please contact a professor or Min."
+               "or the code has already been used.\n" + \
+               "Please contact a member of the course staff."
         response = await msg.channel.send(text)
         await safe_delete(response, delay=15)
         await safe_delete(msg)
@@ -111,7 +114,6 @@ async def student_authenticate(msg, args, uuids):
     write_json('../student_hash.json', students)
     # Return log message
     return name + " has been authenticated!"
-
 
 
 async def request_create(msg, args, uuids):
@@ -131,15 +133,15 @@ async def request_create(msg, args, uuids):
         return msg.author.nick + " had already created a request."
 
     # Description minus the command
-    description = msg.content[len(args[0])+1:]
+    description = msg.content[len(args[0]) + 1:]
     # Build embedded message
     color = discord.Colour(0).blue()
-    embeddedMsg = discord.Embed(description = description,
-                                timestamp = dt.now(),
-                                colour = color)
-    embeddedMsg.set_author(name = msg.author.name)
-    embeddedMsg.add_field(name = "Accept request by typing",
-                          value = "!accept")
+    embeddedMsg = discord.Embed(description=description,
+                                timestamp=dt.now(),
+                                colour=color)
+    embeddedMsg.set_author(name=msg.author.name)
+    embeddedMsg.add_field(name="Accept request by typing",
+                          value="!accept")
     # Send embedded message
     request = await msg.guild.get_channel(uuids["RequestsRoom"]).send(embed=embeddedMsg)
 
@@ -218,13 +220,14 @@ async def request_accept(msg, args, uuids):
     write_json('../offices.json', office_queue)
     # Return log message
     return teacher.name + " has accepted " + \
-        student.name + "'s request and are in " + \
-        msg.guild.get_channel(office["room"]).name
+           student.name + "'s request and are in " + \
+           msg.guild.get_channel(office["room"]).name
 
-commands = {"close":office_close,
-            "auth":student_authenticate,
-            "request":request_create,
-            "accept":request_accept}
+
+commands = {"close": office_close,
+            "auth": student_authenticate,
+            "request": request_create,
+            "accept": request_accept}
 
 
 async def execute_command(msg, args, uuids):
