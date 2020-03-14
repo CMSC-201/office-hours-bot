@@ -11,6 +11,13 @@ def parse_arguments(msg, prefix):
     return args
 
 
+def student_waiting(queue, id):
+    for i in range(len(queue)):
+        if queue[i].userID == id:
+            return True
+    return False
+    
+
 def office_close(msg, args, uuids):
     room, room_name = None, None
     queue = read_json('../offices.json')
@@ -107,7 +114,7 @@ def request_create(msg, args, uuids):
         return msg.author.nick + " had already created a request."
 
     # Description minus the command
-    description = msg.content.[len(args[0])+1:]
+    description = msg.content[len(args[0])+1:]
     # Build embedded message
     color = discord.Colour().blue()
     embeddedMsg = discord.Embed(description = description,
@@ -137,7 +144,61 @@ def request_create(msg, args, uuids):
 
 
 def request_accept(msg, args, uuids):
-    pass
+    # Wrong Channel
+    if msg.channel.id != uuids["RequestsRoom"]:
+        msg.delete()
+        return
+    
+    student_queue = read_json('../student_queue.json')
+    office_queue = read_json('../offices.json')
+    if len(student_queue) < 1:
+        response = msg.channel.send("There are currently no students needing help!")
+        response.delete(delay=10)
+        msg.delete()
+        return msg.author.nick + " tried to help, but nobody was there."
+
+    if len(office_queue["openRooms"]) < 1:
+        response = msg.channel.send("There are currently no available office hour rooms!")
+        response.delete(delay=10)
+        msg.delete()
+        return msg.author.nick + " tried to help, but there was nowhere to go."
+
+    # Get resources
+    office = office_queue["openRooms"][0]
+    role = msg.guild.get_role(office["key"])
+    # Move room to occupied
+    office_queue["openRooms"].remove(office)
+    office_queue["occupied"].append(office)
+    # Get member ids
+    t_id = msg.author.id
+    s_info = student_queue[0]
+    s_id = s_info["userID"]
+    # Remove student from queue
+    student_queue.remove(s_id)
+    # Get member objects
+    teacher = msg.guild.get_member(t_id)
+    student = msg.guild.get_member(s_id)
+    # Delete the request
+    msg.channel.fetch_message(s_info["requestID"]).delete()
+    # Add occupants
+    office["teachers"].append(t_id)
+    office["students"].append(s_id)
+    # Give teacher and student room role
+    teacher.add_roles(role)
+    student.add_roles(role)
+    message = "<@" + t_id + "> and <@" + s_id + ">"
+    msg.guild.get_channel(office["room"]).send(message)
+    message = "Here is your room! You may close this room with `!close`."
+    msg.guild.get_channel(office["room"]).send(message)
+    # Remove command from channel immediately
+    msg.delete()
+    # Save state
+    write_json('../student_queue.json', student_queue)
+    write_json('../offices.json', office_queue)
+    # Return log message
+    return teacher.name + " has accepted " + \
+        student.name + "'s request and are in " + \
+        msg.guild.get_channel(office["room"]).name
 
 
 def read_json(path):
@@ -161,9 +222,3 @@ def execute_command(msg, args, uuids):
     if cmd in commands:
         return cmd(msg, args, uuids)
     return "Command did not exist."
-
-def student_waiting(queue, id):
-    for i in range(len(queue)):
-        if queue[i].userID == id:
-            return True
-    return False
