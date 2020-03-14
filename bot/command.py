@@ -68,8 +68,9 @@ async def student_authenticate(msg, args, uuids):
         return "Executed in wrong channel."
     # No key in command
     if len(args) < 2:
-        response = await msg.channel.send("Please provide your code in this format: " + \
-                                          "`!auth (key)`")
+        text = msg.author.mention + " Please provide " + \
+                "your code in this format: `!auth (key)`"
+        response = await msg.channel.send(text)
         await safe_delete(response, delay=15)
         await safe_delete(msg)
         return "Did not have an argument for key."
@@ -85,7 +86,9 @@ async def student_authenticate(msg, args, uuids):
             students["unauthed"].remove(student)
     # Student exists, begin authentication process
     if name:
-        response = await msg.channel.send("You have been authenticated! Please go to <#>")
+        text = msg.author.mention + " You have been " + \
+                "authenticated! Please go to <#getting-started>"
+        response = await msg.channel.send(text)
         await safe_delete(response, delay=15)
         author = msg.author.id
         role = msg.guild.get_role(uuids["StudentRole"])
@@ -94,9 +97,10 @@ async def student_authenticate(msg, args, uuids):
         await msg.guild.get_member(author).edit(nick=name)
     # Student does not exist, perhaps an incorrect code
     else:
-        response = await msg.channel.send("You have not given a valid code, or the " + \
-                                    "code has already been used.\n" + \
-                                    "Please contact a professor or Min.")
+        text = msg.author.mention + " You have not given a valid code, " + \
+                "or the code has already been used.\n" + \
+                "Please contact a professor or Min."
+        response = await msg.channel.send(text)
         await safe_delete(response, delay=15)
         await safe_delete(msg)
         return "Authentication for " + msg.author.name + " has failed."
@@ -119,7 +123,8 @@ async def request_create(msg, args, uuids):
     queue = read_json('../student_queue.json')
     # Student already made a request
     if student_waiting(queue, student):
-        response = await msg.channel.send("You have already made a request!")
+        text = msg.author.mention + " You have already made a request!"
+        response = await msg.channel.send(text)
         await safe_delete(response, delay=5)
         await safe_delete(msg)
         return msg.author.nick + " had already created a request."
@@ -143,7 +148,8 @@ async def request_create(msg, args, uuids):
     queue.append(entry)
 
     # Command finished
-    response = await msg.channel.send("Your request will be processed!")
+    text = msg.author.mention + " Your request will be processed!"
+    response = await msg.channel.send(text)
     await safe_delete(response, delay=15)
 
     # Remove command from channel immediately
@@ -163,13 +169,15 @@ async def request_accept(msg, args, uuids):
     student_queue = read_json('../student_queue.json')
     office_queue = read_json('../offices.json')
     if len(student_queue) < 1:
-        response = await msg.channel.send("There are currently no students needing help!")
+        text = msg.author.mention + " There are currently no students needing help!"
+        response = await msg.channel.send(text)
         await safe_delete(response, delay=10)
         await safe_delete(msg)
         return msg.author.nick + " tried to help, but nobody was there."
 
     if len(office_queue["open_rooms"]) < 1:
-        response = await msg.channel.send("There are currently no available office hour rooms!")
+        text = msg.author.mention + " There are currently no available office hour rooms!"
+        response = await msg.channel.send(text)
         await safe_delete(response, delay=10)
         await safe_delete(msg)
         return msg.author.nick + " tried to help, but there was nowhere to go."
@@ -198,10 +206,10 @@ async def request_accept(msg, args, uuids):
     # Give teacher and student room role
     await teacher.add_roles(role)
     await student.add_roles(role)
-    message = "<@" + str(t_id) + "> and <@" + str(s_id) + ">"
-    await msg.guild.get_channel(office["room"]).send(message)
-    message = "Here is your room! You may close this room with `!close`."
-    await msg.guild.get_channel(office["room"]).send(message)
+    text = "<@" + str(t_id) + "> and <@" + str(s_id) + ">"
+    await msg.guild.get_channel(office["room"]).send(text)
+    text = "Here is your room! You may close this room with `!close`."
+    await msg.guild.get_channel(office["room"]).send(text)
     # Remove command from channel immediately
     await safe_delete(msg)
     # Save state
