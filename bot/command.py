@@ -12,15 +12,22 @@ def command_class(cls):
     supported_commands.append(cls)
 
 
+def handle_message(message: Message):
+    for cmd_class in supported_commands:
+        if command_class.is_invoked_by_message(message):
+            command = cmd_class(message)
+            command.handle(message)
+
+
 class Command:
-    def __init__(self, message: Message = None, guild: Guild = None):
-        if not message and not guild:
+    def __init__(self, message: Message = None):
+        if not message:
             raise ValueError("You must issue a command with a message or guild")
-        self.message = message
-        if guild:
-            self.guild = guild
-        else:
-            self.guild = message.guild
+        self.message: Message = message
+        self.guild: Guild = message.guild
+
+    def handle(self, message: Message):
+        raise AttributeError("Must be overwritten by command class")
 
     @staticmethod
     def is_invoked_by_message(message: Message):
@@ -29,9 +36,6 @@ class Command:
 
 @command_class
 class SetupCommand(Command):
-    def __init__(self, message: Message = None, guild: Guild = None):
-        super().__init__(message, guild)
-
     @staticmethod
     def is_invoked_by_message(message: Message):
         pass
