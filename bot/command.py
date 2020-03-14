@@ -1,8 +1,40 @@
 from datetime import datetime as dt
 
 import discord
+from discord import Message, Guild
 
 from mongo import read_json, write_json
+
+supported_commands = []
+
+
+def CommandClass(cls):
+    supported_commands.append(cls)
+
+
+class Command:
+    def __init__(self, message: Message = None, guild: Guild = None):
+        if not message and not guild:
+            raise ValueError("You must issue a command with a message or guild")
+        self.message = message
+        if guild:
+            self.guild = guild
+        else:
+            self.guild = message.guild
+
+    @staticmethod
+    def is_invoked_by_message(message: Message):
+        pass
+
+
+@CommandClass
+class SetupCommand(Command):
+    def __init__(self, message: Message = None, guild: Guild = None):
+        super().__init__(message, guild)
+
+    @staticmethod
+    def is_invoked_by_message(message: Message):
+        pass
 
 
 def parse_arguments(msg, prefix):
