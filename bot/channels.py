@@ -60,7 +60,7 @@ class ChannelAuthority:
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = collection.find_one()
         document[channel_name] = channel.id
-        collection.update_one({"_id": document["_id"]}, document)
+        collection.replace_one({"_id": document["_id"]}, document)
 
     async def start_lab(self, message: Message) -> None:
         guild: Guild = message.guild

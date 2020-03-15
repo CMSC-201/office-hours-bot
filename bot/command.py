@@ -1,13 +1,16 @@
+import logging
 from datetime import datetime as dt
 
 import discord
-from discord import Message, Guild, Client
+from discord import Message, Guild, Client, Member, TextChannel, CategoryChannel, PermissionOverwrite, Role, Permissions
 
 from channels import ChannelAuthority
 from mongo import read_json, write_json
 from roles import RoleAuthority
 
 supported_commands = []
+
+logger = logging.getLogger(__name__)
 
 
 def is_bot_mentioned(message: Message, client: Client) -> bool:
@@ -51,9 +54,149 @@ class Command:
 
 @command_class
 class SetupCommand(Command):
+    async def handle(self):
+        DMZ_category = "Bulletin Board"
+        author: Member = self.message.author
+        if not author.guild_permissions.administrator:
+            await self.message.channel.send("Nice try, " + author.mention + ". I'm not fooled so easily.")
+            return
+
+        if DMZ_category in [c.name for c in self.guild.categories]:
+            await self.message.channel.send(
+                "Foolish mortal, we are already prepared! " +
+                "Delete the Bulletin Board category if you want to remake the world!")
+            return
+
+        # delete all the existing channels
+        for channel in self.guild.channels:
+            await channel.delete()
+
+        first = None
+
+        admin_permissions, student_permissions, un_authed_perms = await self.generate_permissions()
+
+        # Delete ALL old roles
+        for role in self.guild.roles:
+            try:
+                await role.delete()
+                logger.info("Deleted role {}".format(role.name))
+            except:
+                logger.warning("Unable to delete role {}".format(role.name))
+
+        student_role, un_authed = await self.generate_roles(admin_permissions, self.guild, student_permissions,
+                                                            un_authed_perms)
+
+        staff_category = "Instructor's Area"
+        student_category = "Student's Area"
+        waiting_room_name = "waiting-room"
+        queue_room_name = "student-requests"
+        channel_structure = {
+            DMZ_category: {
+                "text": ["landing-pad", "getting-started", "announcements", "authentication"],
+                "voice": [],
+            },
+            staff_category: {
+                "text": ["course-staff-general", queue_room_name],
+                "voice": ["instructor-lounge", "ta-lounge"],
+            },
+            student_category: {
+                "text": ["general", "tech-support", "memes", waiting_room_name],
+                "voice": ["questions"],
+            }
+        }
+
+        categories = {}
+        waiting_room: TextChannel = None
+        queue_room: TextChannel = None
+        for category, channels in channel_structure.items():
+            text, voice = (channels["text"], channels["voice"])
+            category_channel: CategoryChannel = await self.guild.create_category(category)
+
+            categories[category] = category_channel
+
+            for name in text:
+                channel = await category_channel.create_text_channel(name)
+                if name == queue_room_name:
+                    queue_room = channel
+                elif name == waiting_room_name:
+                    waiting_room = channel
+                if not first:
+                    first = channel
+                logger.info("Created text channel {} in category {}".format(name, category))
+
+            for name in voice:
+                await category_channel.create_voice_channel(name)
+                logger.info("Created voice channel {} in category {}".format(name, category))
+
+        logger.info("Setting up channel overrides for {} and {}".format(categories[staff_category].name,
+                                                                        categories[student_category].name))
+        overwrite: PermissionOverwrite = PermissionOverwrite(read_messages=False)
+        await categories[staff_category].set_permissions(student_role, overwrite=overwrite)
+        await categories[staff_category].set_permissions(un_authed, overwrite=overwrite)
+        await categories[student_category].set_permissions(un_authed, overwrite=overwrite)
+
+        logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
+        channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
+        channel_authority.save_channels(waiting_room, queue_room)
+
+        await first.send("Righto! You're good to go, boss!")
+
+    async def generate_roles(self, admin_permissions, guild, student_permissions, un_authed_perms):
+        # Adding roles -- do NOT change the order without good reason!
+        admin: Role = await guild.create_role(name="Admin", permissions=admin_permissions, mentionable=True, hoist=True)
+        # await admin.edit(position=4)
+        logger.info("Created role admin")
+        ta_role: Role = await guild.create_role(name="TA", permissions=student_permissions, mentionable=True,
+                                                hoist=True)
+        # await ta_role.edit(position=3)
+        logger.info("Created role TA")
+        student_role: Role = await guild.create_role(name="Student", permissions=student_permissions, mentionable=True,
+                                                     hoist=True)
+        # await student_role.edit(position=2)  # just above @everyone
+        logger.info("Created role Student")
+        un_authed: Role = await guild.create_role(name="Unauthed", permissions=un_authed_perms, mentionable=True,
+                                                  hoist=True)
+        # await un_authed.edit(position=1)
+        logger.info("Created role Unauthed")
+        return student_role, un_authed
+
+    async def generate_permissions(self):
+        # role permissions
+        student_permissions: Permissions = Permissions.none()
+        student_permissions.update(add_reactions=True,
+                                   stream=True,
+                                   read_message_history=True,
+                                   read_messages=True,
+                                   send_messages=True,
+                                   connect=True,
+                                   speak=True,
+                                   use_voice_activation=True)
+        admin_permissions: Permissions = Permissions.all()
+        un_authed_perms: Permissions = Permissions.none()
+        un_authed_perms.update(read_message_history=True,
+                               read_messages=True,
+                               send_messages=True)
+        ta_permissions: Permissions = Permissions.all()
+        ta_permissions.update(administrator=False,
+                              admin_permissions=False,
+                              manage_channels=False,
+                              manage_guild=False,
+                              manage_roles=False,
+                              manage_permissions=False,
+                              manage_webhooks=False, )
+        return admin_permissions, student_permissions, un_authed_perms
+
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        pass
+        ca: ChannelAuthority = ChannelAuthority(message.guild)
+        if is_bot_mentioned(message, client) and ("setup" in message.content or "set up" in message.content):
+            ra: RoleAuthority = RoleAuthority(message.guild)
+            if ra.admin in message.author.roles:
+                return True
+            else:
+                await message.channel.send("You can't run setup, " + message.author.mention)
+                return False
+        return False
 
 
 @command_class
