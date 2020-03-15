@@ -9,8 +9,6 @@ from mongo import read_json, write_json
 from queues import QueueAuthority
 from roles import RoleAuthority
 
-supported_commands = []
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,6 +21,9 @@ def is_bot_mentioned(message: Message, client: Client) -> bool:
         return True
 
     return False
+
+
+supported_commands = []
 
 
 def command_class(cls):
@@ -242,13 +243,14 @@ class EndLab(Command):
     async def is_invoked_by_message(message: Message, client: Client):
         return await is_lab_command(message, client, "end")
 
+
 @command_class
 class EnterQueue(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         request = ""
         if " " in self.message.content:
-            request = self.message.content.split[1:]
+            request = self.message.content.split()[1:]
         qa.add_to_queue(self.message.author, request)
 
     @staticmethod

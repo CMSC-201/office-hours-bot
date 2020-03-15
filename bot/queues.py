@@ -18,7 +18,7 @@ class QueueAuthority:
             document = {
                 "queue": []
             }
-            document = collection.insert(document)
+            collection.insert(document)
 
         document["queue"].append({
             self.__MEMBER_ID_FIELD: member.id,
