@@ -62,6 +62,12 @@ class ChannelAuthority:
         document[channel_name] = channel.id
         collection.replace_one({"_id": document["_id"]}, document)
 
+    def remove_channel(self, channel_name: str) -> None:
+        collection = mongo.db[self.__CHANNEL_COLLECTION]
+        document = collection.find_one()
+        del document[channel_name]
+        collection.replace_one({"_id": document["_id"]}, document)
+
     async def start_lab(self, message: Message) -> None:
         guild: Guild = message.guild
         ra: RoleAuthority = RoleAuthority(guild)
@@ -79,3 +85,11 @@ class ChannelAuthority:
 
     def lab_running(self) -> bool:
         return self.lab_category is not None
+
+    async def end_lab(self, message):
+        for channel in self.lab_category.channels:
+            await channel.delete()
+        await self.lab_category.delete()
+        self.lab_category = None
+
+        self.remove_channel(self.__LAB_CATEGORY_CHANNEL)
