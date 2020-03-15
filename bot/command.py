@@ -198,6 +198,7 @@ class SetupCommand(Command):
                 return False
         return False
 
+
 async def is_lab_command(message: Message, client: Client, keyword: str):
     ca: ChannelAuthority = ChannelAuthority(message.guild)
     if is_bot_mentioned(message, client) and \
@@ -217,6 +218,7 @@ async def is_lab_command(message: Message, client: Client, keyword: str):
             await message.channel.send("You have to be in " + ca.queue_channel.mention + " to request a lab start.")
             return False
     return False
+
 
 @command_class
 class StartLab(Command):
