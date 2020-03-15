@@ -6,6 +6,7 @@ from discord import Message, Guild, Client, Member, TextChannel, CategoryChannel
 
 from channels import ChannelAuthority
 from mongo import read_json, write_json
+from queues import QueueAuthority
 from roles import RoleAuthority
 
 supported_commands = []
@@ -240,6 +241,30 @@ class EndLab(Command):
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         return await is_lab_command(message, client, "end")
+
+@command_class
+class EnterQueue(Command):
+    async def handle(self):
+        qa: QueueAuthority = QueueAuthority(self.guild)
+        request = ""
+        if " " in self.message.content:
+            request = self.message.content.split[1:]
+        qa.add_to_queue(self.message.author, request)
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        ca: ChannelAuthority = ChannelAuthority(message.guild)
+        if message.content.startswith("!request"):
+            if message.channel == ca.waiting_channel:
+                return True
+            else:
+                warning = await message.channel.send("{} you must be in {} to request a place in the queue.".format(
+                    message.author.mention,
+                    ca.waiting_channel.mention))
+                await warning.delete(delay=7)
+                await message.delete()
+                return False
+        return False
 
 
 def parse_arguments(msg, prefix):
