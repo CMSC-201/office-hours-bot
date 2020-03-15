@@ -7,6 +7,7 @@ from discord import Message, Guild, CategoryChannel, Role, Permissions, Permissi
 
 import command as com
 from channels import ChannelAuthority
+from command import handle_message
 from globals import get_globals
 
 logger = logging.getLogger('bot_main')
@@ -24,23 +25,16 @@ class MyClient(discord.Client):
 
         logger.info("Loading channel authority")
         self.channel_authority = ChannelAuthority(self.guilds[0])
-        await self.channel_authority.load_channels()
 
     async def on_message(self, message: Message):
         # if message.content.startswith('hashbot'):
         #    await message.channel.send('https://gph.is/28LBdcE')
         guild: Guild = message.guild
         logger.info('Message from {0.author}: {0.content}'.format(message))
-        users_mentioned_in_role = []
-        for role in message.role_mentions:
-            users_mentioned_in_role.extend(role.members)
-
-        if self.user in message.mentions or self.user in users_mentioned_in_role:
+        if com.is_bot_mentioned(message, self):
             if "set up" in message.content or "setup" in message.content:
                 await self.setup(guild, message)
-            else:
-                # If nothing else, do this
-                await message.channel.send("Yes?")
+
 
         # Ignore bot messages
         if message.author.bot:
@@ -55,6 +49,8 @@ class MyClient(discord.Client):
         response = await com.execute_command(message, args, uuids)
         if response:
             logger.info(response)
+
+        await handle_message(message, self)
 
     async def setup(self, guild: Guild, message: Message):
         DMZ_category = "Bulletin Board"

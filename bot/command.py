@@ -1,44 +1,86 @@
 from datetime import datetime as dt
 
 import discord
-from discord import Message, Guild
+from discord import Message, Guild, Client
 
+from channels import ChannelAuthority
 from mongo import read_json, write_json
+from roles import RoleAuthority
 
 supported_commands = []
+
+
+def is_bot_mentioned(message: Message, client: Client) -> bool:
+    users_mentioned_in_role = []
+    for role in message.role_mentions:
+        users_mentioned_in_role.extend(role.members)
+
+    if client.user in message.mentions or client.user in users_mentioned_in_role:
+        return True
+
+    return False
 
 
 def command_class(cls):
     supported_commands.append(cls)
 
 
-def handle_message(message: Message):
+async def handle_message(message: Message, client: Client):
     for cmd_class in supported_commands:
-        if command_class.is_invoked_by_message(message):
-            command = cmd_class(message)
-            command.handle(message)
+        if await cmd_class.is_invoked_by_message(message, client):
+            command = cmd_class(message, client)
+            await command.handle()
+            return
 
 
 class Command:
-    def __init__(self, message: Message = None):
+    def __init__(self, message: Message = None, client: Client = None):
         if not message:
             raise ValueError("You must issue a command with a message or guild")
         self.message: Message = message
         self.guild: Guild = message.guild
+        self.client = client
 
-    def handle(self, message: Message):
+    async def handle(self):
         raise AttributeError("Must be overwritten by command class")
 
     @staticmethod
-    def is_invoked_by_message(message: Message):
+    async def is_invoked_by_message(message: Message, client: Client):
         pass
 
 
 @command_class
 class SetupCommand(Command):
     @staticmethod
-    def is_invoked_by_message(message: Message):
+    async def is_invoked_by_message(message: Message, client: Client):
         pass
+
+
+@command_class
+class StartLab(Command):
+    async def handle(self):
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
+        await ca.start_lab(self.message)
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        ca: ChannelAuthority = ChannelAuthority(message.guild)
+        if is_bot_mentioned(message, client) and "start lab" in message.content:
+            if ca.lab_running():
+                await message.channel.send("A lab is already running, " + message.author.mention + \
+                                           ", please wait for it to conclude or join in.")
+                return False
+            if message.channel == ca.queue_channel:
+                ra: RoleAuthority = RoleAuthority(message.guild)
+                if ra.ta_or_higher(message.author):
+                    return True
+                else:
+                    await message.channel.send("You can't do this, " + message.author.mention)
+                    return False
+            else:
+                await message.channel.send("You have to be in " + ca.queue_channel.mention + " to request a lab start.")
+                return False
+        return False
 
 
 def parse_arguments(msg, prefix):
