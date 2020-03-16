@@ -1,9 +1,11 @@
+import json
 import logging
 
 from discord import Guild, TextChannel, Message, Client, CategoryChannel, PermissionOverwrite
 from discord.abc import GuildChannel
 
 import mongo
+from queues import OHSession
 from roles import RoleAuthority
 
 logger = logging.getLogger("channels")
@@ -19,6 +21,7 @@ class ChannelAuthority:
     __QUEUE_CHANNEL_KEY = "queue"
     __CHANNEL_COLLECTION = "channels"
     __LAB_CATEGORY_CHANNEL = "lab"
+    __OH_SESSION_KEY = "oh_sessions"
 
     def __init__(self, guild: Guild):
         self.waiting_channel: TextChannel = None
@@ -93,3 +96,11 @@ class ChannelAuthority:
         self.lab_category = None
 
         self.remove_channel(self.__LAB_CATEGORY_CHANNEL)
+
+    def add_oh_session(self, session: OHSession):
+        collection = mongo.db[self.__CHANNEL_COLLECTION]
+        document = collection.find_one()
+        if self.__OH_SESSION_KEY not in document:
+            document[self.__OH_SESSION_KEY] = {}
+        document[self.__OH_SESSION_KEY][str(session.room.id)] = session.to_dict()
+        collection.replace_one({"_id": document["_id"]}, document)

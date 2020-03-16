@@ -6,7 +6,7 @@ from discord import Message, Guild, Client, Member, TextChannel, CategoryChannel
 
 from channels import ChannelAuthority
 from mongo import read_json, write_json
-from queues import QueueAuthority
+from queues import QueueAuthority, OHSession
 from roles import RoleAuthority
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def command_class(cls):
 
 async def handle_message(message: Message, client: Client):
     if not message.guild:
-        return # this is a DM to the bot TODO: add DM commands
+        return  # this is a DM to the bot TODO: add DM commands
     for cmd_class in supported_commands:
         if await cmd_class.is_invoked_by_message(message, client):
             command = cmd_class(message, client)
@@ -301,6 +301,51 @@ class QueueStatus(Command):
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!status"):
             return True
+
+        return False
+
+
+@command_class
+class AcceptStudent(Command):
+    async def handle(self):
+        qa: QueueAuthority = QueueAuthority(self.guild)
+        # get oldest queue item (and also remove it)
+        session: OHSession = await qa.dequeue(self.message.author)
+        # create channel
+        session_category: CategoryChannel = await self.guild.create_category_channel(
+            "Session for {}".format(session.member.nick if session.member.nick else session.member.display_name),
+            overwrites={})
+        await session_category.create_text_channel("Text Cat")
+        await session_category.create_voice_channel("Voice chat")
+        session.room = session_category
+        # attach user ids and channel ids to OH room info in channel authority
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
+        ca.add_oh_session(session)
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+
+        if message.content.startswith("!accept"):
+            ra: RoleAuthority = RoleAuthority(message.guild)
+            if ra.ta_or_higher(message.author):
+                ca: ChannelAuthority = ChannelAuthority(message.guild)
+                if message.channel == ca.queue_channel:
+                    return True
+                else:
+                    admonishment = await message.channel.send("{}, you must be in {} to accept a student.".format(
+                        message.author.mention,
+                        ca.queue_channel.mention
+                    ))
+                    await admonishment.delete(delay=7)
+                    await message.delete()
+                    return False
+            else:
+                admonishment = await message.channel.send("Silly {}, you're not a TA!".format(
+                    message.author.mention
+                ))
+                await admonishment.delete(delay=7)
+                await message.delete()
+                return False
 
         return False
 
