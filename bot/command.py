@@ -12,6 +12,10 @@ from roles import RoleAuthority
 logger = logging.getLogger(__name__)
 
 
+def name(member: Member):
+    return member.nick if member.nick else member.display_name
+
+
 def is_bot_mentioned(message: Message, client: Client) -> bool:
     users_mentioned_in_role = []
     for role in message.role_mentions:
@@ -229,6 +233,9 @@ class StartLab(Command):
     async def handle(self):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         await ca.start_lab(self.message)
+        logger.info("Lab started by {}".format(
+            name(self.message.author)
+        ))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
@@ -263,12 +270,16 @@ class EnterQueue(Command):
                                     colour=color)
 
         author: Member = self.message.author
-        embeddedMsg.set_author(name=author.nick if author.nick else author.display_name)
+        embeddedMsg.set_author(name=name(author))
         embeddedMsg.add_field(name="Accept request by typing",
                               value="!accept")
         # Send embedded message
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
         qa.add_to_queue(author, request, announcement)
+        logger.info("{} added to queue with request text: {}".format(
+            name(author),
+            request
+        ))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
@@ -313,14 +324,18 @@ class AcceptStudent(Command):
         session: OHSession = await qa.dequeue(self.message.author)
         # create channel
         session_category: CategoryChannel = await self.guild.create_category_channel(
-            "Session for {}".format(session.member.nick if session.member.nick else session.member.display_name),
+            "Session for {}".format(name(session.member)),
             overwrites={})
         await session_category.create_text_channel("Text Cat")
         await session_category.create_voice_channel("Voice chat")
         session.room = session_category
         # attach user ids and channel ids to OH room info in channel authority
         ca: ChannelAuthority = ChannelAuthority(self.guild)
+        await session.announcement.delete()
         ca.add_oh_session(session)
+        logger.info("OH session for {} accepted by {}".format(
+            name(session.member),
+            name(self.message.author)))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
@@ -358,6 +373,9 @@ class EndOfficeHours(Command):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         await ca.waiting_channel.send(
             "Ok, y'all.  Office hours have ended for the day.  You don't have to go home, but you can't stay here.")
+        logger.info("Office hours closed by {}".format(
+            name(self.message.author)
+        ))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
