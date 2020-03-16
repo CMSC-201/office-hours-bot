@@ -248,10 +248,26 @@ class EndLab(Command):
 class EnterQueue(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
-        request = ""
+        request = "[Student did not supply text]"
         if " " in self.message.content:
-            request = self.message.content.split()[1:]
-        qa.add_to_queue(self.message.author, request)
+            request = " ".join(self.message.content.split()[1:])
+
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
+
+        # Build embedded message
+        color = discord.Colour(0).blue()
+        embeddedMsg = discord.Embed(description=request,
+                                    timestamp=dt.now(),
+                                    colour=color)
+
+        author: Member = self.message.author
+        embeddedMsg.set_author(name=author.nick if author.nick else author.display_name)
+        embeddedMsg.add_field(name="Accept request by typing",
+                              value="!accept")
+        # Send embedded message
+        announcement = await ca.queue_channel.send(embed=embeddedMsg)
+        qa.add_to_queue(author, request, announcement)
+
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
