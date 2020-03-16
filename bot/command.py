@@ -330,22 +330,6 @@ class EndOfficeHours(Command):
         return False
 
 
-def parse_arguments(msg, prefix):
-    args = []
-    if msg.content.startswith(prefix):
-        params = msg.content[1:].split()
-        for param in params:
-            args.append(param)
-    return args
-
-
-def student_waiting(queue, id):
-    for i in range(len(queue)):
-        if queue[i]["userID"] == id:
-            return True
-    return False
-
-
 async def safe_delete(msg, delay=None):
     try:
         await msg.delete(delay=delay)
@@ -441,53 +425,6 @@ async def student_authenticate(msg, args, uuids):
     return name + " has been authenticated!"
 
 
-async def request_create(msg, args, uuids):
-    # Wrong Channel
-    if msg.channel.id != uuids["WaitingRoom"]:
-        await safe_delete(msg)
-        return "Executed in wrong channel."
-
-    student = msg.author.id
-    queue = read_json('../student_queue.json')
-    # Student already made a request
-    if student_waiting(queue, student):
-        text = msg.author.mention + " You have already made a request!"
-        response = await msg.channel.send(text)
-        await safe_delete(response, delay=5)
-        await safe_delete(msg)
-        return msg.author.nick + " had already created a request."
-
-    # Description minus the command
-    description = msg.content[len(args[0]) + 1:]
-    # Build embedded message
-    color = discord.Colour(0).blue()
-    embeddedMsg = discord.Embed(description=description,
-                                timestamp=dt.now(),
-                                colour=color)
-    embeddedMsg.set_author(name=msg.author.name)
-    embeddedMsg.add_field(name="Accept request by typing",
-                          value="!accept")
-    # Send embedded message
-    request = await msg.guild.get_channel(uuids["RequestsRoom"]).send(embed=embeddedMsg)
-
-    # Save new student to queue
-    entry = {"userID": student,
-             "requestID": request.id}
-    queue.append(entry)
-
-    # Command finished
-    text = msg.author.mention + " Your request will be processed!"
-    response = await msg.channel.send(text)
-    await safe_delete(response, delay=15)
-
-    # Remove command from channel immediately
-    await safe_delete(msg)
-    # Save state
-    write_json('../student_queue.json', queue)
-    # Return log message
-    return msg.author.name + " has been added to the queue."
-
-
 async def request_accept(msg, args, uuids):
     # Wrong Channel
     if msg.channel.id != uuids["RequestsRoom"]:
@@ -547,17 +484,3 @@ async def request_accept(msg, args, uuids):
     return teacher.name + " has accepted " + \
            student.name + "'s request and are in " + \
            msg.guild.get_channel(office["room"]).name
-
-
-commands = {"close": office_close,
-            "auth": student_authenticate,
-            "request": request_create,
-            "accept": request_accept}
-
-
-async def execute_command(msg, args, uuids):
-    cmd = args[0]
-    if cmd in commands:
-        return await commands[cmd](msg, args, uuids)
-    await safe_delete(msg)
-    return "Command did not exist."
