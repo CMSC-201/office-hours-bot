@@ -31,6 +31,8 @@ def command_class(cls):
 
 
 async def handle_message(message: Message, client: Client):
+    if not message.guild:
+        return # this is a DM to the bot TODO: add DM commands
     for cmd_class in supported_commands:
         if await cmd_class.is_invoked_by_message(message, client):
             command = cmd_class(message, client)
