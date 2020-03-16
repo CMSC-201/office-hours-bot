@@ -268,7 +268,6 @@ class EnterQueue(Command):
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
         qa.add_to_queue(author, request, announcement)
 
-
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
@@ -281,6 +280,52 @@ class EnterQueue(Command):
                     ca.waiting_channel.mention))
                 await warning.delete(delay=7)
                 await message.delete()
+                return False
+        return False
+
+
+@command_class
+class QueueStatus(Command):
+    async def handle(self):
+        qa: QueueAuthority = QueueAuthority(self.guild)
+        queue = qa.retrieve_queue()
+        await self.message.channel.send(
+            "{}, there are {} in the queue presently.  We appreciate your patience.".format(
+                self.message.author.mention,
+                len(queue)
+            ))
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        if message.content.startswith("!status"):
+            return True
+
+        return False
+
+
+@command_class
+class EndOfficeHours(Command):
+    async def handle(self):
+        qa: QueueAuthority = QueueAuthority(self.guild)
+        qa.remove_all()
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
+        await ca.waiting_channel.send(
+            "Ok, y'all.  Office hours have ended for the day.  You don't have to go home, but you can't stay here.")
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        ca: ChannelAuthority = ChannelAuthority(message.guild)
+        if is_bot_mentioned(message, client) and \
+                ("close OH" in message.content or "OH close" in message.content):
+            if message.channel == ca.queue_channel:
+                ra: RoleAuthority = RoleAuthority(message.guild)
+                if ra.ta_or_higher(message.author):
+                    return True
+                else:
+                    await message.channel.send("You can't do this, " + message.author.mention)
+                    return False
+            else:
+                await message.channel.send("You have to be in " + ca.queue_channel.mention + " to end office hours.")
                 return False
         return False
 

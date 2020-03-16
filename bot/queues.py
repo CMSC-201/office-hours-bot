@@ -17,7 +17,8 @@ class QueueAuthority:
         document = collection.find_one()
         if not document:
             document = {
-                "queue": []
+                "queue": [],
+                "open": True,
             }
             collection.insert(document)
 
@@ -26,4 +27,26 @@ class QueueAuthority:
             self.__REQUEST_FIELD: request,
             self.__MESSAGE_ID_FIELD: announcement.id
         })
+        collection.replace_one({"_id": document["_id"]}, document)
+
+    def retrieve_queue(self):
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            return []
+        else:
+            return document["queue"]
+
+    def remove_all(self):
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            document = {
+                "queue": [],
+                "open": False,
+            }
+            collection.insert(document)
+
+        document["queue"] = []
+        document["open"] = False
         collection.replace_one({"_id": document["_id"]}, document)
