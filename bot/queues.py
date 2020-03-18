@@ -7,12 +7,13 @@ import mongo
 
 class OHSession:
     def __init__(self, member: Member = None, request: str = None, announcement: Message = None, ta: Member = None,
-                 room=None):
+                 room=None, role=None):
         self.member: Member = member
         self.request: str = request
         self.announcement: Message = announcement
         self.ta: Member = ta
         self.room: Optional[CategoryChannel] = room
+        self.role = role
 
     def to_dict(self) -> dict:
         output = {
@@ -21,6 +22,8 @@ class OHSession:
             "announcement": self.announcement.id,
             "TA": self.ta.id,
         }
+        if self.role:
+            output["role"] = self.role.id
         if self.room:
             output["room"] = self.room.id
         return output
@@ -32,7 +35,8 @@ class OHSession:
             request=dictionary["request"],
             announcement=dictionary["announcement"],
             ta=guild.get_member(dictionary["TA"]),
-            room=guild.get_channel(dictionary["room"])
+            room=guild.get_channel(dictionary["room"]),
+            role=guild.get_role(dictionary["role"]),
         )
 
 
@@ -84,10 +88,10 @@ class QueueAuthority:
             except NotFound:
                 pass
 
-        return OHSession(self.guild.get_member(session[self.__MEMBER_ID_FIELD]),
-                         session[self.__REQUEST_FIELD],
-                         message,
-                         ta)
+        return OHSession(member=self.guild.get_member(session[self.__MEMBER_ID_FIELD]),
+                         request=session[self.__REQUEST_FIELD],
+                         announcement=message,
+                         ta=ta)
 
     def retrieve_queue(self):
         collection = mongo.db[self.__QUEUE_COLLECTION]

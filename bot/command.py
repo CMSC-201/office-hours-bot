@@ -138,10 +138,16 @@ class SetupCommand(Command):
 
         logger.info("Setting up channel overrides for {} and {}".format(categories[staff_category].name,
                                                                         categories[student_category].name))
+        everyone_role: Role = None
+        for role in self.guild.roles:
+            if role.name == "@everyone":
+                everyone_role = role
         overwrite: PermissionOverwrite = PermissionOverwrite(read_messages=False)
         await categories[staff_category].set_permissions(student_role, overwrite=overwrite)
         await categories[staff_category].set_permissions(un_authed, overwrite=overwrite)
+        await categories[staff_category].set_permissions(everyone_role, overwrite=overwrite)
         await categories[student_category].set_permissions(un_authed, overwrite=overwrite)
+        await categories[student_category].set_permissions(everyone_role, overwrite=overwrite)
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
@@ -322,17 +328,35 @@ class AcceptStudent(Command):
         qa: QueueAuthority = QueueAuthority(self.guild)
         # get oldest queue item (and also remove it)
         session: OHSession = await qa.dequeue(self.message.author)
+
+        # create role for channel
+        role: Role = await self.guild.create_role(name="{}'s OH session".format(name(session.member)), hoist=True)
+        num_roles = len(self.guild.roles)
+        await role.edit(position=num_roles-2)
+        session.role = role
+        await session.member.add_roles(session.role)
+        await self.message.author.add_roles(session.role)
+
         # create channel
+        ra: RoleAuthority = RoleAuthority(self.guild)
         session_category: CategoryChannel = await self.guild.create_category_channel(
             "Session for {}".format(name(session.member)),
-            overwrites={})
-        await session_category.create_text_channel("Text Cat")
+            overwrites={
+                role: PermissionOverwrite(read_messages=True),
+                ra.student: PermissionOverwrite(read_messages=False),
+                ra.un_authenticated: PermissionOverwrite(read_messages=False)
+            })
+        text_channel: TextChannel = await session_category.create_text_channel("Text Cat")
         await session_category.create_voice_channel("Voice chat")
         session.room = session_category
         # attach user ids and channel ids to OH room info in channel authority
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         await session.announcement.delete()
         ca.add_oh_session(session)
+        await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close send the session!".format(
+            session.member.mention,
+            session.ta.mention,
+        ))
         logger.info("OH session for {} accepted by {}".format(
             name(session.member),
             name(self.message.author)))
@@ -371,13 +395,27 @@ class EndOHSession(Command):
         await self.message.channel.send("Closing")
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         category_channel: CategoryChannel = None
+
+        # find the correct session
+        this_session = None
         for session in ca.get_oh_sessions():
             if self.message.channel in session.room.channels:
+                this_session = session
                 category_channel = session.room
+
+        # delete the role
+        await this_session.role.delete()
+
+        # delete the channels
         for room in category_channel.channels:
             await room.delete()
-        ca.remove_oh_session(category_channel.id) # remove the session from mongo
         await category_channel.delete()
+
+        # remove the session from mongo
+        ca.remove_oh_session(category_channel.id)
+        logger.info("OH session in room {} closed by {}".format(
+            category_channel.id,
+            name(self.message.author)))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
