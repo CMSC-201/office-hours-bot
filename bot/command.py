@@ -208,6 +208,8 @@ class SetupCommand(Command):
             if ra.admin in message.author.roles:
                 return True
             else:
+                if ca.waiting_channel == None:
+                    return True
                 await message.channel.send("You can't run setup, " + message.author.mention)
                 return False
         return False
