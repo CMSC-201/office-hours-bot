@@ -17,7 +17,7 @@ def using_mongo():
 
 if using_mongo():
     address = get_globals()["props"]['mongodb-address']
-    client = pymongo.MongoClient(address)
+    client = pymongo.MongoClient(address + '?retryWrites=true&w=majority')
     db_name = address.split("/")[-1]
     db = client[db_name]
 
