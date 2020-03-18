@@ -21,7 +21,7 @@ def get_globals():
         info['props'] = {
             "token": os.environ.get("BOT_TOKEN"),
             "prefix": os.environ.get("BOT_PREFIX"),
-            "mongodb-address": os.environ.get("MONGODB_ADDRESS"),
+            "mongodb-address": os.environ.get("MONGODB_URI"),
         }
 
     return info
