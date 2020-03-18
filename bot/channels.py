@@ -28,7 +28,7 @@ class ChannelAuthority:
         self.queue_channel: TextChannel = None
         self.lab_category: CategoryChannel = None
         self.guild = guild
-
+        self.oh_sessions = None
         channels = mongo.db[self.__CHANNEL_COLLECTION].find_one()
         if not channels:
             logger.warning("Unable to load channel authority!  Run setup!")
@@ -104,3 +104,22 @@ class ChannelAuthority:
             document[self.__OH_SESSION_KEY] = {}
         document[self.__OH_SESSION_KEY][str(session.room.id)] = session.to_dict()
         collection.replace_one({"_id": document["_id"]}, document)
+
+    def get_oh_sessions(self):
+        collection = mongo.db[self.__CHANNEL_COLLECTION]
+        document = collection.find_one()
+        sessions = []
+        for room_id, values in document[self.__OH_SESSION_KEY].items():
+            session_dict = dict(values)
+            session_dict["room"] = room_id
+            sessions.append(OHSession.from_dict(values, self.guild))
+        return sessions
+
+    def remove_oh_session(self, room_id):
+        collection = mongo.db[self.__CHANNEL_COLLECTION]
+        document = collection.find_one()
+        if self.__OH_SESSION_KEY not in document:
+            document[self.__OH_SESSION_KEY] = {}
+        del document[self.__OH_SESSION_KEY][str(room_id)]
+        collection.replace_one({"_id": document["_id"]}, document)
+

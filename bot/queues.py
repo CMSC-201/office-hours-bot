@@ -1,17 +1,18 @@
 from typing import Optional
 
-from discord import Guild, Member, Message, CategoryChannel, TextChannel, NotFound
+from discord import Guild, Member, Message, CategoryChannel, NotFound
 
 import mongo
 
 
 class OHSession:
-    def __init__(self, member: Member = None, request: str = None, announcement: Message = None, ta: Member = None):
+    def __init__(self, member: Member = None, request: str = None, announcement: Message = None, ta: Member = None,
+                 room=None):
         self.member: Member = member
         self.request: str = request
         self.announcement: Message = announcement
         self.ta: Member = ta
-        self.room: Optional[CategoryChannel] = None
+        self.room: Optional[CategoryChannel] = room
 
     def to_dict(self) -> dict:
         output = {
@@ -23,6 +24,16 @@ class OHSession:
         if self.room:
             output["room"] = self.room.id
         return output
+
+    @staticmethod
+    def from_dict(dictionary: dict, guild: Guild):
+        return OHSession(
+            member=guild.get_member(dictionary["student"]),
+            request=dictionary["request"],
+            announcement=dictionary["announcement"],
+            ta=guild.get_member(dictionary["TA"]),
+            room=guild.get_channel(dictionary["room"])
+        )
 
 
 # TODO: migrate to using a document for each queue entry (not sure about ordering atm)

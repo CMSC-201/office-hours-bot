@@ -366,6 +366,30 @@ class AcceptStudent(Command):
 
 
 @command_class
+class EndOHSession(Command):
+    async def handle(self):
+        await self.message.channel.send("Closing")
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
+        category_channel: CategoryChannel = None
+        for session in ca.get_oh_sessions():
+            if self.message.channel in session.room.channels:
+                category_channel = session.room
+        for room in category_channel.channels:
+            await room.delete()
+        ca.remove_oh_session(category_channel.id) # remove the session from mongo
+        await category_channel.delete()
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        if message.content.startswith("!close"):
+            ca: ChannelAuthority = ChannelAuthority(message.guild)
+            for session in ca.get_oh_sessions():
+                if message.channel in session.room.channels:
+                    return True
+        return False
+
+
+@command_class
 class EndOfficeHours(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
