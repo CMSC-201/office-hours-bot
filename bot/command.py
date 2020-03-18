@@ -148,6 +148,8 @@ class SetupCommand(Command):
         await categories[staff_category].set_permissions(everyone_role, overwrite=overwrite)
         await categories[student_category].set_permissions(un_authed, overwrite=overwrite)
         await categories[student_category].set_permissions(everyone_role, overwrite=overwrite)
+        await categories[DMZ_category].set_permissions(everyone_role,
+                                                           overwrite=PermissionOverwrite(read_messages=True))
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)

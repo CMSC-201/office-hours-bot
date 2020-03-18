@@ -5,6 +5,7 @@
 1. Copy `heroku.env.sample` to `heroku.env` and add in all the config options.
 2. Run `heroku config:set $(cat heroku.env)`
 3. Run `heroku addons:create mongolab:sandbox`
+3. Do the first push, e.g. `git push heroku master`
 4. Run `heroku ps:scale bot=1`
 3. Use Heroku normally.
 
