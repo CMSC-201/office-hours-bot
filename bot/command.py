@@ -426,42 +426,6 @@ async def safe_delete(msg, delay=None):
         print(e, "\nBot may proceed normally.")
 
 
-async def office_close(msg, args, uuids):
-    # Room is room object which contains room id, role (key) id
-    # and list of teachers and students
-    room, room_name = None, None
-    queue = read_json('offices')
-    for office in queue["occupied"]:
-        if office["room"] == msg.channel.id:
-            room = office
-            queue["occupied"].remove(room)
-    # Not a valid room
-    if not room:
-        await safe_delete(msg)
-        return "Cannot close non-office room!"
-    # Begin closing room
-    room_chan = msg.guild.get_channel(room["room"])
-    room_role = msg.guild.get_role(room["key"])
-    room_name = room_chan.name
-    # Clear all message objects from room
-    await room_chan.purge(limit=1000)
-    # Take the role from teachers and students
-    teacher, student = None, None
-    while len(room["teachers"]) > 0:
-        teacher = room["teachers"].pop()
-        await msg.guild.get_member(teacher).remove_roles(room_role)
-    while len(room["students"]) > 0:
-        student = room["students"].pop()
-        await msg.guild.get_member(student).remove_roles(room_role)
-    # Mark room as vacant
-    queue["open_rooms"].append(room)
-
-    # Save state
-    write_json('../offices.json', queue)
-    # Return log message
-    return room_name + " has been closed!"
-
-
 async def student_authenticate(msg, args, uuids):
     # Wrong Channel
     if msg.channel.id != uuids["AuthRoom"]:
@@ -512,64 +476,3 @@ async def student_authenticate(msg, args, uuids):
     write_json('../student_hash.json', students)
     # Return log message
     return name + " has been authenticated!"
-
-
-async def request_accept(msg, args, uuids):
-    # Wrong Channel
-    if msg.channel.id != uuids["RequestsRoom"]:
-        await safe_delete(msg)
-        return "Executed in wrong channel."
-
-    student_queue = read_json('../student_queue.json')
-    office_queue = read_json('../offices.json')
-    if len(student_queue) < 1:
-        text = msg.author.mention + " There are currently no students needing help!"
-        response = await msg.channel.send(text)
-        await safe_delete(response, delay=10)
-        await safe_delete(msg)
-        return msg.author.nick + " tried to help, but nobody was there."
-
-    if len(office_queue["open_rooms"]) < 1:
-        text = msg.author.mention + " There are currently no available office hour rooms!"
-        response = await msg.channel.send(text)
-        await safe_delete(response, delay=10)
-        await safe_delete(msg)
-        return msg.author.nick + " tried to help, but there was nowhere to go."
-
-    # Get resources
-    office = office_queue["open_rooms"][0]
-    role = msg.guild.get_role(office["key"])
-    # Move room to occupied
-    office_queue["open_rooms"].remove(office)
-    office_queue["occupied"].append(office)
-    # Get member ids
-    t_id = msg.author.id
-    s_info = student_queue[0]
-    s_id = s_info["userID"]
-    # Remove student from queue
-    student_queue.remove(s_info)
-    # Get member objects
-    teacher = msg.guild.get_member(t_id)
-    student = msg.guild.get_member(s_id)
-    # Delete the request
-    requestmsg = await msg.channel.fetch_message(s_info["requestID"])
-    await safe_delete(requestmsg)
-    # Add occupants
-    office["teachers"].append(t_id)
-    office["students"].append(s_id)
-    # Give teacher and student room role
-    await teacher.add_roles(role)
-    await student.add_roles(role)
-    text = "<@" + str(t_id) + "> and <@" + str(s_id) + ">"
-    await msg.guild.get_channel(office["room"]).send(text)
-    text = "Here is your room! You may close this room with `!close`."
-    await msg.guild.get_channel(office["room"]).send(text)
-    # Remove command from channel immediately
-    await safe_delete(msg)
-    # Save state
-    write_json('../student_queue.json', student_queue)
-    write_json('../offices.json', office_queue)
-    # Return log message
-    return teacher.name + " has accepted " + \
-           student.name + "'s request and are in " + \
-           msg.guild.get_channel(office["room"]).name
