@@ -16,9 +16,10 @@ def using_mongo():
 
 
 if using_mongo():
-    client = pymongo.MongoClient(get_globals()["props"]['mongodb-address'])
-
-    db = client["botdb"]
+    address = get_globals()["props"]['mongodb-address']
+    client = pymongo.MongoClient(address)
+    db_name = address.split("/")[-1]
+    db = client[db_name]
 
 
 def read_json(path):
