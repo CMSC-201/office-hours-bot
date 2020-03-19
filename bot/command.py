@@ -347,7 +347,8 @@ class AcceptStudent(Command):
         # create role for channel
         role: Role = await self.guild.create_role(name="{}'s OH session".format(name(session.member)), hoist=True)
         num_roles = len(self.guild.roles)
-        await role.edit(position=num_roles-2)
+        # todo find bot role insert this underneath
+        # await role.edit(position=num_roles-2)
         session.role = role
         await session.member.add_roles(session.role)
         await self.message.author.add_roles(session.role)
