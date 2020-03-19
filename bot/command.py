@@ -91,7 +91,7 @@ class SetupCommand(Command):
             except:
                 logger.warning("Unable to delete role {}".format(role.name))
 
-        student_role, un_authed = await self.generate_roles(admin_permissions, self.guild, student_permissions,
+        student_role, un_authed, ta_role, admin_role = await self.generate_roles(admin_permissions, self.guild, student_permissions,
                                                             un_authed_perms)
 
         staff_category = "Instructor's Area"
@@ -142,14 +142,25 @@ class SetupCommand(Command):
         for role in self.guild.roles:
             if role.name == "@everyone":
                 everyone_role = role
-        overwrite: PermissionOverwrite = PermissionOverwrite(read_messages=False)
-        await categories[staff_category].set_permissions(student_role, overwrite=overwrite)
-        await categories[staff_category].set_permissions(un_authed, overwrite=overwrite)
-        await categories[staff_category].set_permissions(everyone_role, overwrite=overwrite)
-        await categories[student_category].set_permissions(un_authed, overwrite=overwrite)
-        await categories[student_category].set_permissions(everyone_role, overwrite=overwrite)
+        remove_read: PermissionOverwrite = PermissionOverwrite(read_messages=False)
+        add_read: PermissionOverwrite = PermissionOverwrite(read_messages=True)
+
+        await categories[staff_category].set_permissions(student_role, overwrite=remove_read)
+        await categories[staff_category].set_permissions(un_authed, overwrite=remove_read)
+        await categories[staff_category].set_permissions(everyone_role, overwrite=remove_read)
+        await categories[staff_category].set_permissions(ta_role, overwrite=add_read)
+        await categories[staff_category].set_permissions(admin_role, overwrite=add_read)
+
+
+        await categories[student_category].set_permissions(un_authed, overwrite=remove_read)
+        await categories[student_category].set_permissions(everyone_role, overwrite=remove_read)
+        await categories[student_category].set_permissions(ta_role, overwrite=add_read)
+        await categories[student_category].set_permissions(admin_role, overwrite=add_read)
+
         await categories[DMZ_category].set_permissions(everyone_role,
-                                                           overwrite=PermissionOverwrite(read_messages=True))
+                                                           overwrite=add_read)
+
+
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
@@ -174,7 +185,7 @@ class SetupCommand(Command):
                                                   hoist=True)
         # await un_authed.edit(position=1)
         logger.info("Created role Unauthed")
-        return student_role, un_authed
+        return student_role, un_authed, ta_role, admin
 
     async def generate_permissions(self):
         # role permissions
