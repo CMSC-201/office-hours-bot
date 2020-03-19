@@ -251,7 +251,7 @@ async def toggle_office(msg, args, uuids):
         await safe_delete(old_msg)
     # Toggle the office hours, send the messages
     if(office_queue["is_open"]):
-        message = "Office hours are now ""CLOSED**!"
+        message = "Office hours are now **CLOSED**!"
         waiting = await msg.guild.get_channel(uuids["WaitingRoom"]).send(message)
         request = await msg.guild.get_channel(uuids["RequestsRoom"]).send(message)
         office_queue["open_indicator"] = waiting.id
