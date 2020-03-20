@@ -1,61 +1,42 @@
-import json
 import logging
-import os
 
 import discord
+from discord import Message, Guild
 
-import command as com
+from channels import ChannelAuthority
+from command import handle_message
+from globals import get_globals
+from roles import RoleAuthority
 
 logger = logging.getLogger('bot_main')
 
 
 class MyClient(discord.Client):
+    def __init__(self, **options):
+        super().__init__(**options)
+        self.channel_authority: ChannelAuthority = None
+
     async def on_ready(self):
         logger.info('Logged on as {0}!'.format(self.user))
+        if len(self.guilds) > 1:
+            raise ValueError("Bot cannot manage more than one guild at this time.")
 
-    async def on_message(self, message):
-        #if message.content.startswith('hashbot'):
-        #    await message.channel.send('https://gph.is/28LBdcE')
+        logger.info("Bot started.  Waiting for messages.")
+
+    async def on_message(self, message: Message):
+        guild: Guild = message.guild
+        logger.info('Message from {0.author}: {0.content}'.format(message))
 
         # Ignore bot messages
         if message.author.bot:
             return
-        # Split message by spaces
-        args = com.parse_arguments(message, prefix)
-        # If not a command, ignore
-        if not args:
-            logger.info('Message from {0.author}: {0.content}'.format(message))
-            return
 
-        logger.info('{0.author} issued command: {0.content}'.format(message))
-        response = await com.execute_command(message, args, uuids)
-        if response:
-            logger.info(response)
+        await handle_message(message, self)
 
-
-def get_globals():
-    global token
-    global prefix
-    global uuids
-
-    info = {}
-    if os.path.exists('../uuids.json'):
-        with open('../uuids.json', 'r') as f:
-            info['uuids'] = json.load(f)
-    else:
-        info['uuids'] = {}
-
-    if os.path.exists('../prop.json'):
-        with open('../prop.json', 'r') as f:
-            info['props'] = json.load(f)
-    else:
-        info['props'] = {
-            "token": os.environ.get("BOT_TOKEN"),
-            "prefix": os.environ.get("BOT_PREFIX"),
-            "mongodb-address": os.environ.get("MONGODB_ADDRESS"),
-        }
-    
-    return info
+        # ca: ChannelAuthority = ChannelAuthority(message.guild)
+        # ra: RoleAuthority = RoleAuthority(message.guild)
+        # if ca.is_cleared_channel(message.channel) and not ra.ta_or_higher(message.author):
+        #     await message.delete()
 
 
 def set_up_logs():
@@ -83,4 +64,3 @@ if __name__ == '__main__':
         client.run(token)
     else:
         print("Something failed (this is very vague)")
-

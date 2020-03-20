@@ -1,5 +1,6 @@
 token
 prop.json
+*.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
