@@ -293,6 +293,7 @@ class EnterQueue(Command):
         qa: QueueAuthority = QueueAuthority(self.guild)
         request = "[Student did not supply text]"
         if " " in self.message.content:
+            # remove the !request from the front of the message
             request = " ".join(self.message.content.split()[1:])
 
         ca: ChannelAuthority = ChannelAuthority(self.guild)

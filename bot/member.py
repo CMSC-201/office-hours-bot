@@ -39,7 +39,12 @@ class MemberAuthority:
                 await member.remove_roles(ra.un_authenticated)
                 # except:
                 #     logger.error("Error authenticating user {}".format(member.id))
-
+                if self.__DISCORD_ID_FIELD in auth_data and auth_data[self.__DISCORD_ID_FIELD] != member.id:
+                    logger.error("Student tried to auth with a new account.  New ID: {}, Old ID: {}".format(
+                        member.id,
+                        auth_data[self.__DISCORD_ID_FIELD]
+                    ))
+                    return False
                 auth_data[self.__DISCORD_ID_FIELD] = member.id
 
                 found = True

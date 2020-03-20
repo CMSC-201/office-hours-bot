@@ -21,22 +21,3 @@ if using_mongo():
     client = pymongo.MongoClient(address + '?retryWrites=false&w=majority')
     db_name = address.split("/")[-1]
     db = client[db_name]
-
-
-def read_json(path):
-    if using_mongo():
-        collection = db[path]
-        return collection.find()
-    else:
-        with open("../" + path + ".json", "r") as f:
-            return json.load(f)
-
-
-def write_json(path, data):
-    if using_mongo():
-        collection = db[path]
-        collection.delete_many()
-        collection.insert_many(data, ordered=True)
-    else:
-        with open("../" + path + ".json", "w+") as f:
-            f.write(json.dumps(data))
