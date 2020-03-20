@@ -63,7 +63,7 @@ class Command:
 @command_class
 class Bark(Command):
     async def handle(self):
-        await self.message.channel("Ruff!")
+        await self.message.channel.send("Ruff!")
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
