@@ -1,4 +1,6 @@
 {
+	"is_open": false,
+	"open_indicator": 0,
     "room_template":{"room":0, "key":0, "teachers":[], "students":[]},
     "all_rooms":[],
     "open_rooms":[],
