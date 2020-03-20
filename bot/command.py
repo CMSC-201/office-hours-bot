@@ -6,7 +6,6 @@ from discord import Message, Guild, Client, Member, TextChannel, CategoryChannel
 
 from channels import ChannelAuthority
 from member import MemberAuthority
-from mongo import read_json, write_json
 from queues import QueueAuthority, OHSession
 from roles import RoleAuthority
 
@@ -59,6 +58,16 @@ class Command:
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         pass
+
+
+@command_class
+class Bark(Command):
+    async def handle(self):
+        await self.message.channel("Ruff!")
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        return message.startswith("!bark")
 
 
 @command_class
@@ -161,6 +170,7 @@ class SetupCommand(Command):
         await categories[student_category].set_permissions(everyone_role, overwrite=remove_read)
         await categories[student_category].set_permissions(ta_role, overwrite=add_read)
         await categories[student_category].set_permissions(admin_role, overwrite=add_read)
+        await categories[student_category].set_permissions(student_role, overwrite=add_read)
 
         await categories[DMZ_category].set_permissions(everyone_role,
                                                        overwrite=add_read)
@@ -312,9 +322,10 @@ class EnterQueue(Command):
         if message.content.startswith("!request"):
             qa: QueueAuthority = QueueAuthority(message.guild)
             if qa.is_member_in_queue(message.author):
-                warning = await message.channel.send("{} you are already in the queue.  Please continue waiting.".format(
-                    message.author.mention,
-                    ca.waiting_channel.mention))
+                warning = await message.channel.send(
+                    "{} you are already in the queue.  Please continue waiting.".format(
+                        message.author.mention,
+                        ca.waiting_channel.mention))
                 await warning.delete(delay=7)
                 await message.delete()
                 return False
@@ -496,7 +507,7 @@ class AuthenticateStudent(Command):
             logger.info("Authenticated user {0.display_name} ({0.id}) as {0.nick}".format(self.message.author))
         else:
             warning = await self.message.channel.send("Key unrecognized.  Please try again.  " + \
-                                                     "If you're still having trouble, please contact course staff.")
+                                                      "If you're still having trouble, please contact course staff.")
             await warning.delete(delay=7)
 
         await self.message.delete()
