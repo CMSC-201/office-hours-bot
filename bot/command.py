@@ -496,7 +496,7 @@ class AuthenticateStudent(Command):
     async def is_invoked_by_message(message: Message, client: Client):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
         if message.content.startswith("!auth"):
-            if len(message.split() != 2):
+            if len(message.content.split() != 2):
                 warning = await message.author.send("Please try again.  The format is !auth [your key]")
                 await warning.delete(delay=7)
             elif message.channel == ca.auth_channel:
