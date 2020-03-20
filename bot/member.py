@@ -1,9 +1,11 @@
-from typing import Optional
+import logging
 
 from discord import Guild, Member
 
 import mongo
 from roles import RoleAuthority
+
+logger = logging.getLogger(__name__)
 
 
 class MemberAuthority:
@@ -31,12 +33,16 @@ class MemberAuthority:
             if auth_data[self.__KEY_FIELD] == key:
                 name = auth_data[self.__NAME_FIELD]
                 ra: RoleAuthority = RoleAuthority(self.guild)
-
+                # try:
                 await member.edit(nick=name)
                 await member.add_roles(ra.student)
                 await member.remove_roles(ra.un_authenticated)
+                # except:
+                #     logger.error("Error authenticating user {}".format(member.id))
 
                 auth_data[self.__DISCORD_ID_FIELD] = member.id
+
+                found = True
                 break
 
         collection.replace_one({"_id": document["_id"]}, document)

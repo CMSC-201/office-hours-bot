@@ -27,24 +27,14 @@ class MyClient(discord.Client):
         self.channel_authority = ChannelAuthority(self.guilds[0])
 
     async def on_message(self, message: Message):
-        # if message.content.startswith('hashbot'):
-        #    await message.channel.send('https://gph.is/28LBdcE')
         guild: Guild = message.guild
         logger.info('Message from {0.author}: {0.content}'.format(message))
 
         # Ignore bot messages
         if message.author.bot:
             return
-        # # Split message by spaces
-        # args = com.parse_arguments(message, prefix)
-        # # If not a command, ignore
-        # if not args:
-        #     return
-        #
-        # logger.info('{0.author} issued command: {0.content}'.format(message))
-        # response = await com.execute_command(message, args, uuids)
-        # if response:
-        #     logger.info(response)
+
+        ca: ChannelAuthority = ChannelAuthority(message.guild)
 
         await handle_message(message, self)
 
