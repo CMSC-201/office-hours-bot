@@ -23,6 +23,7 @@ class ChannelAuthority:
     __LAB_CATEGORY_CHANNEL = "lab"
     __OH_SESSION_KEY = "oh_sessions"
     __AUTH_CHANNEL_KEY = "auth"
+    __BULLETIN_CHANNEL_KEY = "bulletin"
 
     def __init__(self, guild: Guild):
         self.waiting_channel: TextChannel = None
@@ -40,6 +41,8 @@ class ChannelAuthority:
 
             if self.__LAB_CATEGORY_CHANNEL in channels:
                 self.lab_category = self.guild.get_channel(channels[self.__LAB_CATEGORY_CHANNEL])
+
+            self.bulletin_category = self.guild.get_channel(channels[self.__BULLETIN_CHANNEL_KEY])
             self.auth_channel: TextChannel = self.guild.get_channel(channels[self.__AUTH_CHANNEL_KEY])
             self.waiting_channel = self.guild.get_channel(waiting_uuid)
             self.queue_channel = self.guild.get_channel(queue_uuid)
@@ -125,4 +128,11 @@ class ChannelAuthority:
             document[self.__OH_SESSION_KEY] = {}
         del document[self.__OH_SESSION_KEY][str(room_id)]
         collection.replace_one({"_id": document["_id"]}, document)
+
+    def is_cleared_channel(self, channel: TextChannel) -> bool:
+        if channel in self.bulletin_category.channels:
+            logger.info("Admin message in {}.  Leaving it alone.".format(channel.name))
+            return True
+        else:
+            return False
 

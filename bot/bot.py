@@ -1,14 +1,12 @@
-import json
 import logging
-import os
 
 import discord
-from discord import Message, Guild, CategoryChannel, Role, Permissions, PermissionOverwrite, TextChannel, Member
+from discord import Message, Guild
 
-import command as com
 from channels import ChannelAuthority
 from command import handle_message
 from globals import get_globals
+from roles import RoleAuthority
 
 logger = logging.getLogger('bot_main')
 
@@ -23,8 +21,7 @@ class MyClient(discord.Client):
         if len(self.guilds) > 1:
             raise ValueError("Bot cannot manage more than one guild at this time.")
 
-        logger.info("Loading channel authority")
-        self.channel_authority = ChannelAuthority(self.guilds[0])
+        logger.info("Bot started.  Waiting for messages.")
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
@@ -34,9 +31,12 @@ class MyClient(discord.Client):
         if message.author.bot:
             return
 
-        ca: ChannelAuthority = ChannelAuthority(message.guild)
-
         await handle_message(message, self)
+
+        # ca: ChannelAuthority = ChannelAuthority(message.guild)
+        # ra: RoleAuthority = RoleAuthority(message.guild)
+        # if ca.is_cleared_channel(message.channel) and not ra.ta_or_higher(message.author):
+        #     await message.delete()
 
 
 def set_up_logs():
