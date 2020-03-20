@@ -130,3 +130,24 @@ class QueueAuthority:
         document["queue"] = []
         document["open"] = False
         collection.replace_one({"_id": document["_id"]}, document)
+
+    def is_office_hours_open(self) -> bool:
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document or not document["open"]:
+            return False
+        return True
+
+    def open_office_hours(self):
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            document = {
+                "queue": [],
+                "open": False,
+            }
+            collection.insert(document)
+
+        document["queue"] = []
+        document["open"] = True
+        collection.replace_one({"_id": document["_id"]}, document)

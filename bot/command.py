@@ -67,7 +67,7 @@ class Bark(Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        return message.startswith("!bark")
+        return message.content.startswith("!bark")
 
 
 @command_class
@@ -322,6 +322,14 @@ class EnterQueue(Command):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
         if message.content.startswith("!request"):
             qa: QueueAuthority = QueueAuthority(message.guild)
+            if not qa.is_office_hours_open():
+                warning = await message.channel.send(
+                    "Office hours are closed.  Please try again after they have opened.".format(
+                        message.author.mention,
+                        ca.waiting_channel.mention))
+                await warning.delete(delay=7)
+                await message.delete()
+                return False
             if qa.is_member_in_queue(message.author):
                 warning = await message.channel.send(
                     "{} you are already in the queue.  Please continue waiting.".format(
@@ -468,6 +476,40 @@ class EndOHSession(Command):
         return False
 
 
+async def is_oh_command(client, message, type):
+    ca: ChannelAuthority = ChannelAuthority(message.guild)
+    if is_bot_mentioned(message, client) and \
+            ("oh" in message.content.lower() and type in message.content.lower()):
+        if message.channel == ca.queue_channel:
+            ra: RoleAuthority = RoleAuthority(message.guild)
+            if ra.ta_or_higher(message.author):
+                return True
+            else:
+                await message.channel.send("You can't do this, " + message.author.mention)
+                return False
+        else:
+            await message.channel.send("You have to be in " +
+                                       ca.queue_channel.mention + " to {} office hours.".format(type))
+            return False
+    return False
+
+@command_class
+class StartOfficeHours(Command):
+    async def handle(self):
+        qa: QueueAuthority = QueueAuthority(self.guild)
+        qa.open_office_hours()
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
+        await ca.waiting_channel.send(
+            "Office hours are live.  Get in line with !request")
+        logger.info("Office hours opened by {}".format(
+            name(self.message.author)
+        ))
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        return await is_oh_command(client, message, "start")
+
+
 @command_class
 class EndOfficeHours(Command):
     async def handle(self):
@@ -482,20 +524,9 @@ class EndOfficeHours(Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        ca: ChannelAuthority = ChannelAuthority(message.guild)
-        if is_bot_mentioned(message, client) and \
-                ("close OH" in message.content or "OH close" in message.content):
-            if message.channel == ca.queue_channel:
-                ra: RoleAuthority = RoleAuthority(message.guild)
-                if ra.ta_or_higher(message.author):
-                    return True
-                else:
-                    await message.channel.send("You can't do this, " + message.author.mention)
-                    return False
-            else:
-                await message.channel.send("You have to be in " + ca.queue_channel.mention + " to end office hours.")
-                return False
-        return False
+        return await is_oh_command(client, message, "end")
+
+
 
 
 @command_class
