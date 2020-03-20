@@ -14,3 +14,11 @@
 2. `python3 bot.py`
 
 #Remember not to version private keys!
+
+## Setup
+
+You must have developer mode enabled on your Discord client in order to proceed.
+1. Go to User Settings on your Discord Client
+2. In the settings, go to Appearance
+3. One of the options should be named Developer Mode, toggle it on.
+4. You may now right click servers (guilds), channels, messages, and users and click Copy ID to get their Discord UID.
