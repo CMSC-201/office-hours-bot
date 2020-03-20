@@ -1,6 +1,8 @@
+from typing import Optional
+
 from discord import Permissions, Guild, Role, Member
 
-
+# TODO: store the role ids in mongo so we can rename them
 class RoleAuthority:
     __ADMIN_NAME = "Admin"
     __STUDENT_NAME = "Student"
@@ -8,12 +10,11 @@ class RoleAuthority:
     __TA_NAME = "TA"
 
     def __init__(self, guild: Guild):
-        self.admin = None
-        self.student = None
-        self.un_authenticated = None
-        self.ta = None
+        self.admin: Optional[Role] = None
+        self.student: Optional[Role] = None
+        self.un_authenticated: Optional[Role] = None
+        self.ta: Optional[Role] = None
 
-        role: Role = None  # The things I do for type hints...
         for role in guild.roles:
             if role.name == self.__ADMIN_NAME:
                 self.admin = role

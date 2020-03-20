@@ -22,6 +22,7 @@ class ChannelAuthority:
     __CHANNEL_COLLECTION = "channels"
     __LAB_CATEGORY_CHANNEL = "lab"
     __OH_SESSION_KEY = "oh_sessions"
+    __AUTH_CHANNEL_KEY = "auth"
 
     def __init__(self, guild: Guild):
         self.waiting_channel: TextChannel = None
@@ -39,19 +40,21 @@ class ChannelAuthority:
 
             if self.__LAB_CATEGORY_CHANNEL in channels:
                 self.lab_category = self.guild.get_channel(channels[self.__LAB_CATEGORY_CHANNEL])
-
+            self.auth_channel: TextChannel = self.guild.get_channel(channels[self.__AUTH_CHANNEL_KEY])
             self.waiting_channel = self.guild.get_channel(waiting_uuid)
             self.queue_channel = self.guild.get_channel(queue_uuid)
         except KeyError:
             logger.warning("Unable to load channel authority!  Run setup!")
 
-    def save_channels(self, waiting_channel, queue_channel) -> None:
+    def save_channels(self, waiting_channel, queue_channel, auth_channel) -> None:
         self.waiting_channel = waiting_channel
         self.queue_channel = queue_channel
+        self.auth_channel = auth_channel
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = {
             self.__WAITING_CHANNEL_KEY: self.waiting_channel.id,
             self.__QUEUE_CHANNEL_KEY: self.queue_channel.id,
+            self.__AUTH_CHANNEL_KEY: self.auth_channel.id,
         }
         if self.lab_category:
             document[self.__LAB_CATEGORY_CHANNEL] = self.lab_category.id

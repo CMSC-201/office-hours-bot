@@ -5,6 +5,7 @@ import discord
 from discord import Message, Guild, Client, Member, TextChannel, CategoryChannel, PermissionOverwrite, Role, Permissions
 
 from channels import ChannelAuthority
+from member import MemberAuthority
 from mongo import read_json, write_json
 from queues import QueueAuthority, OHSession
 from roles import RoleAuthority
@@ -91,16 +92,18 @@ class SetupCommand(Command):
             except:
                 logger.warning("Unable to delete role {}".format(role.name))
 
-        student_role, un_authed, ta_role, admin_role = await self.generate_roles(admin_permissions, self.guild, student_permissions,
-                                                            un_authed_perms)
+        student_role, un_authed, ta_role, admin_role = await self.generate_roles(admin_permissions, self.guild,
+                                                                                 student_permissions,
+                                                                                 un_authed_perms)
 
         staff_category = "Instructor's Area"
         student_category = "Student's Area"
         waiting_room_name = "waiting-room"
         queue_room_name = "student-requests"
+        auth_room_name = "authentication"
         channel_structure = {
             DMZ_category: {
-                "text": ["landing-pad", "getting-started", "announcements", "authentication"],
+                "text": ["landing-pad", "getting-started", "announcements", auth_room_name],
                 "voice": [],
             },
             staff_category: {
@@ -116,6 +119,7 @@ class SetupCommand(Command):
         categories = {}
         waiting_room: TextChannel = None
         queue_room: TextChannel = None
+        auth_room: TextChannel = None
         for category, channels in channel_structure.items():
             text, voice = (channels["text"], channels["voice"])
             category_channel: CategoryChannel = await self.guild.create_category(category)
@@ -124,7 +128,9 @@ class SetupCommand(Command):
 
             for name in text:
                 channel = await category_channel.create_text_channel(name)
-                if name == queue_room_name:
+                if name == auth_room_name:
+                    auth_room = channel
+                elif name == queue_room_name:
                     queue_room = channel
                 elif name == waiting_room_name:
                     waiting_room = channel
@@ -151,20 +157,17 @@ class SetupCommand(Command):
         await categories[staff_category].set_permissions(ta_role, overwrite=add_read)
         await categories[staff_category].set_permissions(admin_role, overwrite=add_read)
 
-
         await categories[student_category].set_permissions(un_authed, overwrite=remove_read)
         await categories[student_category].set_permissions(everyone_role, overwrite=remove_read)
         await categories[student_category].set_permissions(ta_role, overwrite=add_read)
         await categories[student_category].set_permissions(admin_role, overwrite=add_read)
 
         await categories[DMZ_category].set_permissions(everyone_role,
-                                                           overwrite=add_read)
-
-
+                                                       overwrite=add_read)
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
-        channel_authority.save_channels(waiting_room, queue_room)
+        channel_authority.save_channels(waiting_room, queue_room, auth_room)
 
         await first.send("Righto! You're good to go, boss!")
 
@@ -297,6 +300,7 @@ class EnterQueue(Command):
         # Send embedded message
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
         qa.add_to_queue(author, request, announcement)
+        await self.message.delete()
         logger.info("{} added to queue with request text: {}".format(
             name(author),
             request
@@ -368,6 +372,7 @@ class AcceptStudent(Command):
         # attach user ids and channel ids to OH room info in channel authority
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         await session.announcement.delete()
+        await self.message.delete()
         ca.add_oh_session(session)
         await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close send the session!".format(
             session.member.mention,
@@ -470,6 +475,36 @@ class EndOfficeHours(Command):
             else:
                 await message.channel.send("You have to be in " + ca.queue_channel.mention + " to end office hours.")
                 return False
+        return False
+
+
+@command_class
+class AuthenticateStudent(Command):
+    async def handle(self):
+        ma: MemberAuthority = MemberAuthority(self.guild)
+        key = self.message.split()[1]
+        if await ma.authenticate_member(self.messsage.author, key):
+            logger.info("Authenticated user {0.display_name} ({0.id}) as {0.nick}".format(self.message.author))
+        else:
+            warning = await self.message.author.send("Key unrecognized.  Please try again.  " + \
+                                                     "If you're still having trouble, please contact course staff.")
+            await warning.delete(delay=7)
+
+        await self.message.delete()
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        ca: ChannelAuthority = ChannelAuthority(message.guild)
+        if message.content.startswith("!auth"):
+            if len(message.split() != 2):
+                warning = await message.author.send("Please try again.  The format is !auth [your key]")
+                await warning.delete(delay=7)
+            elif message.channel == ca.auth_channel:
+                return True
+            else:
+                warning = await message.channel.send("You have to be in {} to authenticate.".format(
+                    ca.auth_channel.mention))
+                await warning.delete(delay=7)
         return False
 
 
