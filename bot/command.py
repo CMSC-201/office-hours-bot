@@ -310,6 +310,14 @@ class EnterQueue(Command):
     async def is_invoked_by_message(message: Message, client: Client):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
         if message.content.startswith("!request"):
+            qa: QueueAuthority = QueueAuthority(message.guild)
+            if qa.is_member_in_queue(message.author):
+                warning = await message.channel.send("{} you are already in the queue.  Please continue waiting.".format(
+                    message.author.mention,
+                    ca.waiting_channel.mention))
+                await warning.delete(delay=7)
+                await message.delete()
+                return False
             if message.channel == ca.waiting_channel:
                 return True
             else:

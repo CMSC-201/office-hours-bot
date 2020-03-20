@@ -93,6 +93,22 @@ class QueueAuthority:
                          announcement=message,
                          ta=ta)
 
+    def is_member_in_queue(self, member: Member):
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            document = {
+                "queue": [],
+                "open": True,
+            }
+            collection.insert(document)
+
+        for queue_item in document["queue"]:
+            if queue_item[self.__MEMBER_ID_FIELD] == member.id:
+                return True
+
+        return False
+
     def retrieve_queue(self):
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
