@@ -22,7 +22,7 @@ with open(filename, 'r') as f:
             "key": key
         })
 
-with open("mail.csv", 'w') as f:
+with open("mail202.csv", 'w') as f:
     for row in output_csv:
         f.write(','.join(row) + '\n')
 

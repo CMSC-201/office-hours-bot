@@ -517,7 +517,7 @@ class EndOfficeHours(Command):
         qa.remove_all()
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         await ca.waiting_channel.send(
-            "Ok, y'all.  Office hours have ended for the day.  You don't have to go home, but you can't stay here.")
+            "Ok, y'all.  Office hours have ended for now.  An announcement will appear here when they have reopened.")
         logger.info("Office hours closed by {}".format(
             name(self.message.author)
         ))
