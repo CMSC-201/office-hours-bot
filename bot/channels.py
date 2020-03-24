@@ -118,7 +118,9 @@ class ChannelAuthority:
         for room_id, values in document[self.__OH_SESSION_KEY].items():
             session_dict = dict(values)
             session_dict["room"] = room_id
-            sessions.append(OHSession.from_dict(values, self.guild))
+            from_dict = OHSession.from_dict(values, self.guild)
+            if from_dict and from_dict.room:  # the room can be null sometimes
+                sessions.append(from_dict)
         return sessions
 
     def remove_oh_session(self, room_id):
