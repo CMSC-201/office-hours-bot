@@ -91,7 +91,7 @@ class SetupCommand(Command):
 
         first = None
 
-        admin_permissions, student_permissions, un_authed_perms = await self.generate_permissions()
+        admin_permissions, ta_permissions, student_permissions, un_authed_permissions = await self.generate_permissions()
 
         # Delete ALL old roles
         for role in self.guild.roles:
@@ -101,9 +101,10 @@ class SetupCommand(Command):
             except:
                 logger.warning("Unable to delete role {}".format(role.name))
 
-        student_role, un_authed, ta_role, admin_role = await self.generate_roles(admin_permissions, self.guild,
+        admin_role, ta_role, student_role, un_authed_role = await self.generate_roles(self.guild, admin_permissions,
+                                                                                 ta_permissions,
                                                                                  student_permissions,
-                                                                                 un_authed_perms)
+                                                                                 un_authed_permissions)
 
         staff_category = "Instructor's Area"
         student_category = "Student's Area"
@@ -126,6 +127,7 @@ class SetupCommand(Command):
         }
 
         categories = {}
+        all_channels = {} # Replicates channel_structure, but with Channel objects
         waiting_room: TextChannel = None
         queue_room: TextChannel = None
         auth_room: TextChannel = None
@@ -134,6 +136,7 @@ class SetupCommand(Command):
             category_channel: CategoryChannel = await self.guild.create_category(category)
 
             categories[category] = category_channel
+            all_channels[category] = {"text":{},"voice":{}}
 
             for name in text:
                 channel = await category_channel.create_text_channel(name)
@@ -145,10 +148,12 @@ class SetupCommand(Command):
                     waiting_room = channel
                 if not first:
                     first = channel
+                all_channels[category]["text"][name] = channel
                 logger.info("Created text channel {} in category {}".format(name, category))
 
             for name in voice:
                 await category_channel.create_voice_channel(name)
+                all_channels[category]["voice"][name] = channel
                 logger.info("Created voice channel {} in category {}".format(name, category))
 
         logger.info("Setting up channel overrides for {} and {}".format(categories[staff_category].name,
@@ -159,21 +164,29 @@ class SetupCommand(Command):
                 everyone_role = role
         remove_read: PermissionOverwrite = PermissionOverwrite(read_messages=False)
         add_read: PermissionOverwrite = PermissionOverwrite(read_messages=True)
-
-        await categories[staff_category].set_permissions(student_role, overwrite=remove_read)
-        await categories[staff_category].set_permissions(un_authed, overwrite=remove_read)
-        await categories[staff_category].set_permissions(everyone_role, overwrite=remove_read)
-        await categories[staff_category].set_permissions(ta_role, overwrite=add_read)
+        remove_media: PermissionOverwrite = PermissionOverwrite(attach_files=False, embed_link=False)
+        add_media: PermissionOverwrite = PermissionOverwrite(attach_files=True, embed_link=True)
+        # Overwrite Instructor's Area category read permissions
         await categories[staff_category].set_permissions(admin_role, overwrite=add_read)
-
-        await categories[student_category].set_permissions(un_authed, overwrite=remove_read)
-        await categories[student_category].set_permissions(everyone_role, overwrite=remove_read)
-        await categories[student_category].set_permissions(ta_role, overwrite=add_read)
+        await categories[staff_category].set_permissions(ta_role, overwrite=add_read)
+        await categories[staff_category].set_permissions(student_role, overwrite=remove_read)
+        await categories[staff_category].set_permissions(un_authed_role, overwrite=remove_read)
+        await categories[staff_category].set_permissions(everyone_role, overwrite=remove_read)
+        # Overwrite Student's Area category read permissions
         await categories[student_category].set_permissions(admin_role, overwrite=add_read)
+        await categories[student_category].set_permissions(ta_role, overwrite=add_read)
         await categories[student_category].set_permissions(student_role, overwrite=add_read)
-
-        await categories[DMZ_category].set_permissions(everyone_role,
-                                                       overwrite=add_read)
+        await categories[student_category].set_permissions(un_authed_role, overwrite=remove_read)
+        await categories[student_category].set_permissions(everyone_role, overwrite=remove_read)
+        # Overwrite Student's Area category media posting permissions
+        await categories[student_category].set_permissions(student_role, overwrite=remove_media)
+        await all_channels[student_category]["text"]["memes"].set_permissions(student_role, overwrite=add_media)
+        # Overwrite Bulletin Board category read permissions
+        await categories[DMZ_category].set_permissions(everyone_role, overwrite=add_read)
+        await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(ta_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(student_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["text"]["landing-pad"].set_permissions(ta_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["text"]["landing-pad"].set_permissions(student_role, overwrite=remove_read)
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
@@ -181,24 +194,24 @@ class SetupCommand(Command):
 
         await first.send("Righto! You're good to go, boss!")
 
-    async def generate_roles(self, admin_permissions, guild, student_permissions, un_authed_perms):
+    async def generate_roles(self, guild, admin_permissions, ta_permissions, student_permissions, un_authed_permissions):
         # Adding roles -- do NOT change the order without good reason!
-        admin: Role = await guild.create_role(name="Admin", permissions=admin_permissions, mentionable=True, hoist=True)
+        admin_role: Role = await guild.create_role(name="Admin", permissions=admin_permissions, mentionable=True, hoist=True)
         # await admin.edit(position=4)
-        logger.info("Created role admin")
+        logger.info("Created role Admin")
         ta_role: Role = await guild.create_role(name="TA", permissions=student_permissions, mentionable=True,
                                                 hoist=True)
         # await ta_role.edit(position=3)
         logger.info("Created role TA")
-        student_role: Role = await guild.create_role(name="Student", permissions=student_permissions, mentionable=True,
+        student_role: Role = await guild.create_role(name="Student", permissions=ta_permissions, mentionable=True,
                                                      hoist=True)
         # await student_role.edit(position=2)  # just above @everyone
         logger.info("Created role Student")
-        un_authed: Role = await guild.create_role(name="Unauthed", permissions=un_authed_perms, mentionable=True,
+        un_authed_role: Role = await guild.create_role(name="Unauthed", permissions=un_authed_permissions, mentionable=True,
                                                   hoist=True)
         # await un_authed.edit(position=1)
         logger.info("Created role Unauthed")
-        return student_role, un_authed, ta_role, admin
+        return admin_role, ta_role, student_role, un_authed_role
 
     async def generate_permissions(self):
         # role permissions
@@ -210,10 +223,12 @@ class SetupCommand(Command):
                                    send_messages=True,
                                    connect=True,
                                    speak=True,
-                                   use_voice_activation=True)
+                                   use_voice_activation=True,
+                                   embed_link=True,
+                                   attach_files=True)
         admin_permissions: Permissions = Permissions.all()
-        un_authed_perms: Permissions = Permissions.none()
-        un_authed_perms.update(read_message_history=True,
+        un_authed_permissions: Permissions = Permissions.none()
+        un_authed_permissions.update(read_message_history=True,
                                read_messages=True,
                                send_messages=True)
         ta_permissions: Permissions = Permissions.all()
@@ -223,8 +238,8 @@ class SetupCommand(Command):
                               manage_guild=False,
                               manage_roles=False,
                               manage_permissions=False,
-                              manage_webhooks=False, )
-        return admin_permissions, student_permissions, un_authed_perms
+                              manage_webhooks=False)
+        return admin_permissions, ta_permissions, student_permissions, un_authed_permissions
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
