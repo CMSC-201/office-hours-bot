@@ -127,6 +127,7 @@ class SetupCommand(Command):
         }
 
         categories = {}
+        all_channels = {} # Replicates channel_structure, but with Channel objects
         waiting_room: TextChannel = None
         queue_room: TextChannel = None
         auth_room: TextChannel = None
@@ -135,6 +136,7 @@ class SetupCommand(Command):
             category_channel: CategoryChannel = await self.guild.create_category(category)
 
             categories[category] = category_channel
+            all_channels[category] = {"text":{},"voice":{}}
 
             for name in text:
                 channel = await category_channel.create_text_channel(name)
@@ -146,10 +148,12 @@ class SetupCommand(Command):
                     waiting_room = channel
                 if not first:
                     first = channel
+                all_channels[category]["text"][name] = channel
                 logger.info("Created text channel {} in category {}".format(name, category))
 
             for name in voice:
                 await category_channel.create_voice_channel(name)
+                all_channels[category]["voice"][name] = channel
                 logger.info("Created voice channel {} in category {}".format(name, category))
 
         logger.info("Setting up channel overrides for {} and {}".format(categories[staff_category].name,
@@ -160,21 +164,29 @@ class SetupCommand(Command):
                 everyone_role = role
         remove_read: PermissionOverwrite = PermissionOverwrite(read_messages=False)
         add_read: PermissionOverwrite = PermissionOverwrite(read_messages=True)
-        # Overwrite Instructor's Area category permissions
+        remove_media: PermissionOverwrite = PermissionOverwrite(attach_files=False, embed_link=False)
+        add_media: PermissionOverwrite = PermissionOverwrite(attach_files=True, embed_link=True)
+        # Overwrite Instructor's Area category read permissions
         await categories[staff_category].set_permissions(admin_role, overwrite=add_read)
         await categories[staff_category].set_permissions(ta_role, overwrite=add_read)
         await categories[staff_category].set_permissions(student_role, overwrite=remove_read)
         await categories[staff_category].set_permissions(un_authed_role, overwrite=remove_read)
         await categories[staff_category].set_permissions(everyone_role, overwrite=remove_read)
-        # Overwrite Student's Area category permissions
+        # Overwrite Student's Area category read permissions
         await categories[student_category].set_permissions(admin_role, overwrite=add_read)
         await categories[student_category].set_permissions(ta_role, overwrite=add_read)
         await categories[student_category].set_permissions(student_role, overwrite=add_read)
         await categories[student_category].set_permissions(un_authed_role, overwrite=remove_read)
         await categories[student_category].set_permissions(everyone_role, overwrite=remove_read)
-        # Overwrite Bulletin Board category permissions
-        await categories[DMZ_category].set_permissions(everyone_role,
-                                                       overwrite=add_read)
+        # Overwrite Student's Area category media posting permissions
+        await categories[student_category].set_permissions(student_role, overwrite=remove_media)
+        await all_channels[student_category]["text"]["memes"].set_permissions(student_role, overwrite=add_media)
+        # Overwrite Bulletin Board category read permissions
+        await categories[DMZ_category].set_permissions(everyone_role, overwrite=add_read)
+        await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(ta_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(student_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["landing-pad"][auth_room_name].set_permissions(ta_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["landing-pad"][auth_room_name].set_permissions(student_role, overwrite=remove_read)
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
