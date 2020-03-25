@@ -185,8 +185,8 @@ class SetupCommand(Command):
         await categories[DMZ_category].set_permissions(everyone_role, overwrite=add_read)
         await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(ta_role, overwrite=remove_read)
         await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(student_role, overwrite=remove_read)
-        await all_channels[DMZ_category]["landing-pad"][auth_room_name].set_permissions(ta_role, overwrite=remove_read)
-        await all_channels[DMZ_category]["landing-pad"][auth_room_name].set_permissions(student_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["text"]["landing-pad"].set_permissions(ta_role, overwrite=remove_read)
+        await all_channels[DMZ_category]["text"]["landing-pad"].set_permissions(student_role, overwrite=remove_read)
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
