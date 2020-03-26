@@ -405,7 +405,7 @@ class AcceptStudent(Command):
         session_category: CategoryChannel = await self.guild.create_category_channel(
             "Session for {}".format(name(session.member)),
             overwrites={
-                role: PermissionOverwrite(read_messages=True),
+                role: PermissionOverwrite(read_messages=True, attach_files=True, embed_link=True),
                 ra.student: PermissionOverwrite(read_messages=False),
                 ra.un_authenticated: PermissionOverwrite(read_messages=False)
             })
