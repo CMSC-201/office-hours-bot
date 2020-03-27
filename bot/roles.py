@@ -8,12 +8,14 @@ class RoleAuthority:
     __STUDENT_NAME = "Student"
     __UNAUTHED_NAME = "Unauthed"
     __TA_NAME = "TA"
+    __EVERYONE_NAME = "@everyone"
 
     def __init__(self, guild: Guild):
         self.admin: Optional[Role] = None
         self.student: Optional[Role] = None
         self.un_authenticated: Optional[Role] = None
         self.ta: Optional[Role] = None
+        self.everyone: Optional[Role] = None
 
         for role in guild.roles:
             if role.name == self.__ADMIN_NAME:
@@ -24,6 +26,8 @@ class RoleAuthority:
                 self.un_authenticated = role
             elif role.name == self.__TA_NAME:
                 self.ta = role
+            elif role.name == self.__EVERYONE_NAME:
+                self.everyone = role
 
     def ta_or_higher(self, member: Member) -> bool:
         """
