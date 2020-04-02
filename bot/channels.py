@@ -49,12 +49,14 @@ class ChannelAuthority:
         except KeyError:
             logger.warning("Unable to load channel authority!  Run setup!")
 
-    def save_channels(self, waiting_channel, queue_channel, auth_channel) -> None:
+    def save_channels(self, bulletin_category, waiting_channel, queue_channel, auth_channel) -> None:
+        self.bulletin_category = bulletin_category
         self.waiting_channel = waiting_channel
         self.queue_channel = queue_channel
         self.auth_channel = auth_channel
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = {
+            self.__BULLETIN_CHANNEL_KEY: self.bulletin_category.id,
             self.__WAITING_CHANNEL_KEY: self.waiting_channel.id,
             self.__QUEUE_CHANNEL_KEY: self.queue_channel.id,
             self.__AUTH_CHANNEL_KEY: self.auth_channel.id,

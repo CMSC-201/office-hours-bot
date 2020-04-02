@@ -164,8 +164,8 @@ class SetupCommand(Command):
                 everyone_role = role
         remove_read: PermissionOverwrite = PermissionOverwrite(read_messages=False)
         add_read: PermissionOverwrite = PermissionOverwrite(read_messages=True)
-        remove_media: PermissionOverwrite = PermissionOverwrite(attach_files=False, embed_link=False)
-        add_media: PermissionOverwrite = PermissionOverwrite(attach_files=True, embed_link=True)
+        remove_media: PermissionOverwrite = PermissionOverwrite(attach_files=False, embed_links=False)
+        add_media: PermissionOverwrite = PermissionOverwrite(attach_files=True, embed_links=True)
         # Overwrite Instructor's Area category read permissions
         await categories[staff_category].set_permissions(admin_role, overwrite=add_read)
         await categories[staff_category].set_permissions(ta_role, overwrite=add_read)
@@ -190,7 +190,7 @@ class SetupCommand(Command):
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
-        channel_authority.save_channels(waiting_room, queue_room, auth_room)
+        channel_authority.save_channels(categories[DMZ_category], waiting_room, queue_room, auth_room)
 
         await first.send("Righto! You're good to go, boss!")
 
@@ -224,7 +224,7 @@ class SetupCommand(Command):
                                    connect=True,
                                    speak=True,
                                    use_voice_activation=True,
-                                   embed_link=True,
+                                   embed_links=True,
                                    attach_files=True)
         admin_permissions: Permissions = Permissions.all()
         un_authed_permissions: Permissions = Permissions.none()
@@ -405,7 +405,7 @@ class AcceptStudent(Command):
         session_category: CategoryChannel = await self.guild.create_category_channel(
             "Session for {}".format(name(session.member)),
             overwrites={
-                role: PermissionOverwrite(read_messages=True), #, attach_files=True, embed_link=True),
+                role: PermissionOverwrite(read_messages=True, attach_files=True, embed_links=True),
                 ra.student: PermissionOverwrite(read_messages=False),
                 ra.un_authenticated: PermissionOverwrite(read_messages=False)
             })
