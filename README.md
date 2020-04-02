@@ -1,6 +1,6 @@
 # Office Hours Chat Bot
 
-##Heroku Deploy
+## Heroku Deploy
 
 1. Copy `heroku.env.sample` to `heroku.env` and add in all the config options.
 2. Run `heroku config:set $(cat heroku.env)`

@@ -452,6 +452,21 @@ class AcceptStudent(Command):
 
         return False
 
+@command_class
+class Help(Command):
+    async def handle(self):
+        sender: Member = self.message.author
+        ra: RoleAuthority = RoleAuthority(self.guild)
+        if ra.ta_or_higher(sender):
+            self.message.channel.send("{}, great and powerful course staff member!"
+                                      "Go to {} to see all the ways I may serve you!".format(
+                sender.mention, "https://github.com/CMSC-201/office-hours-bot/blob/master/tahelp.md"
+            ))
+
+    async def is_invoked_by_message(message: Message, client: Client):
+        if message.content.startswith("!help"):
+            return True
+        return False
 
 @command_class
 class EndOHSession(Command):
