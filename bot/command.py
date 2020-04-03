@@ -102,9 +102,9 @@ class SetupCommand(Command):
                 logger.warning("Unable to delete role {}".format(role.name))
 
         admin_role, ta_role, student_role, un_authed_role = await self.generate_roles(self.guild, admin_permissions,
-                                                                                 ta_permissions,
-                                                                                 student_permissions,
-                                                                                 un_authed_permissions)
+                                                                                      ta_permissions,
+                                                                                      student_permissions,
+                                                                                      un_authed_permissions)
 
         staff_category = "Instructor's Area"
         student_category = "Student's Area"
@@ -127,7 +127,7 @@ class SetupCommand(Command):
         }
 
         categories = {}
-        all_channels = {} # Replicates channel_structure, but with Channel objects
+        all_channels = {}  # Replicates channel_structure, but with Channel objects
         waiting_room: TextChannel = None
         queue_room: TextChannel = None
         auth_room: TextChannel = None
@@ -136,7 +136,7 @@ class SetupCommand(Command):
             category_channel: CategoryChannel = await self.guild.create_category(category)
 
             categories[category] = category_channel
-            all_channels[category] = {"text":{},"voice":{}}
+            all_channels[category] = {"text": {}, "voice": {}}
 
             for name in text:
                 channel = await category_channel.create_text_channel(name)
@@ -194,9 +194,11 @@ class SetupCommand(Command):
 
         await first.send("Righto! You're good to go, boss!")
 
-    async def generate_roles(self, guild, admin_permissions, ta_permissions, student_permissions, un_authed_permissions):
+    async def generate_roles(self, guild, admin_permissions, ta_permissions, student_permissions,
+                             un_authed_permissions):
         # Adding roles -- do NOT change the order without good reason!
-        admin_role: Role = await guild.create_role(name="Admin", permissions=admin_permissions, mentionable=True, hoist=True)
+        admin_role: Role = await guild.create_role(name="Admin", permissions=admin_permissions, mentionable=True,
+                                                   hoist=True)
         # await admin.edit(position=4)
         logger.info("Created role Admin")
         ta_role: Role = await guild.create_role(name="TA", permissions=student_permissions, mentionable=True,
@@ -207,8 +209,9 @@ class SetupCommand(Command):
                                                      hoist=True)
         # await student_role.edit(position=2)  # just above @everyone
         logger.info("Created role Student")
-        un_authed_role: Role = await guild.create_role(name="Unauthed", permissions=un_authed_permissions, mentionable=True,
-                                                  hoist=True)
+        un_authed_role: Role = await guild.create_role(name="Unauthed", permissions=un_authed_permissions,
+                                                       mentionable=True,
+                                                       hoist=True)
         # await un_authed.edit(position=1)
         logger.info("Created role Unauthed")
         return admin_role, ta_role, student_role, un_authed_role
@@ -229,8 +232,8 @@ class SetupCommand(Command):
         admin_permissions: Permissions = Permissions.all()
         un_authed_permissions: Permissions = Permissions.none()
         un_authed_permissions.update(read_message_history=True,
-                               read_messages=True,
-                               send_messages=True)
+                                     read_messages=True,
+                                     send_messages=True)
         ta_permissions: Permissions = Permissions.all()
         ta_permissions.update(administrator=False,
                               admin_permissions=False,
@@ -452,21 +455,29 @@ class AcceptStudent(Command):
 
         return False
 
+
 @command_class
 class Help(Command):
+    prefix = "https://github.com/CMSC-201/office-hours-bot/blob/master/"
+
     async def handle(self):
         sender: Member = self.message.author
         ra: RoleAuthority = RoleAuthority(self.guild)
         if ra.ta_or_higher(sender):
-            self.message.channel.send("{}, great and powerful course staff member!"
+            await self.message.channel.send("{}, great and powerful course staff member!"
                                       "Go to {} to see all the ways I may serve you!".format(
-                sender.mention, "https://github.com/CMSC-201/office-hours-bot/blob/master/tahelp.md"
+                sender.mention, self.prefix + "tahelp.md"
+            ))
+        else:
+            await self.message.channel.send("You can find a guide to using office hours here: {}".format(
+                self.prefix + "student.md"
             ))
 
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!help"):
             return True
         return False
+
 
 @command_class
 class EndOHSession(Command):
@@ -523,6 +534,7 @@ async def is_oh_command(client, message, type):
             return False
     return False
 
+
 @command_class
 class StartOfficeHours(Command):
     async def handle(self):
@@ -555,8 +567,6 @@ class EndOfficeHours(Command):
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         return await is_oh_command(client, message, "end")
-
-
 
 
 @command_class
