@@ -464,7 +464,7 @@ class Help(Command):
         sender: Member = self.message.author
         ra: RoleAuthority = RoleAuthority(self.guild)
         if ra.ta_or_higher(sender):
-            await self.message.channel.send("{}, great and powerful course staff member!"
+            await self.message.channel.send("{}, great and powerful course staff member! "
                                       "Go to {} to see all the ways I may serve you!".format(
                 sender.mention, self.prefix + "tahelp.md"
             ))
