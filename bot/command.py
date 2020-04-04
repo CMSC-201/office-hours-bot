@@ -420,7 +420,7 @@ class AcceptStudent(Command):
         await session.announcement.delete()
         await self.message.delete()
         ca.add_oh_session(session)
-        await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close send the session!".format(
+        await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close to end the session!".format(
             session.member.mention,
             session.ta.mention,
         ))
