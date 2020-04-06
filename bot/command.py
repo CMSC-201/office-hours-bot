@@ -340,6 +340,7 @@ class EnterQueue(Command):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
         if message.content.startswith("!request"):
             qa: QueueAuthority = QueueAuthority(message.guild)
+            position = qa.get_queue_position_of(message.author)
             if not qa.is_office_hours_open():
                 warning = await message.channel.send(
                     "Office hours are closed.  Please try again after they have opened.".format(
@@ -348,11 +349,11 @@ class EnterQueue(Command):
                 await warning.delete(delay=7)
                 await message.delete()
                 return False
-            if qa.is_member_in_queue(message.author):
+            if position > -1:
                 warning = await message.channel.send(
-                    "{} you are already in the queue.  Please continue waiting.".format(
+                    "{} you are already in position {} in the queue.  Please continue waiting.".format(
                         message.author.mention,
-                        ca.waiting_channel.mention))
+                        qa + 1))
                 await warning.delete(delay=7)
                 await message.delete()
                 return False
@@ -373,11 +374,21 @@ class QueueStatus(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         queue = qa.retrieve_queue()
-        await self.message.channel.send(
-            "{}, there are {} in the queue presently.  We appreciate your patience.".format(
-                self.message.author.mention,
-                len(queue)
-            ))
+        position = qa.get_queue_position_of(self.message.author)
+        if position > -1:
+            await self.message.channel.send(
+                "{}, you are in position {} out of {} presently.  We appreciate your patience.".format(
+                    self.message.author.mention,
+                    position + 1,
+                    len(queue)
+                ))
+        else:
+            await self.message.channel.send(
+                "{}, there are {} in the queue presently.  We appreciate your patience.".format(
+                    self.message.author.mention,
+                    len(queue)
+                ))
+
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
