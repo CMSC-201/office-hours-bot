@@ -326,6 +326,8 @@ class EnterQueue(Command):
         embeddedMsg.set_author(name=name(author))
         embeddedMsg.add_field(name="Accept request by typing",
                               value="!accept")
+        embeddedMsg.add_field(name="Reject request by typing",
+                              value="!reject {} [text to be sent to student]".format(author.id))
         # Send embedded message
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
         qa.add_to_queue(author, request, announcement)
@@ -457,6 +459,80 @@ class AcceptStudent(Command):
 
 
 @command_class
+class RejectStudent(Command):
+    async def handle(self):
+        qa: QueueAuthority = QueueAuthority(self.guild)
+
+        student_id = self.message.content.split(" ")[1]
+        student: Member = self.guild.get_member(int(student_id))
+
+        session: OHSession = await qa.find_and_remove_by_user_id(student)
+        await session.announcement.delete()
+        reject_message = " ".join(self.message.content.split(" ")[2:])
+        await student.send("Your request was fulfilled by the following message: {}".format(reject_message))
+
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+
+        if message.content.startswith("!reject"):
+            ra: RoleAuthority = RoleAuthority(message.guild)
+
+            # check if the sender has permission to issue this command
+            if ra.ta_or_higher(message.author):
+                ca: ChannelAuthority = ChannelAuthority(message.guild)
+                malformed = False
+
+                # Check to see if a there is a valid member id and message
+                guild: Guild = message.guild;
+                try:
+                    # checks for at least 3 words
+                    if len(message.content.split(" ")) < 3:
+                        malformed = True
+                    else:
+                        member_id = int(message.content.split(" ")[1])
+                        member_mentioned: Member = guild.get_member(member_id)
+                        # checks if the supplied id is a valid id
+                        if not member_mentioned:
+                            malformed = True
+                # if an exception is thrown above, then it's something real wonkey (like a non-int id)
+                except:
+                    malformed = True
+
+                # tell them it's malformed and supply correct format
+                if malformed:
+                    admonishment = await message.channel.send(
+                        "Reject must be of the form `!reject [integer userid] [message]`".format(
+                            message.author.mention,
+                            ca.queue_channel.mention
+                        ))
+                    await admonishment.delete(delay=7)
+                    await message.delete()
+                    return False
+                # if it's well-formed and in the correct channel, we have success!
+                if message.channel == ca.queue_channel:
+                    return True
+                else:
+                    # else point them to the correct channel
+                    admonishment = await message.channel.send("{}, you must be in {} to reject a student.".format(
+                        message.author.mention,
+                        ca.queue_channel.mention
+                    ))
+                    await admonishment.delete(delay=7)
+                    await message.delete()
+                    return False
+            else:
+                admonishment = await message.channel.send("Silly {}, you're not a TA!".format(
+                    message.author.mention
+                ))
+                await admonishment.delete(delay=7)
+                await message.delete()
+                return False
+
+        return False
+
+
+@command_class
 class Help(Command):
     prefix = "https://github.com/CMSC-201/office-hours-bot/blob/master/"
 
@@ -465,7 +541,7 @@ class Help(Command):
         ra: RoleAuthority = RoleAuthority(self.guild)
         if ra.ta_or_higher(sender):
             await self.message.channel.send("{}, great and powerful course staff member! "
-                                      "Go to {} to see all the ways I may serve you!".format(
+                                            "Go to {} to see all the ways I may serve you!".format(
                 sender.mention, self.prefix + "tahelp.md"
             ))
         else:
