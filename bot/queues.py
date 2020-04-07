@@ -140,6 +140,15 @@ class QueueAuthority:
 
         return False
 
+    @staticmethod
+    def queue_for_web():
+        collection = mongo.db[QueueAuthority.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            return []
+        else:
+            return document["queue"]
+
     def retrieve_queue(self):
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
