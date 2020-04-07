@@ -93,6 +93,37 @@ class QueueAuthority:
                          announcement=message,
                          ta=ta)
 
+    async def find_and_remove_by_user_id(self, student: Member):
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            return None
+        if not document["queue"]:
+            return None
+
+        output_session = None
+        for i, session in enumerate(document["queue"]):
+            if session[self.__MEMBER_ID_FIELD] == student.id:
+                output_session = session
+                del document["queue"][i]
+                break
+
+        # get the message object
+        message: Optional[Message] = None
+        for channel in self.guild.text_channels:
+            try:
+                m = await channel.fetch_message(output_session[self.__MESSAGE_ID_FIELD])
+                if m:
+                    message = m
+            except NotFound:
+                pass
+
+        collection.replace_one({"_id": document["_id"]}, document)
+        return OHSession(member=self.guild.get_member(output_session[self.__MEMBER_ID_FIELD]),
+                         request=output_session[self.__REQUEST_FIELD],
+                         announcement=message,
+                         ta=None)
+
     def is_member_in_queue(self, member: Member):
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
