@@ -20,15 +20,18 @@
         (though your ID number is always available through other means).
     </p>
 
-    <p>x
+    <p>
         If your number is at the top of the list, you will be the next student helped.
     </p>
-
+    {% if queue %}
     <ol class="list-group">
         {% for item in queue %}
         <li class="list-group-item">{{loop.index}}. {{item.member}}</li>
         {% endfor %}
     </ol>
+    {% else %}
+    <h3>The queue is empty!</h3>
+    {% endif %}
 </div>
 
 <!-- Optional JavaScript -->
