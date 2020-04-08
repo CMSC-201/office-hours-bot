@@ -56,6 +56,7 @@ class QueueAuthority:
         if not document:
             document = {
                 "queue": [],
+                "available_tas": [],
                 "open": True,
             }
             collection.insert(document)
@@ -130,6 +131,7 @@ class QueueAuthority:
         if not document:
             document = {
                 "queue": [],
+                "available_tas": [],
                 "open": True,
             }
             collection.insert(document)
@@ -157,17 +159,33 @@ class QueueAuthority:
         else:
             return document["queue"]
 
-    def remove_all(self):
+    async def remove_all(self):
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
         if not document:
             document = {
                 "queue": [],
+                "available_tas": [],
                 "open": False,
             }
             collection.insert(document)
 
+        while len(document["queue"]) > 0:
+            session = document["queue"][0]
+            document["queue"] = document["queue"][1:]
+            collection.replace_one({"_id": document["_id"]}, document)
+
+            # delete the announcement
+            for channel in self.guild.text_channels:
+                try:
+                    m: Optional[Message] = await channel.fetch_message(session[self.__MESSAGE_ID_FIELD])
+                    if m:
+                        await m.delete()
+                except NotFound:
+                    pass
+
         document["queue"] = []
+        document["available_tas"] = []
         document["open"] = False
         collection.replace_one({"_id": document["_id"]}, document)
 
@@ -178,16 +196,69 @@ class QueueAuthority:
             return False
         return True
 
-    def open_office_hours(self):
+    def open_office_hours(self, ta_uid: int) -> bool:
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
         if not document:
             document = {
                 "queue": [],
+                "available_tas": [],
+                "open": True,
+            }
+            collection.insert(document)
+        
+        # Check if this is a new queue beginning and if new TA queueing
+        fresh_start, is_new_ta = False, False
+        if document["open"]:
+            # Only check existing TA if open
+            if ta_uid not in document["available_tas"]:
+                document["available_tas"].append(ta_uid)
+                is_new_ta = True
+
+        else:
+            document["queue"] = []
+            document["available_tas"] = [ta_uid]
+            document["open"] = True
+            fresh_start = True
+            is_new_ta = True
+
+        collection.replace_one({"_id": document["_id"]}, document)
+        return fresh_start, is_new_ta
+
+    def close_office_hours(self, ta_uid: int) -> int:
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            document = {
+                "queue": [],
+                "available_tas": [],
                 "open": False,
             }
             collection.insert(document)
-
-        document["queue"] = []
-        document["open"] = True
+        
+        was_removed = False
+        tas = len(document["available_tas"])
+        if ta_uid in document["available_tas"]:
+            document["available_tas"].remove(ta_uid)
+            was_removed = True
+            tas -= 1
+            
         collection.replace_one({"_id": document["_id"]}, document)
+        return document["open"], was_removed, tas
+
+    def is_ta_on_duty(self, ta_uid: int) -> bool:
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            document = {
+                "queue": [],
+                "available_tas": [],
+                "open": True,
+            }
+            collection.insert(document)
+
+        if ta_uid in document["available_tas"]:
+            return True
+
+        return False
+
