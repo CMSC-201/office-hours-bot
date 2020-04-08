@@ -22,6 +22,10 @@ Once you have finished helping the student, you can may end the session with the
 
 NOTE:  all course staff can see all of the OH session channels.  This means that occasionally someone might pop in to help out.  This is great!
 
+### Rejecting a student from the queue
+
+If a student has no message, or they have been repeatedly entering the queue at the expense of others, or if their message is a simple question you can answer, you can reject them from the queue.  You can reject students from any point in the queue.  The command is `!reject [user id] [reason]`.  You MUST supply a reason, and your message will stay in the chat, so please be polite to students -- they are just here for help.
+
 ### Opening and closing office hours
 
 WARNING!  Taking either of these actions will clear the queue!  Only use these commands if NO ONE ELSE IS CURRENTLY HELPING STUDENTS.

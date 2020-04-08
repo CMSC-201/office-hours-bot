@@ -7,8 +7,7 @@ from queues import QueueAuthority
 app = Flask(__name__)
 
 @app.route('/')
-def hello_world():
-
+def index():
     queue = QueueAuthority.queue_for_web()
     for item in queue:
         item["member"] = item["member-id"]
