@@ -5,6 +5,7 @@ import discord
 from discord import Message, Guild, Client, Member, TextChannel, CategoryChannel, PermissionOverwrite, Role, Permissions
 
 from channels import ChannelAuthority
+from globals import get_globals
 from member import MemberAuthority
 from queues import QueueAuthority, OHSession
 from roles import RoleAuthority
@@ -375,11 +376,20 @@ class QueueStatus(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         queue = qa.retrieve_queue()
-        await self.message.channel.send(
-            "{}, there are {} in the queue presently.  We appreciate your patience.".format(
-                self.message.author.mention,
-                len(queue)
+        if "id" in self.message.content:
+            await self.message.author.send("Your id is {}.  Your spot in the queue will appear here: {}".format(
+                self.message.author.id,
+                get_globals()["props"]["queue_url"],
             ))
+
+        else:
+            msg: Message = await self.message.channel.send(
+                "Queue status can be viewed here:  {}.  Do `!status id` and I will DM you your id.".format(
+                    get_globals()["props"]["queue_url"]
+                ))
+            await msg.delete(delay=10)
+
+        await self.message.delete()
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
