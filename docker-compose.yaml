@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+
+  bot-201:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: bot
+    #env_file:
+    #  - /envs/201.env
+    command: python /bot/bot.py
+
+  bot-202:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: bot
+    #env_file:
+    #  - /envs/202.env
+    command: python /bot/bot.py
+
+
+  bot-341:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: bot
+    #env_file:
+    #  - /envs/341.env
+    command: python /bot/bot.py
+
+  bot-staging:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: bot
+    env_file:
+      - heroku.env
+    command: python bot/bot.py
