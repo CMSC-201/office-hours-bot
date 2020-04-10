@@ -4,6 +4,8 @@ from flask import render_template
 from globals import get_globals
 from queues import QueueAuthority
 
+
+
 app = Flask(__name__)
 
 @app.route('/')

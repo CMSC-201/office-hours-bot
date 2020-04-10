@@ -8,6 +8,7 @@ from command import handle_message
 from globals import get_globals
 from roles import RoleAuthority
 
+
 logger = logging.getLogger('bot_main')
 
 
