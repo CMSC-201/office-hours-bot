@@ -37,4 +37,4 @@ services:
     image: bot
     env_file:
       - /Users/jamesstevenson/staging.env
-    command: python /bot/bot.py
+    command: python bot/bot.py

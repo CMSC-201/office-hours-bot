@@ -22,11 +22,9 @@ RUN pip install -r /requirements.txt \
         /var/tmp/* \
         /usr/share/man \
         /usr/share/doc \
-        /usr/share/doc-base 
+        /usr/share/doc-base
 
 
 COPY ./bot /office-hours-bot/bot
 
 WORKDIR /office-hours-bot
-
-ENTRYPOINT ["/entrypoint"]
