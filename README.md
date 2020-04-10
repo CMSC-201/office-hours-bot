@@ -13,6 +13,10 @@
 1. Create a copy of `sample-prop.json` called 'prop.json' and put in your values.
 2. `python3 bot.py`
 
+## Docker Compose Deploy
+1. docker-compose build
+2. docker-compose up bot-staging
+
 #Remember not to version private keys!
 
 ## Setup

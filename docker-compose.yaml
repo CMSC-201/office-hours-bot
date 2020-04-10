@@ -36,5 +36,5 @@ services:
       dockerfile: ./Dockerfile
     image: bot
     env_file:
-      - /Users/jamesstevenson/staging.env
+      - heroku.env
     command: python bot/bot.py
