@@ -606,10 +606,14 @@ class EndOHSession(Command):
         return False
 
 
-async def is_oh_command(client, message, type):
+async def is_oh_command(client, message, types):
     ca: ChannelAuthority = ChannelAuthority(message.guild)
+    has_command = False
+    for type in types:
+        if type in message.content.lower():
+            has_command = True
     if is_bot_mentioned(message, client) and \
-            ("oh" in message.content.lower() and type in message.content.lower()):
+            ("oh" in message.content.lower() and has_command):
         if message.channel == ca.queue_channel:
             ra: RoleAuthority = RoleAuthority(message.guild)
             if ra.ta_or_higher(message.author):
@@ -619,7 +623,7 @@ async def is_oh_command(client, message, type):
                 return False
         else:
             await message.channel.send("You have to be in " +
-                                       ca.queue_channel.mention + " to {} office hours.".format(type))
+                                       ca.queue_channel.mention + " to {} office hours.".format(types))
             return False
     return False
 
@@ -643,7 +647,7 @@ class StartOfficeHours(Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        return await is_oh_command(client, message, "start")
+        return await is_oh_command(client, message, ["start", "open"])
 
 
 @command_class
@@ -667,7 +671,7 @@ class EndOfficeHours(Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        return await is_oh_command(client, message, "end")
+        return await is_oh_command(client, message, ["end", "close"])
 
 
 @command_class

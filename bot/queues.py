@@ -206,11 +206,13 @@ class QueueAuthority:
                 "open": True,
             }
             collection.insert(document)
-        
+        if "available_tas" not in document:
+            document["available_tas"] = []
         # Check if this is a new queue beginning and if new TA queueing
         fresh_start, is_new_ta = False, False
         if document["open"]:
             # Only check existing TA if open
+
             if ta_uid not in document["available_tas"]:
                 document["available_tas"].append(ta_uid)
                 is_new_ta = True
@@ -235,14 +237,14 @@ class QueueAuthority:
                 "open": False,
             }
             collection.insert(document)
-        
+
         was_removed = False
         tas = len(document["available_tas"])
         if ta_uid in document["available_tas"]:
             document["available_tas"].remove(ta_uid)
             was_removed = True
             tas -= 1
-            
+
         collection.replace_one({"_id": document["_id"]}, document)
         return document["open"], was_removed, tas
 
