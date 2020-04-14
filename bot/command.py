@@ -403,6 +403,9 @@ class QueueStatus(Command):
 class AcceptStudent(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
+        if not qa.is_ta_on_duty(self.message.author.id):
+            await self.message.channel.send("You must be on duty to accept a request!")
+            return
         # get oldest queue item (and also remove it)
         session: OHSession = await qa.dequeue(self.message.author)
 
@@ -494,7 +497,7 @@ class RejectStudent(Command):
                 malformed = False
 
                 # Check to see if a there is a valid member id and message
-                guild: Guild = message.guild;
+                guild: Guild = message.guild
                 try:
                     # checks for at least 3 words
                     if len(message.content.split(" ")) < 3:
@@ -603,10 +606,14 @@ class EndOHSession(Command):
         return False
 
 
-async def is_oh_command(client, message, type):
+async def is_oh_command(client, message, types):
     ca: ChannelAuthority = ChannelAuthority(message.guild)
+    has_command = False
+    for type in types:
+        if type in message.content.lower():
+            has_command = True
     if is_bot_mentioned(message, client) and \
-            ("oh" in message.content.lower() and type in message.content.lower()):
+            ("oh" in message.content.lower() and has_command):
         if message.channel == ca.queue_channel:
             ra: RoleAuthority = RoleAuthority(message.guild)
             if ra.ta_or_higher(message.author):
@@ -616,7 +623,7 @@ async def is_oh_command(client, message, type):
                 return False
         else:
             await message.channel.send("You have to be in " +
-                                       ca.queue_channel.mention + " to {} office hours.".format(type))
+                                       ca.queue_channel.mention + " to {} office hours.".format(types))
             return False
     return False
 
@@ -625,34 +632,46 @@ async def is_oh_command(client, message, type):
 class StartOfficeHours(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
-        qa.open_office_hours()
         ca: ChannelAuthority = ChannelAuthority(self.guild)
-        await ca.waiting_channel.send(
-            "Office hours are live.  Get in line with !request")
-        logger.info("Office hours opened by {}".format(
-            name(self.message.author)
-        ))
+        # Add TA to list of available TAs. Return True if fresh opening, True if newly added TA
+        fresh_open, is_new_ta = qa.open_office_hours(self.message.author.id)
+        if fresh_open:
+            await ca.queue_channel.send("Office hours are live!")
+            await ca.waiting_channel.send(
+                "Office hours are live.  Get in line with !request")
+            logger.info("Office hours opened by {}".format(
+                name(self.message.author)
+            ))
+        if is_new_ta:
+            await ca.queue_channel.send(name(self.message.author) + " has checked into office hours!")
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        return await is_oh_command(client, message, "start")
+        return await is_oh_command(client, message, ["start", "open"])
 
 
 @command_class
 class EndOfficeHours(Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
-        qa.remove_all()
         ca: ChannelAuthority = ChannelAuthority(self.guild)
-        await ca.waiting_channel.send(
-            "Ok, y'all.  Office hours have ended for now.  An announcement will appear here when they have reopened.")
-        logger.info("Office hours closed by {}".format(
-            name(self.message.author)
-        ))
+        # Remove TA from list of available TAs.
+        is_open, was_removed, ta_count = qa.close_office_hours(self.message.author.id)
+        if ta_count > 0 and is_open and was_removed:
+            await ca.queue_channel.send(name(self.message.author) + " has checked out of office hours.")
+        # Last TA was removed, or TA queue was empty when called
+        elif ta_count <= 0 and is_open:
+            await qa.remove_all()
+            await ca.queue_channel.send(name(self.message.author) + " has closed office hours!")
+            await ca.waiting_channel.send(
+                "Ok, y'all.  Office hours have ended for now.  An announcement will appear here when they have reopened.")
+            logger.info("Office hours closed by {}".format(
+                name(self.message.author)
+            ))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        return await is_oh_command(client, message, "end")
+        return await is_oh_command(client, message, ["end", "close"])
 
 
 @command_class
