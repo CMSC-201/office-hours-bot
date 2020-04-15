@@ -16,8 +16,7 @@ async def is_oh_command(client, message, types):
     for type in types:
         if type in message.content.lower():
             has_command = True
-    if command.is_bot_mentioned(message, client) and \
-            ("oh" in message.content.lower() and has_command):
+    if command.is_bot_mentioned(message, client) and "oh" in message.content.lower() and has_command:
         if message.channel == ca.queue_channel:
             ra: RoleAuthority = RoleAuthority(message.guild)
             if ra.ta_or_higher(message.author):
@@ -61,6 +60,12 @@ class EndOfficeHours(command.Command):
         qa: QueueAuthority = QueueAuthority(self.guild)
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         # Remove TA from list of available TAs.
+
+        if "force" in self.message.content:
+            qa.force_close_office_hours()
+            await ca.queue_channel.send(command.name(self.message.author) + " has forced OH to close.")
+            return
+
         is_open, was_removed, ta_count = qa.close_office_hours(self.message.author.id)
         if ta_count > 0 and is_open and was_removed:
             await ca.queue_channel.send(command.name(self.message.author) + " has checked out of office hours.")
