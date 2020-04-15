@@ -28,9 +28,11 @@ If a student has no message, or they have been repeatedly entering the queue at 
 
 ### Opening and closing office hours
 
-WARNING!  Taking either of these actions will clear the queue!  Only use these commands if NO ONE ELSE IS CURRENTLY HELPING STUDENTS.
+To start office hours, mention the bot and say `oh start`.  You will not be able to accept students until you have done this, even if another staff member has opened their office hours.
 
-To close office hours, mention the bot (e.g. @201bot) and say `oh end`.  To start office hours, mention the bot and say `oh start`.
+To close office hours, mention the bot (e.g. @201bot) and say `oh end`.  
+
+If you want to close office hours for everyone (e.g. someone forgot to close their OH session) you can mention the bot and say `oh end force`.  This will end the office hours for all TAs.
 
 ## Student commands
 While you are unlikely to use these commands, they are documented here so that you can help any student that is having difficulty properly using the bot.

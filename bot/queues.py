@@ -227,6 +227,23 @@ class QueueAuthority:
         collection.replace_one({"_id": document["_id"]}, document)
         return fresh_start, is_new_ta
 
+    def force_close_office_hours(self) -> int:
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            document = {
+                "queue": [],
+                "available_tas": [],
+                "open": False,
+            }
+            collection.insert(document)
+
+        document["queue"] = []
+        document["available_tas"] = []
+        document['open'] = False
+
+        collection.replace_one({"_id": document["_id"]}, document)
+
     def close_office_hours(self, ta_uid: int) -> int:
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
@@ -263,4 +280,3 @@ class QueueAuthority:
             return True
 
         return False
-
