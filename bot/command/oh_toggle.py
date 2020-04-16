@@ -64,6 +64,8 @@ class EndOfficeHours(command.Command):
         if "force" in self.message.content:
             qa.force_close_office_hours()
             await ca.queue_channel.send(command.name(self.message.author) + " has forced OH to close.")
+            await ca.waiting_channel.send(
+                "Ok, y'all.  Office hours have ended for now.  An announcement will appear here when they have reopened.")
             return
 
         is_open, was_removed, ta_count = qa.close_office_hours(self.message.author.id)
