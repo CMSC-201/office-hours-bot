@@ -2,6 +2,8 @@ from typing import Optional
 
 from discord import Guild, Member, Message, CategoryChannel, NotFound
 
+from datetime import datetime
+
 import mongo
 
 
@@ -189,6 +191,46 @@ class QueueAuthority:
         document["open"] = False
         collection.replace_one({"_id": document["_id"]}, document)
 
+    # No idea if this works
+    def save_last_queue(self):
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            return None
+
+        # Probably ought to change this to a safer/more robust method of 
+        #   storage or diff filename (for multiple classes and junk)
+        with open("last_queue.txt", 'w') as queue_file:
+            # Store timestamp from when queue closed
+            curr_time = (datetime.now()).strftime("%Y-%m-%d %H:%M:%S.%f")
+            queue_file.write(curr_time + '\n')
+
+            # Store IDs from current queue
+            for id in document["queue"]:
+                queue_file.write(str(id) + '\n')
+
+    # And no idea if this works either
+    def open_last_queue(self):
+        # Threshold to preserve queue, in hours
+        threshold = 2
+        try:
+            queue = []
+            with open("last_queue.txt") as queue_file:
+                # Check if we should use the queue, or if it is too old
+                queue_time = queue_file.readline().strip()
+                queue_time = datetime.strptime(queue_time, "%Y-%m-%d %H:%M:%S.%f")
+                save_time = queue_time.replace(hour = queue_time.hour + threshold)
+
+                # Within threshold of old queue
+                if datetime.now() <= save_time:
+                    queue = queue_file.readlines()
+                    queue = [int(i) for i in queue] # Do we need to cast these to anything? Are IDs ints?
+            return queue
+        except:
+            # No previous queue file...
+            return []
+
+
     def is_office_hours_open(self) -> bool:
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
@@ -218,7 +260,8 @@ class QueueAuthority:
                 is_new_ta = True
 
         else:
-            document["queue"] = []
+            saved_queue = self.open_last_queue()
+            document["queue"] = saved_queue
             document["available_tas"] = [ta_uid]
             document["open"] = True
             fresh_start = True
@@ -262,6 +305,10 @@ class QueueAuthority:
             was_removed = True
             tas -= 1
 
+        # If no more TAs, save queue
+        if tas <= 0:
+            self.save_last_queue() # syntax? idk if i need to add self here as a param
+        
         collection.replace_one({"_id": document["_id"]}, document)
         return document["open"], was_removed, tas
 
