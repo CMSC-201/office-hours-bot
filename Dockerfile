@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 PYTHONPATH=$PYTHONPATH:/office-h
 RUN apt-get -qq update \
     && mkdir -p /usr/share/man/man1/ && mkdir -p /usr/share/man/man3/ && mkdir -p /usr/share/man/man7/ \
     && apt-get -qq install -yq --no-install-recommends locales build-essential libssl-dev libffi-dev netbase \
-    python-dev vim \
+    python-dev \
     && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && locale-gen \
     && pip install pip --upgrade
 
