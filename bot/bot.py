@@ -6,8 +6,6 @@ from discord import Message, Guild
 from channels import ChannelAuthority
 from command import handle_message
 from globals import get_globals
-from roles import RoleAuthority
-
 
 logger = logging.getLogger('bot_main')
 
@@ -29,7 +27,7 @@ class MyClient(discord.Client):
         logger.info('Message from {0.author}: {0.content}'.format(message))
 
         # Ignore bot messages
-        if message.author.bot:
+        if message.author == self.user:
             return
 
         await handle_message(message, self)
