@@ -63,7 +63,7 @@ class BotTest(TestCase):
             print("Seems good!")
         else:
             self.assertTrue(False)
-            print("Am sad")
+            print("Am sad!")
         test_bot = TestBot(tester=self)
         test_bot.run(token)
 
