@@ -59,6 +59,8 @@ class BotTest(TestCase):
     def test_bark(self):
         token = environ['TEST_BOT_TOKEN']
         print("SECRET:  ", token)
+        if '3MzQ' in token:
+            print("Seems good!")
         test_bot = TestBot(tester=self)
         test_bot.run(token)
 
