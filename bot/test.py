@@ -61,6 +61,9 @@ class BotTest(TestCase):
         print("SECRET:  ", token)
         if '3MzQ' in token:
             print("Seems good!")
+        else:
+            self.assertTrue(False)
+            print("Am sad")
         test_bot = TestBot(tester=self)
         test_bot.run(token)
 
