@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 class MemberAuthority:
-    __MEMBER_COLLECTION = "members"
+    __ADMIN_GROUP = 'admin'
+    __TA_GROUP = 'admin'
+    __STUDENTS_GROUP = 'students'
     __AUTHENTICATION_FIELD = "authentication"
 
     __NAME_FIELD = "name"
@@ -20,35 +22,40 @@ class MemberAuthority:
         self.guild = guild
 
     async def authenticate_member(self, member: Member, key: str) -> bool:
-        collection = mongo.db[self.__MEMBER_COLLECTION]
-        document = collection.find_one()
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
 
-        if not document:
-            document = {
-                self.__AUTHENTICATION_FIELD: []
-            }
-            collection.insert(document)
-        found = False
-        for auth_data in document[self.__AUTHENTICATION_FIELD]:
-            if auth_data[self.__KEY_FIELD] == key:
-                name = auth_data[self.__NAME_FIELD]
-                ra: RoleAuthority = RoleAuthority(self.guild)
-                # try:
-                await member.edit(nick=name)
-                await member.add_roles(ra.student)
-                await member.remove_roles(ra.un_authenticated)
-                # except:
-                #     logger.error("Error authenticating user {}".format(member.id))
-                if self.__DISCORD_ID_FIELD in auth_data and auth_data[self.__DISCORD_ID_FIELD] != member.id:
-                    logger.error("Student tried to auth with a new account.  New ID: {}, Old ID: {}".format(
-                        member.id,
-                        auth_data[self.__DISCORD_ID_FIELD]
-                    ))
-                    return False
-                auth_data[self.__DISCORD_ID_FIELD] = member.id
+        found_student = students_group.find_one({'key': key})
+        found_ta = ta_group.find_one({'key': key})
+        found_admin = admin_group.find_one({'key': key})
 
-                found = True
-                break
+        ra: RoleAuthority = RoleAuthority(self.guild)
 
-        collection.replace_one({"_id": document["_id"]}, document)
-        return found
+        found_person = None
+        found_role = None
+
+        for person, role in [(found_student, ra.student),
+                             (found_ta, ra.ta),
+                             (found_admin, ra.admin)]:
+            if person:
+                found_person = person
+                found_role = role
+
+        if found_person:
+            if found_person.get(self.__DISCORD_ID_FIELD) != member.id:
+                logger.error("Human tried to auth with a new account.  New ID: {}, Old ID: {}".format(
+                    member.id,
+                    found_person[self.__DISCORD_ID_FIELD]
+                ))
+                return False
+
+            name = found_person[self.__NAME_FIELD]
+            await member.edit(nick=name)
+            await member.add_roles(found_role)
+            await member.remove_roles(ra.un_authenticated)
+            found_person[self.__DISCORD_ID_FIELD] = member.id
+            return True
+
+        return False
+
