@@ -37,10 +37,10 @@ class MemberAuthority:
             if person:
                 found_person = person
                 found_role = role
-                found_group = students_group
+                found_group = group
 
         if found_person:
-            if found_person.get(self.__DISCORD_ID_FIELD) not in [member.id, '']:
+            if found_person.get(self.__DISCORD_ID_FIELD) and found_person.get(self.__DISCORD_ID_FIELD) in member.id:
                 logger.error("Human tried to auth with a new account.  New ID: {}, Old ID: {}".format(
                     member.id,
                     found_person[self.__DISCORD_ID_FIELD]
@@ -52,9 +52,16 @@ class MemberAuthority:
             await member.add_roles(found_role)
             await member.remove_roles(ra.un_authenticated)
 
-            found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
+            result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
 
-            return True
+            # should be one, if non-zero it indicates that the update occurred.
+            return result.modified_count > 0
 
         return False
 
+    async def deauthenticate_member(self, member: Member) -> bool:
+        ra: RoleAuthority = RoleAuthority(self.guild)
+        for role in member.roles:
+            await member.remove_role(role)
+            await member.add_roles(ra.un_authenticated)
+        return True
