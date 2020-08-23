@@ -55,7 +55,7 @@ class MemberAuthority:
             result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
 
             # should be one, if non-zero it indicates that the update occurred.
-            return result.modified_count > 0
+            return result.modified_count == 1
 
         return False
 
