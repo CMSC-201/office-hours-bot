@@ -22,28 +22,38 @@ def is_bot_mentioned(message: Message, client: Client) -> bool:
 
 
 supported_commands = []
+the_guild = None
 
 
 def command_class(cls):
     supported_commands.append(cls)
 
 
+def set_default_guild(g):
+    global the_guild
+    the_guild = g
+
+
 async def handle_message(message: Message, client: Client):
     if not message.guild:
-        return  # this is a DM to the bot TODO: add DM commands
-    for cmd_class in supported_commands:
-        if await cmd_class.is_invoked_by_message(message, client):
-            command = cmd_class(message, client)
-            await command.handle()
-            return
+        for cmd_class in supported_commands:
+            if await cmd_class.is_invoked_by_direct_message(message, client):
+                command = cmd_class(message, client, the_guild)
+                await command.handle()
+    else:
+        for cmd_class in supported_commands:
+            if await cmd_class.is_invoked_by_message(message, client):
+                command = cmd_class(message, client)
+                await command.handle()
+                return
 
 
 class Command:
-    def __init__(self, message: Message = None, client: Client = None):
+    def __init__(self, message: Message = None, client: Client = None, guild: Guild = None):
         if not message:
             raise ValueError("You must issue a command with a message or guild")
         self.message: Message = message
-        self.guild: Guild = message.guild
+        self.guild: Guild = guild if guild else message.guild
         self.client = client
 
     async def handle(self):
@@ -51,7 +61,12 @@ class Command:
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        pass
+        return False
+
+    @staticmethod
+    async def is_invoked_by_direct_message(message: Message, client: Client):
+        return False
+
 
 
 ## DO NOT MOVE THIS CODE

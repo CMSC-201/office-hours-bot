@@ -1,6 +1,7 @@
 import logging
 
 from discord import Message, Client, Member, User
+from discord.errors import NotFound
 
 import re
 import command
@@ -41,12 +42,12 @@ class RemoveUser(command.Command):
                     member = self.message.guild.get_member(member_document[self.__DISCORD_ID])
                     if member:
                         await self.message.channel.send('Deauthenticating User %s' % member.nick)
-                        await ma.deauthenticate_user(member)
+                        await ma.deauthenticate_member(member)
+
+
                     await self.message.channel.send('Removing User from Database...')
                     group.delete_one({self.__UID_FIELD: uid})
                     await self.message.channel.send('User removal complete.')
-
-        await self.message.delete()
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):

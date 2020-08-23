@@ -34,7 +34,8 @@ class SearchUsers(command.Command):
                 umbc_id_list = [user for user in group.find({'UMBC-Name-Id': match.group('user_identifier')})]
                 print(first_name_list + last_name_list + umbc_id_list)
 
-        await self.message.delete()
+        # gives a NotFound Exception??
+        # await self.message.delete()
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):

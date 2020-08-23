@@ -1,10 +1,10 @@
 import logging
 
 import discord
-from discord import Message, Guild
+from discord import Message, Guild, Member
 
 from channels import ChannelAuthority
-from command import handle_message
+from command import handle_message, set_default_guild
 from globals import get_globals
 
 logger = logging.getLogger('bot_main')
@@ -20,6 +20,7 @@ class MyClient(discord.Client):
         if len(self.guilds) > 1:
             raise ValueError("Bot cannot manage more than one guild at this time.")
 
+        set_default_guild(self.guilds[0])
         logger.info("Bot started.  Waiting for messages.")
 
     async def on_message(self, message: Message):
@@ -31,6 +32,10 @@ class MyClient(discord.Client):
             return
 
         await handle_message(message, self)
+
+    async def on_member_join(self, member: Member):
+        # update this message with your own course, or
+        await member.send('Welcome to Discord Office Hours for CMSC 201, Fall 2020\n I am the 201Bot.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
 
         # ca: ChannelAuthority = ChannelAuthority(message.guild)
         # ra: RoleAuthority = RoleAuthority(message.guild)

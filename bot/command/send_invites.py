@@ -28,40 +28,51 @@ class SendInvites(command.Command):
     __EMAIL_PASSWORD = 'email-password'
     __TYPE = 'type'
 
+    state_variables = {__EMAIL_USERNAME: '', __EMAIL_PASSWORD: ''}
+
     def __init__(self, message: Message = None, client: Client = None):
         super().__init__(message, client)
-        # add this to the database and remove this before deployment
+        # there should be one document in the email settings collection, which is the username and password for the reflector email
         self.email_settings_collection = mongo.db[self.__EMAIL_SETTINGS]
-        self.state_variables = {self.__EMAIL_USERNAME: '', self.__EMAIL_PASSWORD: ''}
-
         email_settings = self.email_settings_collection.find_one({self.__TYPE: self.__EMAIL_SETTINGS})
         if email_settings:
-            self.state_variables = email_settings
+            self.state_variables[self.__EMAIL_USERNAME] = email_settings[self.__EMAIL_USERNAME]
+            self.state_variables[self.__EMAIL_PASSWORD] = email_settings[self.__EMAIL_PASSWORD]
 
 
     async def handle(self):
-        if self.message.content.startswith('send invites update'):
 
-            self.state_variables[self.__EMAIL_USERNAME] = self.message.content.split()[4]
-            self.state_variables[self.__EMAIL_PASSWORD] = self.message.content.split()[5]
-
-            self.email_settings_collection.update_one({self.__TYPE: self.__EMAIL_SETTINGS},
-                                                      {'$set': {self.__EMAIL_USERNAME: self.state_variables[self.__EMAIL_USERNAME],
-                                                                self.__EMAIL_PASSWORD: self.state_variables[self.__EMAIL_PASSWORD]}})
-
-            await self.message.delete()
-            await self.message.channel.send('Updated settings for reflector email.')
-            return
-
-        group = self.message.content.split()[3].lower()
         ra: RoleAuthority = RoleAuthority(self.message.guild)
 
-        attachment: Attachment = self.message.attachments[0]
-        await attachment.save('office_hour_email.html')
-        with open('office_hour_email.html') as email_file:
-            email_prompt = email_file.read()
-
         if ra.admin:
+            if self.message.content.startswith('!send invites update'):
+
+                if len(self.message.content.split()) == 5:
+                    self.state_variables[self.__EMAIL_USERNAME] = self.message.content.split()[3]
+                    self.state_variables[self.__EMAIL_PASSWORD] = self.message.content.split()[4]
+
+                    response = self.email_settings_collection.update_one({self.__TYPE: self.__EMAIL_SETTINGS},
+                                                              {'$set': {self.__EMAIL_USERNAME: self.state_variables[self.__EMAIL_USERNAME],
+                                                                        self.__EMAIL_PASSWORD: self.state_variables[self.__EMAIL_PASSWORD]}}, upsert=True)
+                    # check how many matches were updated...
+                    await self.message.channel.send('Updated settings for reflector email.')
+                else:
+                    await self.message.channel.send('Unable to update settings for reflector email, use !send invites update <username@gmail.com> <password>')
+                await self.message.delete()
+
+                return
+
+            elif not self.state_variables[self.__EMAIL_USERNAME] and not self.state_variables[self.__EMAIL_PASSWORD]:
+                await self.message.delete()
+                await self.message.channel.send('Unable to send, email and password are not set.  ')
+                return
+
+            group = self.message.content.split()[3].lower()
+            attachment: Attachment = self.message.attachments[0]
+            await attachment.save('office_hour_email.html')
+            with open('office_hour_email.html') as email_file:
+                email_prompt = email_file.read()
+
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
             admin_group = mongo.db[self.__ADMIN_GROUP]
@@ -71,7 +82,7 @@ class SendInvites(command.Command):
 
             server = smtplib.SMTP_SSL("smtp.gmail.com", port, context=context)
             try:
-                server.login(self.state_variables['email-username'], self.state_variables['email-password'])
+                server.login(self.state_variables[self.__EMAIL_USERNAME], self.state_variables[self.__EMAIL_PASSWORD])
             except smtplib.SMTPAuthenticationError as smtp_auth_error:
                 await self.message.channel.send(str(smtp_auth_error))
                 return
@@ -79,15 +90,15 @@ class SendInvites(command.Command):
             users_to_send = []
             if group == 'students' or group == 'all':
                 users_to_send.extend(list(students_group.find({})))
-            elif group == 'tas' or group == 'all':
+            if group == 'tas' or group == 'all':
                 users_to_send.extend(list(ta_group.find({})))
-            elif group == 'admin' or group == 'all':
+            if group == 'admin' or group == 'all':
                 users_to_send.extend(list(admin_group.find({})))
 
             for user in users_to_send:
                 student_name = ' '.join([user['First-Name'], user['Last-Name']])
                 response = MIMEMultipart('alternative')
-                response['From'] = self.state_variables['email-username']
+                response['From'] = self.state_variables[self.__EMAIL_USERNAME]
                 response['To'] = '%s@umbc.edu' % user['UMBC-Name-Id']
                 response['Subject'] = '%s, Invitation to Discord Office Hours' % student_name
                 formatted_email_prompt = self.format_email(email_prompt, user)
@@ -118,17 +129,17 @@ class SendInvites(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if message.content.startswith("send invites update"):
+        if message.content.startswith("!send invites update"):
             if len(message.content.split()) == 5:
                 return True
-            else:
-                return False
+            return False
         elif message.content.startswith("!send invites to"):
             split_message = message.content.split()
             if len(split_message) >= 4 and split_message[3].lower() in ['students', 'tas', 'admin', 'all']:
                 if message.attachments:
                     return True
                 else:
+                    await message.channel.send('You must attach a text or html message to be sent. ')
                     return False
             else:
                 return False

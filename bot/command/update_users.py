@@ -28,11 +28,14 @@ class UpdateUsers(command.Command):
     __KEY = 'key'
 
     async def handle(self):
-        attachment: Attachment = self.message.attachments[0]
-        await attachment.save('update_users.csv')
-
         ra: RoleAuthority = RoleAuthority(self.message.guild)
         if ra.admin:
+            if self.message.attachments:
+                attachment: Attachment = self.message.attachments[0]
+                await attachment.save('update_users.csv')
+            else:
+                await self.message.channel.send('Did you attach a csv with the new users?')
+                return
             try:
                 students_group = mongo.db[self.__STUDENTS_GROUP]
                 ta_group = mongo.db[self.__TA_GROUP]

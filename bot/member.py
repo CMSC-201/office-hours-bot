@@ -1,6 +1,6 @@
 import logging
 
-from discord import Guild, Member
+from discord import Guild, Member, Role, User
 
 import mongo
 from roles import RoleAuthority
@@ -31,6 +31,7 @@ class MemberAuthority:
         found_person = None
         found_role = None
         found_group = None
+        print(member, member.id)
 
         for group, role in zip([students_group, ta_group, admin_group], [ra.student, ra.ta, ra.admin]):
             person = group.find_one({'key': key})
@@ -38,30 +39,36 @@ class MemberAuthority:
                 found_person = person
                 found_role = role
                 found_group = group
+                break
 
         if found_person:
-            if found_person.get(self.__DISCORD_ID_FIELD) and found_person.get(self.__DISCORD_ID_FIELD) in member.id:
+            if found_person.get(self.__DISCORD_ID_FIELD) and found_person.get(self.__DISCORD_ID_FIELD) != member.id:
                 logger.error("Human tried to auth with a new account.  New ID: {}, Old ID: {}".format(
                     member.id,
                     found_person[self.__DISCORD_ID_FIELD]
                 ))
                 return False
+            elif not found_person.get(self.__DISCORD_ID_FIELD):
 
-            name = ' '.join([found_person[first_or_last] for first_or_last in self.__NAME_FIELDS])
-            await member.edit(nick=name)
-            await member.add_roles(found_role)
-            await member.remove_roles(ra.un_authenticated)
+                name = ' '.join([found_person[first_or_last] for first_or_last in self.__NAME_FIELDS])
+                await member.edit(nick=name)
+                await member.add_roles(found_role)
+                await member.remove_roles(ra.un_authenticated)
 
-            result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
+                result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
 
-            # should be one, if non-zero it indicates that the update occurred.
-            return result.modified_count == 1
+                # should be one, if non-zero it indicates that the update occurred.
+                # result.matched_count, result.modified_count
+                return result.modified_count > 0
+            else:
+                return True
 
         return False
 
     async def deauthenticate_member(self, member: Member) -> bool:
         ra: RoleAuthority = RoleAuthority(self.guild)
         for role in member.roles:
-            await member.remove_role(role)
+            if not role.is_default():
+                await member.remove_roles(role)
             await member.add_roles(ra.un_authenticated)
         return True
