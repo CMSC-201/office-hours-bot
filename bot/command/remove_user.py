@@ -1,6 +1,6 @@
 import logging
 
-from discord import Message, Client
+from discord import Message, Client, Member, User
 
 import re
 import command
@@ -20,9 +20,11 @@ class RemoveUser(command.Command):
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
     __UID_FIELD = 'UMBC-Name-Id'
+    __DISCORD_ID = 'discord'
 
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.message.guild)
+        ma: MemberAuthority = MemberAuthority(self.message.guild)
         if ra.admin:
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
@@ -32,8 +34,17 @@ class RemoveUser(command.Command):
                 match = re.match(r'!remove\s+user\s+(?P<user_identifier>\w+)', self.message.content)
                 uid = match.group('user_identifier')
                 umbc_id_list = [user for user in group.find({'UMBC-Name-Id': uid})]
+
                 if umbc_id_list:
+                    member_document = umbc_id_list[0]
+                    print(member_document[self.__DISCORD_ID])
+                    member = self.message.guild.get_member(member_document[self.__DISCORD_ID])
+                    if member:
+                        await self.message.channel.send('Deauthenticating User %s' % member.nick)
+                        await ma.deauthenticate_user(member)
+                    await self.message.channel.send('Removing User from Database...')
                     group.delete_one({self.__UID_FIELD: uid})
+                    await self.message.channel.send('User removal complete.')
 
         await self.message.delete()
 
