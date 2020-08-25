@@ -24,6 +24,7 @@ class ChannelAuthority:
     __OH_SESSION_KEY = "oh_sessions"
     __AUTH_CHANNEL_KEY = "auth"
     __BULLETIN_CHANNEL_KEY = "bulletin"
+    __MAINT_CHANNEL_KEY = 'maint'
 
     def __init__(self, guild: Guild):
         self.waiting_channel: TextChannel = None
@@ -49,10 +50,11 @@ class ChannelAuthority:
         except KeyError:
             logger.warning("Unable to load channel authority!  Run setup!")
 
-    def save_channels(self, bulletin_category, waiting_channel, queue_channel, auth_channel) -> None:
+    def save_channels(self, bulletin_category, waiting_channel, queue_channel, auth_channel, maintenance_channel) -> None:
         self.bulletin_category = bulletin_category
         self.waiting_channel = waiting_channel
         self.queue_channel = queue_channel
+        self.maintenance_channel = maintenance_channel
         self.auth_channel = auth_channel
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = {
@@ -60,6 +62,7 @@ class ChannelAuthority:
             self.__WAITING_CHANNEL_KEY: self.waiting_channel.id,
             self.__QUEUE_CHANNEL_KEY: self.queue_channel.id,
             self.__AUTH_CHANNEL_KEY: self.auth_channel.id,
+            self.__MAINT_CHANNEL_KEY: self.maintenance_channel.id
         }
         if self.lab_category:
             document[self.__LAB_CATEGORY_CHANNEL] = self.lab_category.id
@@ -139,4 +142,12 @@ class ChannelAuthority:
             return True
         else:
             return False
+
+    def is_maintenance_channel(self, channel):
+        collection = mongo.db[self.__CHANNEL_COLLECTION]
+        channels = collection.find_one({})
+        if channel.id == channels.get(self.__MAINT_CHANNEL_KEY, -1):
+            return True
+
+        return False
 
