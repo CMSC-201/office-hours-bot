@@ -9,6 +9,7 @@ class RoleAuthority:
     __UNAUTHED_NAME = "Unauthed"
     __TA_NAME = "TA"
     __EVERYONE_NAME = "@everyone"
+    __LAB_CHANNEL = 'lab'
 
     def __init__(self, guild: Guild):
         self.admin: Optional[Role] = None
@@ -17,7 +18,10 @@ class RoleAuthority:
         self.ta: Optional[Role] = None
         self.everyone: Optional[Role] = None
 
+        self.role_map = {}
+
         for role in guild.roles:
+            self.role_map[role.name] = role
             if role.name == self.__ADMIN_NAME:
                 self.admin = role
             elif role.name == self.__STUDENT_NAME:
@@ -28,6 +32,18 @@ class RoleAuthority:
                 self.ta = role
             elif role.name == self.__EVERYONE_NAME:
                 self.everyone = role
+            elif self.__LAB_CHANNEL in role.name:
+                pass
+
+    def add_role(self, member, role_name):
+        if role_name in self.role_map:
+            member.add_roles(self.role_map[role_name])
+
+    def remove_role(self, member):
+        pass
+
+    def is_admin(self, member: Member) -> bool:
+        return self.admin in member.roles
 
     def ta_or_higher(self, member: Member) -> bool:
         """
