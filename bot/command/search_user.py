@@ -23,7 +23,7 @@ class SearchUsers(command.Command):
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.message.guild)
         ca: ChannelAuthority = ChannelAuthority(self.message.guild)
-        if ra.admin and ca.is_maintenance_channel(self.message.channel):
+        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
             admin_group = mongo.db[self.__ADMIN_GROUP]
