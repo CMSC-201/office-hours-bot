@@ -6,11 +6,9 @@ from discord.errors import NotFound
 import re
 import command
 import mongo
-from globals import get_globals
-from queues import QueueAuthority
 from roles import RoleAuthority
 from member import MemberAuthority
-
+from channels import ChannelAuthority
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +24,9 @@ class RemoveUser(command.Command):
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.message.guild)
         ma: MemberAuthority = MemberAuthority(self.message.guild)
-        if ra.admin:
+        ca: ChannelAuthority = ChannelAuthority(self.message.guild)
+
+        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
             admin_group = mongo.db[self.__ADMIN_GROUP]
