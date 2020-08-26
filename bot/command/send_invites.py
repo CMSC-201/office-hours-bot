@@ -13,6 +13,7 @@ import mongo
 from globals import get_globals
 from queues import QueueAuthority
 from roles import RoleAuthority
+from channels import ChannelAuthority
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,9 @@ class SendInvites(command.Command):
     async def handle(self):
 
         ra: RoleAuthority = RoleAuthority(self.message.guild)
+        ca: ChannelAuthority = ChannelAuthority(self.message.guild)
 
-        if ra.admin:
+        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
             if self.message.content.startswith('!send invites update'):
 
                 if len(self.message.content.split()) == 5:
