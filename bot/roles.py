@@ -35,12 +35,22 @@ class RoleAuthority:
             elif self.__LAB_CHANNEL in role.name:
                 pass
 
-    def add_role(self, member, role_name):
+    async def add_role(self, member: Member, role_name: str):
+        """
+        :param member: a discord.Member object of the server
+        :param role_name: a string which will be matched to the role name, must be exact
+        :return: success of adding roles.
+        """
         if role_name in self.role_map:
-            member.add_roles(self.role_map[role_name])
+            await member.add_roles(self.role_map[role_name])
 
-    def remove_role(self, member):
-        pass
+        return self.role_map[role_name] in member.roles
+
+    async def remove_role(self, member: Member, role_name: str):
+        if role_name in self.role_map:
+            await member.remove_roles(self.role_map[role_name])
+
+        return self.role_map[role_name] in member.roles
 
     def is_admin(self, member: Member) -> bool:
         return self.admin in member.roles
