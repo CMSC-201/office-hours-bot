@@ -153,11 +153,11 @@ class SetupCommand(command.Command):
                                                    hoist=True)
         # await admin.edit(position=4)
         logger.info("Created role Admin")
-        ta_role: Role = await guild.create_role(name="TA", permissions=student_permissions, mentionable=True,
+        ta_role: Role = await guild.create_role(name="TA", permissions=ta_permissions, mentionable=True,
                                                 hoist=True)
         # await ta_role.edit(position=3)
         logger.info("Created role TA")
-        student_role: Role = await guild.create_role(name="Student", permissions=ta_permissions, mentionable=True,
+        student_role: Role = await guild.create_role(name="Student", permissions=student_permissions, mentionable=True,
                                                      hoist=True)
         # await student_role.edit(position=2)  # just above @everyone
         logger.info("Created role Student")
@@ -204,7 +204,7 @@ class SetupCommand(command.Command):
             if ra.admin in message.author.roles:
                 return True
             else:
-                if ca.waiting_channel == None:
+                if ca.waiting_channel is None:
                     return True
                 await message.channel.send("You can't run setup, " + message.author.mention)
                 return False
