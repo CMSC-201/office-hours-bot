@@ -3,7 +3,8 @@ import logging
 from discord import Guild, Member, Role, User
 
 import mongo
-from roles import RoleAuthority
+from roles import RoleAuthority, PermissionAuthority
+from channels import ChannelAuthority
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,8 @@ class MemberAuthority:
     __KEY_FIELD = "key"
     __DISCORD_ID_FIELD = "discord"
     __UID_FIELD = 'UMBC-Name-Id'
+    __SECTION = 'Section'
+    __LAB = 'Lab {}'
 
     def __init__(self, guild: Guild):
         self.guild = guild
@@ -27,7 +30,7 @@ class MemberAuthority:
         admin_group = mongo.db[self.__ADMIN_GROUP]
 
         ra: RoleAuthority = RoleAuthority(self.guild)
-
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
         found_person = None
         found_role = None
         found_group = None
@@ -56,6 +59,15 @@ class MemberAuthority:
                 await member.remove_roles(ra.un_authenticated)
 
                 result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
+                pa: PermissionAuthority = PermissionAuthority()
+                # add lab authorization.
+                if found_person[self.__SECTION].strip():
+                    section_name = found_person[self.__SECTION].strip()
+                    if self.__LAB.format(section_name) in ca.lab_sections:
+                        if found_group == ta_group:
+                            await ca.lab_sections[self.__LAB.format(section_name)].set_permissions(member, overwrite=pa.ta_overwrite)
+                        elif found_group == students_group:
+                            await ca.lab_sections[self.__LAB.format(section_name)].set_permissions(member, overwrite=pa.student_overwrite)
 
                 # should be one, if non-zero it indicates that the update occurred.
                 # result.matched_count, result.modified_count
