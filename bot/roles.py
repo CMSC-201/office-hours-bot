@@ -1,6 +1,7 @@
 from typing import Optional
 
-from discord import Permissions, Guild, Role, Member
+from discord import Permissions, Guild, Role, Member, PermissionOverwrite
+
 
 # TODO: store the role ids in mongo so we can rename them
 class RoleAuthority:
@@ -89,3 +90,32 @@ class PermissionAuthority:
                                    manage_roles=False,
                                    manage_permissions=False,
                                    manage_webhooks=False, )
+
+        self.ta_overwrite = PermissionOverwrite(administrator=True,
+                                                manage_channels=True,
+                                                manage_guild=False,
+                                                manage_roles=False,
+                                                manage_permissions=False,
+                                                manage_webhooks=False,
+                                                add_reactions=True,
+                                                stream=True,
+                                                read_message_history=True,
+                                                read_messages=True,
+                                                send_messages=True,
+                                                connect=True,
+                                                speak=True,
+                                                use_voice_activation=True)
+        self.student_overwrite = PermissionOverwrite(add_reactions=True,
+                                                     stream=True,
+                                                     read_message_history=True,
+                                                     read_messages=True,
+                                                     send_messages=True,
+                                                     connect=True,
+                                                     speak=True,
+                                                     use_voice_activation=True)
+
+        self.forbid_overwrite = PermissionOverwrite(
+            read_messages=False,
+            send_messages=False,
+            connect=False,
+        )
