@@ -10,6 +10,9 @@ If you type `!status` you will be able to see how many students are waiting in t
 ### Viewing this help page
 Typing `!help` will provide a link to role-specific help.
 
+### Viewing the list of on-duty TAs
+Typing `!who` will send a list of the TAs currently checked into office hours.
+
 ## Student commands
 The following are commands useable to you to access the server and request help for office hours.
 

@@ -280,3 +280,14 @@ class QueueAuthority:
             return True
 
         return False
+
+    """ Returns list of Member IDs of the checked-in TAs
+    """
+    def on_duty_ta_list(self) -> list:
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+
+        if not document:
+            return []
+
+        return document["available_tas"]
