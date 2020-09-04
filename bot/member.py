@@ -21,10 +21,14 @@ class MemberAuthority:
     __SECTION = 'Section'
     __LAB = 'Lab {}'
 
+    BAD_AUTHENTICATION = 0
+    AUTHENTICATED = 1
+    DUPLICATE_ACCOUNT = 2
+
     def __init__(self, guild: Guild):
         self.guild = guild
 
-    async def authenticate_member(self, member: Member, key: str) -> bool:
+    async def authenticate_member(self, member: Member, key: str) -> int:
         students_group = mongo.db[self.__STUDENTS_GROUP]
         ta_group = mongo.db[self.__TA_GROUP]
         admin_group = mongo.db[self.__ADMIN_GROUP]
@@ -50,7 +54,7 @@ class MemberAuthority:
                     member.id,
                     found_person[self.__DISCORD_ID_FIELD]
                 ))
-                return False
+                return self.DUPLICATE_ACCOUNT
             elif not found_person.get(self.__DISCORD_ID_FIELD):
 
                 name = ' '.join([found_person[first_or_last] for first_or_last in self.__NAME_FIELDS])
@@ -71,11 +75,11 @@ class MemberAuthority:
 
                 # should be one, if non-zero it indicates that the update occurred.
                 # result.matched_count, result.modified_count
-                return result.modified_count > 0
+                return result.modified_count > 0 and self.AUTHENTICATED
             else:
-                return True
+                return self.AUTHENTICATED
 
-        return False
+        return self.BAD_AUTHENTICATION
 
     async def deauthenticate_member(self, member: Member) -> bool:
         ra: RoleAuthority = RoleAuthority(self.guild)
