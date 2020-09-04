@@ -46,7 +46,7 @@ class EnterQueue(command.Command):
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
-        if message.content.startswith("!request"):
+        if message.content.startswith("!request") and message.channel == ca.waiting_channel:
             qa: QueueAuthority = QueueAuthority(message.guild)
             if not qa.is_office_hours_open():
                 warning = await message.channel.send(
@@ -64,13 +64,14 @@ class EnterQueue(command.Command):
                 await warning.delete(delay=7)
                 await message.delete()
                 return False
-            if message.channel == ca.waiting_channel:
-                return True
-            else:
-                warning = await message.channel.send("{} you must be in {} to request a place in the queue.".format(
-                    message.author.mention,
-                    ca.waiting_channel.mention))
-                await warning.delete(delay=7)
-                await message.delete()
-                return False
+            return True
+        elif message.channel == ca.waiting_channel:
+            await message.author.send('You should reserve this channel for office hour requests only.  Ask your question in general, tech-support or request help using the office hour system.  ')
+            await message.delete(delay=10)
+        elif message.content.startswith("!request"):
+            warning = await message.channel.send("{} you must be in {} to request a place in the queue.".format(
+                message.author.mention,
+                ca.waiting_channel.mention))
+            await warning.delete(delay=7)
+            await message.delete()
         return False
