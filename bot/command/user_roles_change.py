@@ -108,7 +108,7 @@ class RemoveUserRole(command.Command):
                 await self.message.channel.send('Unable to find user %s' % user_name)
 
     @staticmethod
-    async def is_invoked_by_message(message: Message, client: Client):
+    async def is_invoked_by_message(message: Message, client: Client) -> bool:
         if message.content.startswith("!user role remove") and len(message.content.split()) == 5:
             return True
 
