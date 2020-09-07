@@ -24,6 +24,9 @@ class MemberAuthority:
     BAD_AUTHENTICATION = 0
     AUTHENTICATED = 1
     DUPLICATE_ACCOUNT = 2
+    NO_ACCOUNT_ERROR = 3
+    UNABLE_TO_UPDATE = 4
+    SAME_ACCOUNT = 5
 
     def __init__(self, guild: Guild):
         self.guild = guild
@@ -49,37 +52,37 @@ class MemberAuthority:
                 break
 
         if found_person:
-            if found_person.get(self.__DISCORD_ID_FIELD) and found_person.get(self.__DISCORD_ID_FIELD) != member.id:
-                logger.error("Human tried to auth with a new account.  New ID: {}, Old ID: {}".format(
-                    member.id,
-                    found_person[self.__DISCORD_ID_FIELD]
-                ))
-                return self.DUPLICATE_ACCOUNT
-            elif not found_person.get(self.__DISCORD_ID_FIELD):
-
+            if found_person.get(self.__DISCORD_ID_FIELD):
+                if member.id == found_person.get(self.__DISCORD_ID_FIELD):
+                    return self.SAME_ACCOUNT
+                else:
+                    return self.DUPLICATE_ACCOUNT
+            else:
                 name = ' '.join([found_person[first_or_last] for first_or_last in self.__NAME_FIELDS])
-                await member.edit(nick=name)
-                await member.add_roles(found_role)
-                await member.remove_roles(ra.un_authenticated)
+                await member.edit(nick='{}-preauth'.format(name))
 
                 result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
-                pa: PermissionAuthority = PermissionAuthority()
-                # add lab authorization.
-                if found_person[self.__SECTION].strip():
-                    section_name = found_person[self.__SECTION].strip()
-                    if self.__LAB.format(section_name) in ca.lab_sections:
-                        if found_group == ta_group:
-                            await ca.lab_sections[self.__LAB.format(section_name)].set_permissions(member, overwrite=pa.ta_overwrite)
-                        elif found_group == students_group:
-                            await ca.lab_sections[self.__LAB.format(section_name)].set_permissions(member, overwrite=pa.student_overwrite)
 
-                # should be one, if non-zero it indicates that the update occurred.
-                # result.matched_count, result.modified_count
-                return result.modified_count > 0 and self.AUTHENTICATED
-            else:
-                return self.AUTHENTICATED
+                if result.modified_count > 0:
+                    await member.edit(nick=name)
+                    await member.add_roles(found_role)
+                    await member.remove_roles(ra.un_authenticated)
 
-        return self.BAD_AUTHENTICATION
+                    pa: PermissionAuthority = PermissionAuthority()
+                    # add lab authorization.
+                    if found_person[self.__SECTION].strip():
+                        section_name = found_person[self.__SECTION].strip()
+                        if self.__LAB.format(section_name) in ca.lab_sections:
+                            if found_group == ta_group:
+                                await ca.lab_sections[self.__LAB.format(section_name)].set_permissions(member, overwrite=pa.ta_overwrite)
+                            elif found_group == students_group:
+                                await ca.lab_sections[self.__LAB.format(section_name)].set_permissions(member, overwrite=pa.student_overwrite)
+
+                    return self.AUTHENTICATED
+
+                return self.UNABLE_TO_UPDATE
+
+        return self.NO_ACCOUNT_ERROR
 
     async def deauthenticate_member(self, member: Member) -> bool:
         ra: RoleAuthority = RoleAuthority(self.guild)
