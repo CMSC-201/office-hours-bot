@@ -30,22 +30,36 @@ def command_class(cls):
 
 
 def set_default_guild(g):
+    """
+        Necessary in order to ensure that direct messages know the guild (server) on which they're going to operate.
+
+        As long as the_guild in handle_message is defined correctly, this function need not exist.
+    :param g: the default guild
+    :return: None
+    """
     global the_guild
     the_guild = g
 
 
 async def handle_message(message: Message, client: Client):
+    """
+    :param message:
+    :param client:
+    :return:
+    """
+
     if not message.guild:
         for cmd_class in supported_commands:
             if await cmd_class.is_invoked_by_direct_message(message, client):
                 command = cmd_class(message, client, the_guild)
                 await command.handle()
+                break
     else:
         for cmd_class in supported_commands:
             if await cmd_class.is_invoked_by_message(message, client):
                 command = cmd_class(message, client)
                 await command.handle()
-                return
+                break
 
 
 class Command:
@@ -75,7 +89,7 @@ class Command:
 import pkgutil
 
 __all__ = []
-for loader, module_name, is_pkg in  pkgutil.walk_packages(__path__):
+for loader, module_name, is_pkg in pkgutil.walk_packages(__path__):
     __all__.append(module_name)
     _module = loader.find_module(module_name).load_module(module_name)
     globals()[module_name] = _module
