@@ -82,6 +82,13 @@ class ChannelAuthority:
         del document[channel_name]
         collection.replace_one({"_id": document["_id"]}, document)
 
+    def find_lab_channel(self, the_category: CategoryChannel):
+        current_lab_channel = None
+        for lab_name in self.lab_sections:
+            if the_category == self.lab_sections[lab_name]:
+                current_lab_channel = self.lab_sections[lab_name]
+        return current_lab_channel
+
     async def start_lab(self, lab_name) -> None:
         ra: RoleAuthority = RoleAuthority(self.guild)
         # Make the category channel and make it inaccessible to unauthed nerds
