@@ -8,6 +8,7 @@ import hashlib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import re
 import command
 import mongo
 from globals import get_globals
@@ -28,6 +29,7 @@ class SendInvites(command.Command):
     __EMAIL_USERNAME = 'email-username'
     __EMAIL_PASSWORD = 'email-password'
     __TYPE = 'type'
+    __EMAIL_SENT = 'email-sent'
 
     state_variables = {__EMAIL_USERNAME: '', __EMAIL_PASSWORD: ''}
 
@@ -40,6 +42,26 @@ class SendInvites(command.Command):
             self.state_variables[self.__EMAIL_USERNAME] = email_settings[self.__EMAIL_USERNAME]
             self.state_variables[self.__EMAIL_PASSWORD] = email_settings[self.__EMAIL_PASSWORD]
 
+    def get_user_send_group(self, group, new=False):
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+
+        users_to_send = []
+
+        restrictions = {}
+
+        if new:
+            restrictions[self.__EMAIL_SENT] = 0
+
+        if group == 'students' or group == 'all':
+            users_to_send.extend(list(students_group.find(restrictions)))
+        if group == 'tas' or group == 'all':
+            users_to_send.extend(list(ta_group.find(restrictions)))
+        if group == 'admin' or group == 'all':
+            users_to_send.extend(list(admin_group.find(restrictions)))
+
+        return users_to_send
 
     async def handle(self):
 
@@ -54,8 +76,8 @@ class SendInvites(command.Command):
                     self.state_variables[self.__EMAIL_PASSWORD] = self.message.content.split()[4]
 
                     response = self.email_settings_collection.update_one({self.__TYPE: self.__EMAIL_SETTINGS},
-                                                              {'$set': {self.__EMAIL_USERNAME: self.state_variables[self.__EMAIL_USERNAME],
-                                                                        self.__EMAIL_PASSWORD: self.state_variables[self.__EMAIL_PASSWORD]}}, upsert=True)
+                                                                         {'$set': {self.__EMAIL_USERNAME: self.state_variables[self.__EMAIL_USERNAME],
+                                                                                   self.__EMAIL_PASSWORD: self.state_variables[self.__EMAIL_PASSWORD]}}, upsert=True)
                     # check how many matches were updated...
                     await self.message.channel.send('Updated settings for reflector email.')
                 else:
@@ -75,10 +97,6 @@ class SendInvites(command.Command):
             with open('office_hour_email.html') as email_file:
                 email_prompt = email_file.read()
 
-            students_group = mongo.db[self.__STUDENTS_GROUP]
-            ta_group = mongo.db[self.__TA_GROUP]
-            admin_group = mongo.db[self.__ADMIN_GROUP]
-
             port = 465
             context = ssl.create_default_context()
 
@@ -89,13 +107,7 @@ class SendInvites(command.Command):
                 await self.message.channel.send(str(smtp_auth_error))
                 return
 
-            users_to_send = []
-            if group == 'students' or group == 'all':
-                users_to_send.extend(list(students_group.find({})))
-            if group == 'tas' or group == 'all':
-                users_to_send.extend(list(ta_group.find({})))
-            if group == 'admin' or group == 'all':
-                users_to_send.extend(list(admin_group.find({})))
+            users_to_send = self.get_user_send_group(group, new=('--new' in self.message.content))
 
             for user in users_to_send:
                 student_name = ' '.join([user['First-Name'], user['Last-Name']])
@@ -126,9 +138,6 @@ class SendInvites(command.Command):
         else:
             await self.message.channel.send('You are not an administrator, so cannot run this command.')
 
-        await self.message.delete()
-
-
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!send invites update"):
@@ -155,3 +164,54 @@ class SendInvites(command.Command):
             if replace_key in email_prompt:
                 email_prompt = email_prompt.replace(replace_key, student_data[key])
         return email_prompt
+
+
+@command.command_class
+class SetEmailStatus(command.Command):
+    __ADMIN_GROUP = 'admin'
+    __TA_GROUP = 'ta'
+    __STUDENTS_GROUP = 'student'
+
+    __MONGO_ID = '_id'
+    __EMAIL_STATUS = 'email-sent'
+
+    async def handle(self):
+
+        ra: RoleAuthority = RoleAuthority(self.message.guild)
+        ca: ChannelAuthority = ChannelAuthority(self.message.guild)
+
+        match = re.match(r"!set\s+(?P<group_name>(students|admin|tas|all))\s+email\s+status\s+(?P<status>\d+)", self.message.content)
+
+        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel) and match:
+
+            await self.message.channel.send('Starting process to set email code to {} for {}'.format(match.group('status'), match.group('group_name')))
+
+            try:
+                email_status = int(match.group('status'))
+            except ValueError:
+                await self.message.channel.send('Email code must be an integer, not {}'.format(match.group('status')))
+                return
+
+            group_name = match.group('group_name')
+
+            students_group = mongo.db[self.__STUDENTS_GROUP]
+            ta_group = mongo.db[self.__TA_GROUP]
+            admin_group = mongo.db[self.__ADMIN_GROUP]
+
+            if group_name == 'students' or group_name == 'all':
+                for student_record in students_group.find({}):
+                    students_group.update_one({self.__MONGO_ID: student_record[self.__MONGO_ID]}, {'$set': {self.__EMAIL_STATUS: email_status}})
+
+            if group_name == 'tas' or group_name == 'all':
+                for ta_record in ta_group.find({}):
+                    ta_group.update_one({self.__MONGO_ID: ta_record[self.__MONGO_ID]}, {'$set': {self.__EMAIL_STATUS: email_status}})
+
+            if group_name == 'admin' or group_name == 'all':
+                for admin_record in admin_group.find({}):
+                    admin_group.update_one({self.__MONGO_ID: admin_record[self.__MONGO_ID]}, {'$set': {self.__EMAIL_STATUS: email_status}})
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        if re.match(r"[!]set\s+(?P<group_name>(students|admin|tas|all))\s+email\s+status\s+(?P<status>\d+)", message.content):
+            return True
+        return False
