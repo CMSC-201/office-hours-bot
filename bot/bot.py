@@ -34,13 +34,8 @@ class MyClient(discord.Client):
         await handle_message(message, self)
 
     async def on_member_join(self, member: Member):
-        # update this message with your own course, or
+        # update this message with your own course and message
         await member.send('Welcome to Discord Office Hours for CMSC 201, Fall 2020\n I am the 201Bot.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
-
-        # ca: ChannelAuthority = ChannelAuthority(message.guild)
-        # ra: RoleAuthority = RoleAuthority(message.guild)
-        # if ca.is_cleared_channel(message.channel) and not ra.ta_or_higher(message.author):
-        #     await message.delete()
 
 
 def set_up_logs():
