@@ -19,9 +19,9 @@ class ClearChannel(command.Command):
 
         if ra.is_admin(self.message.author):
             if self.message.content.strip().lower() == '!clear all':
-                await self.message.channel.purge()
+                await self.message.channel.purge(limit=None)
             elif self.message.content.strip().lower() == '!clear all but pinned':
-                await self.message.channel.purge(check=not_pinned)
+                await self.message.channel.purge(limit=None, check=not_pinned)
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
