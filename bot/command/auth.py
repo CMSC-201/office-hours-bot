@@ -23,11 +23,14 @@ class AuthenticateStudent(command.Command):
             logger.info("Authenticated user {0.display_name} ({0.id}) as {0.nick}".format(member))
             await self.message.author.send('''You are now authenticated!  You can return to the office hour server.\n  
                                 I live here so I won't actually be going anywhere, but you don't have to talk to me anymore.''')
+        elif result == MemberAuthority.SAME_ACCOUNT:
+            await self.message.author.send("This account has already been authenticated, go to the discord server for your class and you should see the rooms.")
         elif result == MemberAuthority.DUPLICATE_ACCOUNT:
-            await self.message.author.send("This key has already been used to authenticate, and is no longer valid.")
+            await self.message.author.send("This key has already been used to authenticate, and is no longer valid.\n\tIf you want to use a different account, contact course staff and tell them that you have already authenticated and want to switch accounts.")
+        elif result == MemberAuthority.UNABLE_TO_UPDATE:
+            await self.message.author.send("There was an internal database error, unable to update with new discord id.  Try again. ")
         else:
-            await self.message.author.send("Key unrecognized.  Please try again.  " +
-                                                      "If you're still having trouble, please contact course staff.")
+            await self.message.author.send("There is no user account associated with this key.\n\tTry again, make sure to copy and paste the key with !auth.\n\tIf you're still having trouble, please contact course staff.")
         if self.message.guild:
             self.message.delete()
 
