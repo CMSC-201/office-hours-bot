@@ -1,10 +1,11 @@
 import logging
 
-from discord import Message, Client
+from discord import Message, Client, Colour, Embed
 
 import re
 import command
 import mongo
+from datetime import datetime as dt
 from globals import get_globals
 from queues import QueueAuthority
 from roles import RoleAuthority
@@ -39,10 +40,14 @@ class SearchUsers(command.Command):
                 umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': match.group('user_identifier')})])
 
             combined_list = first_name_list + last_name_list + umbc_id_list
-            message = '\n'.join([str(record) for record in combined_list])
-            if message:
-                await self.message.channel.send(message)
-            else:
+            color = Colour(0).dark_gold()
+            for person in combined_list:
+                db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
+                embedded_message = Embed(description=db_text, timestamp=dt.now(), colour=color)
+
+                await self.message.channel.send(embed=embedded_message)
+
+            if not combined_list:
                 await self.message.channel.send('No results were found')
 
     @staticmethod
