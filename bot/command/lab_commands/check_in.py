@@ -87,15 +87,14 @@ class LabCheckIn(command.Command):
 
                     if self.__WEEKDAY_MAP[today.weekday()] in section_data['Days']:
                         if start_time - margin <= today <= start_time + timedelta(minutes=15) + margin and check_in_data[student_record[self.__USERNAME]] == 0:
-                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$inc': student_record[self.__USERNAME]})
+                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$inc': {student_record[self.__USERNAME]: 1}})
                             await self.message.author.send('You are checked in to your office hours!  Remember to stick around until your TA allows you to confirm your check in. ')
                         elif start_time <= today and check_in_data[student_record[self.__USERNAME]] == self.__FIRST_CHECK_IN and check_in_data[self.__ALLOW_SECOND_CHECKIN]:
-                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$inc': student_record[self.__USERNAME]})
+                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$inc': {student_record[self.__USERNAME]: 1}})
                             await self.message.author.send('You have completed your office hour check in requirements.  You should receive full attendance credit. ')
                         else:
                             await self.message.author.send('This is not the correct check in time.')
                     elif found_checkin:
-                        print(check_in_data)
                         if check_in_data[student_record[self.__USERNAME]] == 0:
                             ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$set': {student_record[self.__USERNAME]: 1}})
                             await self.message.author.send('You are checked in to your office hours!  Remember to stick around until your TA allows you to confirm your check in. ')
