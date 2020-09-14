@@ -32,17 +32,22 @@ class Who(command.Command):
         student_col = mongo.db[self.__STUDENTS_GROUP]
         ta_collection = mongo.db[self.__TA_GROUP]
 
-        if self.message.content.startswith('!who is my ta'):
-
-            the_student = student_col.find_one({self.__DISCORD_ID: self.message.author.id})
-            if not the_student:
-                await self.message.author.send('Unable to find you in the student database.')
-                return
-            my_ta = ta_collection.find_one({self.__SECTION: the_student[self.__SECTION]})
-            if not my_ta:
-                await self.message.author.send('Unable to find your TA.')
-            else:
-                await self.message.author.send('Your TA is: {} {}'.format(my_ta[self.__FIRST_NAME], my_ta[self.__LAST_NAME]))
+        if self.message.content.startswith('!who is my'):
+            match = re.match(r'who\s+is\s+my\s+(?P<person>)', self.message.content)
+            if match.group('person').lower() == 'ta':
+                the_student = student_col.find_one({self.__DISCORD_ID: self.message.author.id})
+                if not the_student:
+                    await self.message.author.send('Unable to find you in the student database.')
+                    return
+                my_ta = ta_collection.find_one({self.__SECTION: the_student[self.__SECTION]})
+                if not my_ta:
+                    await self.message.author.send('Unable to find your TA.')
+                else:
+                    await self.message.author.send('Your TA is: {} {}'.format(my_ta[self.__FIRST_NAME], my_ta[self.__LAST_NAME]))
+            elif match.group('person').lower() == 'professor':
+                pass
+            elif match.group('person').lower() == 'mommy':
+                pass
         elif self.message.content.startswith('!who is in section') and ra.ta_or_higher(self.message.author):
             match = re.match(r'!who\s+is\s+in\s+section\s+(?P<section_num>\d+)', self.message.content)
             if match:
