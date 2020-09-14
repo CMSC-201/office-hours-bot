@@ -42,10 +42,24 @@ class GetAttendance(command.Command):
         if not ra.ta_or_higher(self.message.author):
             await self.message.author.send('You do not have permission to run the command.')
         elif match:
-            print(lab_channel)
             section_name = self.__SECTION_STRING.format(match.group('section'))
-            check_in_record = check_in_collection.find_one({'Section Name': section_name, 'Date': int(match.group('date_code'))})
+            date_code = int(match.group('date_code'))
+            check_in_record = check_in_collection.find_one({'Section Name': section_name, 'Date': date_code})
             if check_in_record:
+                try:
+                    file_name = 'attendance_{}_{}.csv'.format(section_name, date_code)
+                    with open(os.path.join('csv_dump', file_name), 'w', newline='') as csv_file:
+                        roster_writer = csv.DictWriter(csv_file, fieldnames=['Student', 'Attendance'])
+                        roster_writer.writeheader()
+
+                        for key in check_in_record:
+                            if key not in ['Section Name', 'Date', self.__ALLOW_SECOND_CHECKIN, '_id']:
+                                roster_writer.writerow({'Student': key, 'Attendance': check_in_record[key]})
+                    f = File(os.path.join('csv_dump', file_name))
+                    await self.message.author.send('Your attendance record is here:', files=[f])
+
+                except OSError:
+                    await self.message.author.send('Some kind of file error occurred, retry.')
                 print(check_in_record)
             else:
                 print('Couldn\'t find the check in record for that date')
