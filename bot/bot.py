@@ -7,6 +7,9 @@ from channels import ChannelAuthority
 from command import handle_message, set_default_guild
 from globals import get_globals
 
+from command.submit_interface import SubmitDaemon
+
+
 logger = logging.getLogger('bot_main')
 
 
@@ -14,6 +17,7 @@ class MyClient(discord.Client):
     def __init__(self, **options):
         super().__init__(**options)
         self.channel_authority: ChannelAuthority = None
+        self.submit_daemon = SubmitDaemon(self)
 
     async def on_ready(self):
         logger.info('Logged on as {0}!'.format(self.user))
@@ -22,6 +26,7 @@ class MyClient(discord.Client):
 
         set_default_guild(self.guilds[0])
         logger.info("Bot started.  Waiting for messages.")
+        self.submit_daemon.start()
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
