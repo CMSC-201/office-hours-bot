@@ -1,4 +1,6 @@
 import re
+import os
+import csv
 from datetime import datetime, timedelta
 from discord import Message, Client
 
@@ -6,8 +8,56 @@ from pymongo.results import InsertOneResult, UpdateResult
 
 import command
 import mongo
+import asyncio
+from paramiko.client import SSHClient
+from paramiko import SFTPClient
 from channels import ChannelAuthority
 from roles import RoleAuthority
+
+from threading import Thread
+
+
+class AssignmentCreationThread(Thread):
+
+    __ADMIN_GROUP = 'admin'
+    __TA_GROUP = 'ta'
+    __STUDENTS_GROUP = 'student'
+    __USERNAME = 'UMBC-Name-Id'
+    __SECTION = 'Section'
+
+    __ROSTER_NAME = 'submit_roster.csv'
+    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall20'
+
+    def __init__(self, guild, client, assignment_name):
+        super().__init__(daemon=True)
+        self.assignment_name = assignment_name
+        self.guild = guild
+        self.client = client
+        self.channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
+
+    def async_message_send(self, message):
+        message_loop = asyncio.new_event_loop()
+        asyncio.run_coroutine_threadsafe(self.channel_authority.maintenance_channel.send(message), message_loop)
+
+    def run(self):
+        ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+
+        ftp_client: SFTPClient = ssh_client.open_sftp()
+
+        with open(os.path.join('csv_dump', self.__ROSTER_NAME), 'w', newline='') as csv_file:
+            roster = csv.writer(csv_file)
+            roster_list = [[student[self.__USERNAME], student[self.__SECTION]] for student in students_group.find()]
+            roster_list.extend([[ta[self.__USERNAME], ta[self.__SECTION]] for ta in ta_group.find()])
+            roster_list.extend([[admin[self.__USERNAME], 0] for admin in admin_group.find()])
+            roster.writerows(roster_list)
+
+        ftp_client.put(os.path.join('csv_dump', self.__ROSTER_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME)
+        ftp_client.close()
+
+        ssh_client.exec_command('python3 {}/admin/create_assignment.py {} {}'.format(self.__BASE_SUBMIT_DIR, self.assignment_name, self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME))
 
 
 @command.command_class
@@ -15,6 +65,14 @@ class ConfigureAssignment(command.Command):
     __COMMAND_REGEX = r"!submit\s+configure\s+(?P<assign_name>\w+)\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+--admin=(?P<admin>\w+))?"
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
+
+    __ADMIN_GROUP = 'admin'
+    __TA_GROUP = 'ta'
+    __STUDENTS_GROUP = 'student'
+    __UID_FIELD = 'UMBC-Name-Id'
+
+    def create_assignment_on_GL(self, assignment_name):
+        AssignmentCreationThread(self.guild, self.client, assignment_name).start()
 
     async def handle(self):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
@@ -42,10 +100,13 @@ class ConfigureAssignment(command.Command):
                     self.client.submit_daemon.updated = True
             else:
                 await self.message.channel.send('Configuring Assignment {}...'.format(assignment_name))
-                ir = assignments.insert_one({'name': assignment_name, 'due-date': due_date})
+                ir = assignments.insert_one({'name': assignment_name, 'due-date': due_date, 'open': True, 'student-extensions': {}, 'section-extensions': {}})
                 if ir.inserted_id:
                     await self.message.channel.send('Assignment {} added to database.'.format(assignment_name))
                     self.client.submit_daemon.updated = True
+                    await self.message.channel.send('Creating {} assignment on GL.'.format(assignment_name))
+                    self.create_assignment_on_GL(assignment_name)
+                    await self.message.channel.send('Assignment {} created on GL.'.format(assignment_name))
                 else:
                     await self.message.channel.send('Error: Assignment {} not added to database.'.format(assignment_name))
 
@@ -55,3 +116,5 @@ class ConfigureAssignment(command.Command):
         if re.match(r"!submit\s+configure\s+(?P<assign_name>\w+)\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+(?P<admin>--admin=\w+))?", message.content):
             return True
         return False
+
+
