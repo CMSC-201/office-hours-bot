@@ -23,9 +23,12 @@ class LabCheckIn(command.Command):
     __DISCORD_ID = 'discord'
     __SECTION_STRING = 'Lab {}'
 
+    __ALLOW_FIRST_CHECKIN = 'allow-first-checkin'
     __ALLOW_SECOND_CHECKIN = 'allow-second-checkin'
-    __FIRST_CHECK_IN = 1
-    __SECOND_CHECK_IN = 2
+
+    __FIRST_CHECK_IN = 'First-Check-In'
+    __SECOND_CHECK_IN = 'Second-Check-In'
+
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
     __USERNAME = 'UMBC-Name-Id'
@@ -48,7 +51,7 @@ class LabCheckIn(command.Command):
         check_in_collection = mongo.db[self.__CHECK_IN_DATA]
 
         student_record = students_group.find_one({self.__DISCORD_ID: self.message.author.id})
-        today = datetime.today()
+        today = datetime.now()
 
         if student_record and current_lab_channel:
             section_name = self.__SECTION_STRING.format(student_record[self.__SECTION])
@@ -84,27 +87,34 @@ class LabCheckIn(command.Command):
 
                     date_code = int(start_time.strftime('%Y%m%d'))
                     found_checkin = check_in_collection.find_one({'Section Name': section_name, 'Date': date_code})
+                    logger.info('{} attempting login for section {}'.format(student_record[self.__USERNAME], student_record[self.__SECTION]))
 
-                    if self.__WEEKDAY_MAP[today.weekday()] in section_data['Days']:
-                        if start_time - margin <= today <= start_time + timedelta(minutes=15) + margin and check_in_data[student_record[self.__USERNAME]] == 0:
-                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$inc': {student_record[self.__USERNAME]: 1}})
-                            await self.message.author.send('You are checked in to your office hours!  Remember to stick around until your TA allows you to confirm your check in. ')
-                        elif start_time <= today and check_in_data[student_record[self.__USERNAME]] == self.__FIRST_CHECK_IN and check_in_data[self.__ALLOW_SECOND_CHECKIN]:
-                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$inc': {student_record[self.__USERNAME]: 1}})
-                            await self.message.author.send('You have completed your office hour check in requirements.  You should receive full attendance credit. ')
+                    if found_checkin:
+                        if not check_in_data[self.__ALLOW_SECOND_CHECKIN]:
+                            if check_in_data[self.__ALLOW_FIRST_CHECKIN] and not check_in_data[student_record[self.__USERNAME]][self.__FIRST_CHECK_IN]:
+                                ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))},
+                                                                                  {'$set': {'{}.{}'.format(student_record[self.__USERNAME], self.__FIRST_CHECK_IN): 1}})
+                                if ur.modified_count:
+                                    await self.message.author.send('You are checked in to your office hours!  Remember to stick around until your TA allows you to confirm your check in. ')
+                                else:
+                                    await self.message.author.send('Error: You checked in, but the database didn\'t update, please talk to your TA and get recorded manually.')
+                            elif not check_in_data[self.__ALLOW_FIRST_CHECKIN]:
+                                await self.message.author.send('First check in is not allowed yet.  ')
+                            else:
+                                await self.message.author.send('You have already checked in the first time.  Wait for your TA to run the command again. ')
                         else:
-                            await self.message.author.send('This is not the correct check in time.')
-                    elif found_checkin:
-                        if check_in_data[student_record[self.__USERNAME]] == 0:
-                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$set': {student_record[self.__USERNAME]: 1}})
-                            await self.message.author.send('You are checked in to your office hours!  Remember to stick around until your TA allows you to confirm your check in. ')
-                        elif check_in_data[student_record[self.__USERNAME]] == self.__FIRST_CHECK_IN and check_in_data[self.__ALLOW_SECOND_CHECKIN]:
-                            ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))}, {'$set': {student_record[self.__USERNAME]: 2}})
-                            await self.message.author.send('You have completed your office hour check in requirements.  You should receive full attendance credit. ')
-                        else:
-                            await self.message.author.send('This is not the correct check in time.')
-                    else:
-                        await self.message.author.send('This is not the correct day for discussion.')
+                            if not check_in_data[student_record[self.__USERNAME]][self.__SECOND_CHECK_IN]:
+                                ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': int(today.strftime('%Y%m%d'))},
+                                                                                  {'$set': {'{}.{}'.format(student_record[self.__USERNAME], self.__SECOND_CHECK_IN): 1}})
+                                if ur.modified_count:
+                                    if check_in_data[student_record[self.__USERNAME]][self.__FIRST_CHECK_IN]:
+                                        await self.message.author.send('You have completed your office hour check in requirements.  You will receive full attendance credit for today\'s session.')
+                                    else:
+                                        await self.message.author.send('You have completed your office hour check in requirements.  You didn\'t check in during the first period, talk to your TA.')
+                                else:
+                                    await self.message.author.send('Error: You checked in, but the database didn\'t update, please talk to your TA and get recorded manually.')
+                            else:
+                                await self.message.author.send('You have already done your second check in, you\'re good to go.')
 
         elif not student_record:
             await self.message.author.send("We were unable to find you. Talk to you TAs or Professors. ")
@@ -115,6 +125,6 @@ class LabCheckIn(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if message.content.startswith('!check in'):
+        if message.content.startswith('!check in') or message.content.startswith('!checkin'):
             return True
         return False

@@ -23,8 +23,9 @@ class AllowCheckIn(command.Command):
     __SECTION_STRING = 'Lab {}'
 
     __ALLOW_SECOND_CHECKIN = 'allow-second-checkin'
-    __FIRST_CHECK_IN = 1
-    __SECOND_CHECK_IN = 2
+    __FIRST_CHECK_IN = 'First-Check-In'
+    __SECOND_CHECK_IN = 'Second-Check-In'
+
     __TA_GROUP = 'ta'
     __ADMIN_GROUP = 'admin'
     __STUDENTS_GROUP = 'student'
@@ -43,18 +44,12 @@ class AllowCheckIn(command.Command):
                 current_lab_channel = ca.lab_sections[lab_name]
                 section_name = lab_name
 
-        students_group = mongo.db[self.__STUDENTS_GROUP]
-        # ta_group = mongo.db[self.__TA_GROUP]
-        # admin_group = mongo.db[self.__ADMIN_GROUP]
-        section_collection = mongo.db[self.__SECTION_DATA]
         check_in_collection = mongo.db[self.__CHECK_IN_DATA]
-
-        today = datetime.today()
 
         match = re.match(r'!lab\s+remove\s+session\s+(?P<date_code>\d+)', self.message.content)
         if ra.ta_or_higher(self.message.author) and current_lab_channel and match:
             date_code = int(match.group('date_code'))
-            print(date_code)
+            logger.info('removing lab {} session {}'.format(section_name, date_code))
             # we're in the right section, now we need to check that it's the right time
             dr: DeleteResult = check_in_collection.delete_one({'Section Name': section_name, 'Date': date_code})
             if dr.deleted_count:

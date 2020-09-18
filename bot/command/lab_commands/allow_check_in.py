@@ -22,9 +22,11 @@ class AllowCheckIn(command.Command):
     __DISCORD_ID = 'discord'
     __SECTION_STRING = 'Lab {}'
 
+    __ALLOW_FIRST_CHECKIN = 'allow-first-checkin'
     __ALLOW_SECOND_CHECKIN = 'allow-second-checkin'
-    __FIRST_CHECK_IN = 1
-    __SECOND_CHECK_IN = 2
+
+    __FIRST_CHECK_IN = 'First-Check-In'
+    __SECOND_CHECK_IN = 'Second-Check-In'
     __TA_GROUP = 'ta'
     __ADMIN_GROUP = 'admin'
     __STUDENTS_GROUP = 'student'
@@ -44,8 +46,6 @@ class AllowCheckIn(command.Command):
                 section_name = lab_name
 
         students_group = mongo.db[self.__STUDENTS_GROUP]
-        # ta_group = mongo.db[self.__TA_GROUP]
-        # admin_group = mongo.db[self.__ADMIN_GROUP]
         section_collection = mongo.db[self.__SECTION_DATA]
         check_in_collection = mongo.db[self.__CHECK_IN_DATA]
 
@@ -57,15 +57,16 @@ class AllowCheckIn(command.Command):
             section_number = section_data[self.__SECTION]
             date_code = int(today.strftime('%Y%m%d'))
             check_in_data = check_in_collection.find_one({'Section Name': section_name, 'Date': date_code})
-            print(check_in_data)
+            logger.info(str(check_in_data))
             if section_data:
                 if not check_in_data:
                     await self.message.author.send('Creating discussion for the date {}'.format(date_code))
-                    todays_record = {'Section Name': section_name, 'Date': date_code, self.__ALLOW_SECOND_CHECKIN: False}
+                    todays_record = {'Section Name': section_name, 'Date': date_code, self.__ALLOW_FIRST_CHECKIN: True, self.__ALLOW_SECOND_CHECKIN: False}
                     for student in students_group.find({self.__SECTION: section_number}):
-                        todays_record[student[self.__USERNAME]] = 0
+                        todays_record[student[self.__USERNAME]] = {self.__FIRST_CHECK_IN: 0, self.__SECOND_CHECK_IN: 0}
                     check_in_collection.insert_one(todays_record)
                     await self.message.author.send('Created discussion for the date {}'.format(date_code))
+                    await self.message.channel.send('Started discussion attendance for the date {}, you may "!check in" now'.format(date_code))
 
                 elif not check_in_data[self.__ALLOW_SECOND_CHECKIN]:
                     ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': date_code}, {'$set': {self.__ALLOW_SECOND_CHECKIN: True}})

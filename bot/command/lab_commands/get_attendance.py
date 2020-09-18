@@ -22,9 +22,11 @@ class GetAttendance(command.Command):
     __DISCORD_ID = 'discord'
     __SECTION_STRING = 'Lab {}'
 
+    __ALLOW_FIRST_CHECKIN = 'allow-first-checkin'
     __ALLOW_SECOND_CHECKIN = 'allow-second-checkin'
-    __FIRST_CHECK_IN = 1
-    __SECOND_CHECK_IN = 2
+
+    __FIRST_CHECK_IN = 'First-Check-In'
+    __SECOND_CHECK_IN = 'Second-Check-In'
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
     __USERNAME = 'UMBC-Name-Id'
@@ -49,12 +51,15 @@ class GetAttendance(command.Command):
                 try:
                     file_name = 'attendance_{}_{}.csv'.format(section_name, date_code)
                     with open(os.path.join('csv_dump', file_name), 'w', newline='') as csv_file:
-                        roster_writer = csv.DictWriter(csv_file, fieldnames=['Student', 'Attendance'])
+                        roster_writer = csv.DictWriter(csv_file, fieldnames=['Student', self.__FIRST_CHECK_IN, self.__SECOND_CHECK_IN, 'Attendance'])
                         roster_writer.writeheader()
 
-                        for key in check_in_record:
-                            if key not in ['Section Name', 'Date', self.__ALLOW_SECOND_CHECKIN, '_id']:
-                                roster_writer.writerow({'Student': key, 'Attendance': check_in_record[key]})
+                        for student in check_in_record:
+                            if student not in ['Section Name', 'Date', self.__ALLOW_FIRST_CHECKIN, self.__ALLOW_SECOND_CHECKIN, '_id']:
+                                roster_writer.writerow({'Student': student,
+                                                        self.__FIRST_CHECK_IN: check_in_record[student][self.__FIRST_CHECK_IN],
+                                                        self.__SECOND_CHECK_IN: check_in_record[student][self.__SECOND_CHECK_IN],
+                                                        'Attendance': check_in_record[student][self.__FIRST_CHECK_IN] + check_in_record[student][self.__SECOND_CHECK_IN]})
                     f = File(os.path.join('csv_dump', file_name))
                     await self.message.author.send('Your attendance record is here:', files=[f])
 
