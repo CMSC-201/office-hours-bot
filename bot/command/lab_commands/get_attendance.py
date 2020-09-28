@@ -56,10 +56,14 @@ class GetAttendance(command.Command):
 
                         for student in check_in_record:
                             if student not in ['Section Name', 'Date', self.__ALLOW_FIRST_CHECKIN, self.__ALLOW_SECOND_CHECKIN, '_id']:
-                                roster_writer.writerow({'Student': student,
-                                                        self.__FIRST_CHECK_IN: check_in_record[student][self.__FIRST_CHECK_IN],
-                                                        self.__SECOND_CHECK_IN: check_in_record[student][self.__SECOND_CHECK_IN],
-                                                        'Attendance': check_in_record[student][self.__FIRST_CHECK_IN] + check_in_record[student][self.__SECOND_CHECK_IN]})
+                                try:
+                                    roster_writer.writerow({'Student': student,
+                                                            self.__FIRST_CHECK_IN: check_in_record[student][self.__FIRST_CHECK_IN],
+                                                            self.__SECOND_CHECK_IN: check_in_record[student][self.__SECOND_CHECK_IN],
+                                                            'Attendance': check_in_record[student][self.__FIRST_CHECK_IN] + check_in_record[student][self.__SECOND_CHECK_IN]})
+                                except TypeError:
+                                    roster_writer.writerow({'Student': student, 'Attendance': check_in_record[student]})
+
                     f = File(os.path.join('csv_dump', file_name))
                     await self.message.author.send('Your attendance record is here:', files=[f])
 
