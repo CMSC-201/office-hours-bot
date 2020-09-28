@@ -8,7 +8,7 @@ import json
 import time
 from datetime import datetime, timedelta
 
-from command.submit_interface import add_student, configure_assignment, get_student, grant_extension, setup_interface
+from command.submit_interface import add_student, configure_assignment, get_student, grant_extension, setup_interface, remove_assignment, close_assignment
 import mongo
 
 
@@ -41,6 +41,14 @@ class SubmitDaemon(Thread):
 
         if self.assignments.find_one({'open': True}):
             earliest_assignment = min((assignment for assignment in self.assignments.find({'open': True})), key=lambda x: x['due-date'])
+
+        for assignment in self.assignments.find():
+            if 'section-extensions' in assignment:
+                for section in assignment['section-extensions']:
+                    pass
+            if 'student-extensions' in assignment:
+                for student in assignment['student-extensions']:
+                    pass
 
         return earliest_assignment
 
@@ -88,13 +96,20 @@ class SubmitDaemon(Thread):
 
         extensions = {}
         with open(os.path.join('csv_dump', self.__EXTENSIONS_NAME), 'w') as json_extensions_file:
+            extensions_json = {}
             for assignment in self.assignments.find():
-                assignment_section_extensions = assignment.get('section-extensions', {})
-                assignment_student_extensions = assignment.get('student-extensions', {})
-                extensions[assignment['name']] = {'section-extensions': assignment_section_extensions,
-                                                  'student-extensions': assignment_student_extensions}
+                extensions_json[assignment['name']] = {'section-extensions': {},
+                                                       'student-extensions': {}}
 
-            json_extensions_file.write(json.dumps(extensions, indent='\t'))
+                for student in assignment['student-extensions']:
+                    due_date = assignment['student-extensions'][student].strftime('%Y.%m.%d.%H.%M.%S')
+                    if assignment['student-extensions'][student] > datetime.now():
+                        extensions_json[assignment['name']]['student-extensions'][student] = due_date
+                for section in assignment['section-extensions']:
+                    due_date = assignment['section-extensions'][section].strftime('%Y.%m.%d.%H.%M.%S')
+                    extensions_json[assignment['name']]['section-extensions'][section] = due_date
+
+            json_extensions_file.write(json.dumps(extensions_json, indent='\t'))
 
         ftp_client.put(os.path.join('csv_dump', self.__ROSTER_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME)
         ftp_client.put(os.path.join('csv_dump', self.__EXTENSIONS_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME)
@@ -110,6 +125,7 @@ class SubmitDaemon(Thread):
 
         nearest_assignment = self.get_earliest_time()
         while True:
+            print(nearest_assignment)
             # sleep for a minute until an update comes in or until we're close enough to a due date deadline.
             while not self.updated and nearest_assignment and nearest_assignment['due-date'] > datetime.now():
                 time.sleep(60)
@@ -121,7 +137,6 @@ class SubmitDaemon(Thread):
                 for assignment in self.assignments.find():
                     if assignment['due-date'] <= datetime.now() and assignment['open']:
                         asyncio.run(self.close_assignment(assignment['name']))
-
                     time.sleep(30)
 
             self.updated = False
