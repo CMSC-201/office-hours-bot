@@ -59,12 +59,14 @@ class MemberAuthority:
                     return self.DUPLICATE_ACCOUNT
             else:
                 name = ' '.join([found_person[first_or_last] for first_or_last in self.__NAME_FIELDS])
-                await member.edit(nick='{}-preauth'.format(name))
+                # there is a 32 character limit for nicknames
+                await member.edit(nick='{}-preauth'.format(name)[0:32])
 
                 result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
 
                 if result.modified_count > 0:
-                    await member.edit(nick=name)
+                    # there is a 32 character limit for nicknames
+                    await member.edit(nick=name[0:32])
                     await member.add_roles(found_role)
                     await member.remove_roles(ra.un_authenticated)
 
