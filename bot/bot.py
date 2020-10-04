@@ -1,14 +1,13 @@
 import logging
 
 import discord
-from discord import Message, Guild, Member
+from discord import Message, Guild, Member, User
 
 from channels import ChannelAuthority
 from command import handle_message, set_default_guild
 from globals import get_globals
 
 from command.submit_interface import SubmitDaemon
-
 
 logger = logging.getLogger('bot_main')
 
@@ -30,7 +29,11 @@ class MyClient(discord.Client):
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
-        logger.info('Message from {0.author}: {0.content}'.format(message))
+
+        if message.guild:
+            logger.info('Message ({0.channel.name}):{0.author}: {0.content}'.format(message))
+        else:
+            logger.info('Message (DirectMsg):{0.author}: {0.content}'.format(message))
 
         # Ignore bot messages
         if message.author == self.user:
@@ -40,7 +43,8 @@ class MyClient(discord.Client):
 
     async def on_member_join(self, member: Member):
         # update this message with your own course and message
-        await member.send('Welcome to Discord Office Hours for CMSC 201, Fall 2020\n I am the 201Bot.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
+        await member.send('Welcome to Discord Office Hours for CMSC 201, Fall 2020\n '
+                          'I am the 201Bot.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
 
 
 def set_up_logs():
@@ -65,6 +69,14 @@ if __name__ == '__main__':
         token = info['props']['token']
         prefix = info['props']['prefix']
         uuids = info['uuids']
-        client.run(token)
+        returned = False
+        while not returned:
+            try:
+                client.run(token)
+                returned = True
+            except Exception as e:
+                print(e)
+                print('Restarting Bot from Exception Failure...')
+
     else:
         print("Something failed (this is very vague)")
