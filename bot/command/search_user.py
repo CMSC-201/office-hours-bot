@@ -21,6 +21,18 @@ class SearchUsers(command.Command):
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
     __DISCORD_ID = 'discord'
+    __DROPPED = 'dropped'
+
+    def search_database(self, criteria):
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+
+        found_list = []
+
+        for group in [students_group, ta_group, admin_group]:
+            found_list.extend([first_name_user for first_name_user in group.find(criteria)])
+        return found_list
 
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.message.guild)
@@ -53,14 +65,20 @@ class SearchUsers(command.Command):
                 await self.message.channel.send('No results were found')
         elif re.match(r'!search\s+user\s+--unauthed', self.message.content):
 
-            students_group = mongo.db[self.__STUDENTS_GROUP]
-            ta_group = mongo.db[self.__TA_GROUP]
-            admin_group = mongo.db[self.__ADMIN_GROUP]
+            found_list = self.search_database({self.__DISCORD_ID: ''})
 
-            found_list = []
+            color = Colour(0).dark_gold()
+            for person in found_list:
+                db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
+                embedded_message = Embed(description=db_text, timestamp=dt.now(), colour=color)
 
-            for group in [students_group, ta_group, admin_group]:
-                found_list.extend([first_name_user for first_name_user in group.find({self.__DISCORD_ID: ''})])
+                await self.message.channel.send(embed=embedded_message)
+
+            if not found_list:
+                await self.message.channel.send('No results were found')
+        elif re.match(r'!search\s+user\s+--dropped', self.message.content):
+
+            found_list = self.search_database({self.__DROPPED: True})
 
             color = Colour(0).dark_gold()
             for person in found_list:
