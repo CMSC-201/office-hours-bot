@@ -25,6 +25,10 @@ class Who(command.Command):
     __FIRST_NAME = 'First-Name'
     __LAST_NAME = 'Last-Name'
 
+    __QUEUE_COLLECTION = 'queues'
+    __AVAILABLE_TAS = 'available_tas'
+    __OFFICE_HOURS_OPEN = 'open'
+
     async def handle(self):
 
         ra: RoleAuthority = RoleAuthority(self.guild)
@@ -32,9 +36,9 @@ class Who(command.Command):
         student_col = mongo.db[self.__STUDENTS_GROUP]
         ta_collection = mongo.db[self.__TA_GROUP]
 
-        if self.message.content.startswith('!who is my'):
-            match = re.match(r'who\s+is\s+my\s+(?P<person>)', self.message.content)
-            if match.group('person').lower() == 'ta':
+        match_ta = re.match(r'!who\s+is\s+my\s+(?P<person>\w+)', self.message.content)
+        if match_ta:
+            if match_ta.group('person').lower() == 'ta':
                 the_student = student_col.find_one({self.__DISCORD_ID: self.message.author.id})
                 if not the_student:
                     await self.message.author.send('Unable to find you in the student database.')
@@ -44,9 +48,9 @@ class Who(command.Command):
                     await self.message.author.send('Unable to find your TA.')
                 else:
                     await self.message.author.send('Your TA is: {} {}'.format(my_ta[self.__FIRST_NAME], my_ta[self.__LAST_NAME]))
-            elif match.group('person').lower() == 'professor':
+            elif match_ta.group('person').lower() == 'professor':
                 pass
-            elif match.group('person').lower() == 'mommy':
+            elif match_ta.group('person').lower() == 'mommy':
                 pass
         elif self.message.content.startswith('!who is in section') and ra.ta_or_higher(self.message.author):
             match = re.match(r'!who\s+is\s+in\s+section\s+(?P<section_num>\d+)', self.message.content)
@@ -67,7 +71,25 @@ class Who(command.Command):
                         await self.message.author.send('Some kind of file error occurred, retry.')
                 else:
                     await self.message.author.send('Section {} appears to be empty.'.format(section_num))
-
+        elif self.message.content.startswith('!who is on duty'):
+            office_hour_queue = mongo.db[self.__QUEUE_COLLECTION]
+            queue_doc = office_hour_queue.find_one()
+            on_duty_tas = [self.guild.get_member(ta_id) for ta_id in queue_doc[self.__AVAILABLE_TAS]]
+            if on_duty_tas:
+                await self.message.channel.send('The TAs on duty are:\n' + '\n'.join([x.name for x in on_duty_tas]))
+            elif not queue_doc[self.__OFFICE_HOURS_OPEN]:
+                await self.message.channel.send('Office hours are closed now, no TAs are on duty. ')
+            else:
+                await self.message.channel.send('No TAs are on duty.  ')
+        elif self.message.content.startswith('!who is the ta for section') and ra.ta_or_higher(self.message.author):
+            match = re.match(r'!who\s+is\s+the\s+ta\s+for\s+section\s+(?P<section_num>\d+)', self.message.content)
+            section_num = match.group('section_num')
+            the_ta = ta_collection.find_one({self.__SECTION: section_num})
+            if the_ta:
+                ta_name = ' '.join([the_ta[self.__FIRST_NAME], the_ta[self.__LAST_NAME]])
+                await self.message.channel.send('The TA for section {} is {}'.format(section_num, ta_name))
+            else:
+                await self.message.channel.send('Unable to find ta for section {}'.format(section_num))
         if self.message.guild:
             await self.message.delete(delay=5)
 
@@ -75,5 +97,5 @@ class Who(command.Command):
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!who"):
             return True
-
         return False
+
