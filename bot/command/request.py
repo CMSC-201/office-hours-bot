@@ -37,7 +37,7 @@ class EnterQueue(command.Command):
 
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
 
-        self.client.safe_send(self.message.author, 'You are now entered in the queue.  A TA should be available to help you shortly.', backup=self.message.channel)
+        await self.safe_send(self.message.author, 'You are now entered in the queue.  A TA should be available to help you shortly.', backup=self.message.channel)
 
         qa.add_to_queue(author, request, announcement)
         await self.message.delete()
