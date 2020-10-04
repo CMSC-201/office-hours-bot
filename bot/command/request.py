@@ -34,8 +34,11 @@ class EnterQueue(command.Command):
                               value="!accept")
         embeddedMsg.add_field(name="Reject request by typing",
                               value="!reject {} [text to be sent to student]".format(author.id))
-        # Send embedded message
+
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
+
+        self.client.safe_send(self.message.author, 'You are now entered in the queue.  A TA should be available to help you shortly.', backup=self.message.channel)
+
         qa.add_to_queue(author, request, announcement)
         await self.message.delete()
         logger.info("{} added to queue with request text: {}".format(
@@ -46,9 +49,15 @@ class EnterQueue(command.Command):
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
+
         if message.content.startswith("!request") and message.channel == ca.waiting_channel:
             qa: QueueAuthority = QueueAuthority(message.guild)
-            if not qa.is_office_hours_open():
+            if len(message.content.split()) == 1:
+                warning = await message.channel.send("You must ask a question so we can know how to help you.  The format should be !request <your question here>")
+                await warning.delete(delay=7)
+                await message.delete()
+                return False
+            elif not qa.is_office_hours_open():
                 warning = await message.channel.send(
                     "Office hours are closed.  Please try again after they have opened.".format(
                         message.author.mention,
