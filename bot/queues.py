@@ -1,7 +1,6 @@
 from typing import Optional
-
 from discord import Guild, Member, Message, CategoryChannel, NotFound
-
+from datetime import datetime
 import mongo
 
 
@@ -46,6 +45,7 @@ class QueueAuthority:
     __MEMBER_ID_FIELD = "member-id"
     __REQUEST_FIELD = "request"
     __MESSAGE_ID_FIELD = "announcement"
+    __REQUEST_TIME = 'request-time'
 
     def __init__(self, guild: Guild):
         self.guild = guild
@@ -64,7 +64,8 @@ class QueueAuthority:
         document["queue"].append({
             self.__MEMBER_ID_FIELD: member.id,
             self.__REQUEST_FIELD: request,
-            self.__MESSAGE_ID_FIELD: announcement.id
+            self.__MESSAGE_ID_FIELD: announcement.id,
+            self.__REQUEST_TIME: datetime.now()
         })
         collection.replace_one({"_id": document["_id"]}, document)
 
