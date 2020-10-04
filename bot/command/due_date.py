@@ -13,50 +13,52 @@ logger = logging.getLogger(__name__)
 
 @command.command_class
 class DueDate(command.Command):
-    __ASSIGNMENTS = 'assignments'
+    # old assignments collection.
+    # __ASSIGNMENTS = 'assignments'
+    __ASSIGNMENTS = 'submit-assignments'
     __ASSIGN_NAME = 'name'
     __DB_ID = '_id'
     __DUE_DATE = 'due-date'
+    __STUDENTS_GROUP = 'student'
+    __USERNAME = 'UMBC-Name-Id'
+    __DISCORD_ID = 'discord'
+    __SECTION = 'Section'
 
     async def handle(self):
         assignments_db = mongo.db[self.__ASSIGNMENTS]
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+
         sender: Member = self.message.author
         ra: RoleAuthority = RoleAuthority(self.guild)
 
-        set_match = re.match(r'!due\s+date\s+set\s+(?P<assignment_name>\w+)\s+(?P<date_and_time>\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}:\d{2})', self.message.content)
-        rem_match = re.match(r'!due\s+date\s+rem\s+(?P<assignment_name>\w+)', self.message.content)
         get_match = re.match(r'!due\s+date\s+(?P<assignment_name>\w+)', self.message.content)
 
         response_message = 'Unable to process your command, bad format.  '
 
         # self.message.guild checks to ensure it isn't a DM, you must set/rem assignments from a channel within the guild
         # users can query using their DM-ing skills with the Bot.
-        if self.message.guild and ra.is_admin(sender) and set_match:
-            assignment_match = assignments_db.find_one({self.__ASSIGN_NAME: get_match.group('assignment_name')})
-            # rejoin with only one space for datetime formatting
-            date_string = ' '.join(set_match.group('date_and_time').split())
-            new_time = datetime.strptime(date_string, '%m-%d-%Y %H:%M:%S')
-            if assignment_match:
-                assignments_db.update_one({self.__DB_ID: assignment_match[self.__DB_ID]}, {'$set': {self.__DUE_DATE: new_time}})
-            else:
-                assignment_match = {self.__ASSIGN_NAME: set_match.group('assignment_name'), self.__DUE_DATE: new_time}
-                assignments_db.insert_one(assignment_match)
-            response_message = 'The Due Date for {} is now set to {}'.format(assignment_match[self.__ASSIGN_NAME],
-                                                                             assignment_match[self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'))
-        elif self.message.guild and ra.is_admin(sender) and rem_match:
-            result = assignments_db.delete_one({self.__ASSIGN_NAME: rem_match.group('assignment_name')})
-            if result.deleted_count == 1:
-                response_message = 'Assignment {} has been removed'.format(rem_match.group('assignment_name'))
-            else:
-                response_message = 'Assignment {} was not found, so not removed'.format(rem_match.group('assignment_name'))
-        elif get_match:
+
+        assignment_match = None
+        if get_match:
             assignment_match = assignments_db.find_one({self.__ASSIGN_NAME: get_match.group('assignment_name')})
             if assignment_match:
-                response_message = 'The Due Date for {} is {}'.format(assignment_match[self.__ASSIGN_NAME],
-                                                                      assignment_match[self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'))
-            else:
-                response_message = 'I was unable to find which assignment you were looking for.  Options are:\n\t' \
-                                   + '\n\t'.join([am[self.__ASSIGN_NAME] for am in assignments_db.find({})])
+                student = students_group.find_one({self.__DISCORD_ID: sender.id})
+                if student and student[self.__SECTION] in assignment_match['section-extensions']:
+                    response_message = 'The original due date for {} is {}, but your extension gives you until {}' \
+                        .format(assignment_match[self.__ASSIGN_NAME],
+                                assignment_match[self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'),
+                                assignment_match['section-extensions'][self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'))
+                elif student and student[self.__USERNAME] in assignment_match['student-extensions']:
+                    response_message = 'The original due date for {} is {}, but your extension gives you until {}' \
+                        .format(assignment_match[self.__ASSIGN_NAME],
+                                assignment_match[self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'),
+                                assignment_match['student-extensions'][student[self.__USERNAME]][self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'))
+                else:
+                    response_message = 'The Due Date for {} is {}'.format(assignment_match[self.__ASSIGN_NAME],
+                                                                          assignment_match[self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'))
+        if not get_match or not assignment_match:
+            response_message = 'I was unable to find which assignment you were looking for.  Options are:\n\t' \
+                               + '\n\t'.join([am[self.__ASSIGN_NAME] for am in assignments_db.find({})])
 
         if self.message.guild:
             await self.message.channel.send(response_message)
