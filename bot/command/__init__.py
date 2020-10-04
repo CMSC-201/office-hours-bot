@@ -1,7 +1,7 @@
 import logging
 
 from discord import Message, Guild, Client, Member
-
+from discord.errors import Forbidden
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,29 @@ class Command:
     async def handle(self):
         raise AttributeError("Must be overwritten by command class")
 
+    async def safe_send(self, destination, message: str, **kwargs) -> bool:
+        """
+            Generally, messages will send and not be rejected.  However, even if some users haven't disabled DMs from the server, they may
+                occasionally generate a discord.errors.Forbidden exception, which will cause further code not to execute.
+                In order to be able to ensure that code will execute even if a DM doesn't send properly, this method should be used.
+        :param destination: should be a TextChannel or Author/User object (something with a send method)
+        :param message: the string message to send
+        :param kwargs:
+            'backup': an alternative author/channel to send the message if the first is Forbidden
+        :return: True if message sent, otherwise False
+        """
+        try:
+            await destination.send(message)
+            return True
+        except Forbidden as f:
+            print(f)
+            if kwargs.get('backup', None):
+                return await self.safe_send(kwargs['backup'], message)
+            return False
+        except Exception as e:
+            print(e)
+            return False
+
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         return False
@@ -81,6 +104,8 @@ class Command:
     async def is_invoked_by_direct_message(message: Message, client: Client):
         return False
 
+    def get_help(self):
+        return '{}\tThis command has no help text.'.format(self.__class__.__name__)
 
 
 ## DO NOT MOVE THIS CODE
