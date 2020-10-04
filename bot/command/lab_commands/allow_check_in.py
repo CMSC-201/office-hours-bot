@@ -1,6 +1,7 @@
 import logging
 
 from discord import Message, Client, Attachment, Guild, PermissionOverwrite, TextChannel, CategoryChannel, Member, File
+from discord.errors import Forbidden
 from datetime import datetime, timedelta
 import csv
 import os
@@ -60,13 +61,14 @@ class AllowCheckIn(command.Command):
             logger.info(str(check_in_data))
             if section_data:
                 if not check_in_data:
-                    await self.message.author.send('Creating discussion for the date {}'.format(date_code))
+                    await self.safe_send(self.message.author, 'Creating discussion for the date {}'.format(date_code), backup=self.message.channel)
+
                     todays_record = {'Section Name': section_name, 'Date': date_code, self.__ALLOW_FIRST_CHECKIN: True, self.__ALLOW_SECOND_CHECKIN: False}
                     for student in students_group.find({self.__SECTION: section_number}):
                         todays_record[student[self.__USERNAME]] = {self.__FIRST_CHECK_IN: 0, self.__SECOND_CHECK_IN: 0}
                     check_in_collection.insert_one(todays_record)
-                    await self.message.author.send('Created discussion for the date {}'.format(date_code))
-                    await self.message.channel.send('Started discussion attendance for the date {}, you may "!check in" now'.format(date_code))
+                    await self.safe_send(self.message.author, 'Created discussion for the date {}'.format(date_code), backup=self.message.channel)
+                    await self.safe_send(self.message.channel, 'Started discussion attendance for the date {}, you may "!check in" now'.format(date_code))
 
                 elif not check_in_data[self.__ALLOW_SECOND_CHECKIN]:
                     ur: UpdateResult = check_in_collection.update_one({'Section Name': section_name, 'Date': date_code}, {'$set': {self.__ALLOW_SECOND_CHECKIN: True}})
