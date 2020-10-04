@@ -51,11 +51,6 @@ class AcceptStudent(command.Command):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         await session.announcement.delete()
 
-        try:
-            await self.message.delete()
-        except NotFound:
-            await self.message.channel.send('Deleting the accept message can potentially cause errors, allow me to delete it for you.')
-
         ca.add_oh_session(session)
         await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close to end the session!".format(
             session.member.mention,
@@ -65,6 +60,11 @@ class AcceptStudent(command.Command):
         logger.info("OH session for {} accepted by {}".format(
             command.name(session.member),
             command.name(self.message.author)))
+
+        try:
+            await self.message.delete()
+        except NotFound:
+            await self.message.channel.send('Deleting the accept message can potentially cause errors, allow me to delete it for you.')
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
