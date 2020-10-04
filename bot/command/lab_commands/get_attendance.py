@@ -1,6 +1,7 @@
 import logging
 
 from discord import Message, Client, Attachment, Guild, PermissionOverwrite, TextChannel, CategoryChannel, Member, File
+from discord.errors import Forbidden
 from datetime import datetime, timedelta
 import csv
 import os
@@ -69,11 +70,13 @@ class GetAttendance(command.Command):
 
                 except OSError:
                     await self.message.author.send('Some kind of file error occurred, retry.')
+                except Forbidden:
+                    await self.message.channel.send('Attendance Request: Unable to send you a DM, try again or enable DMs.  ')
                 print(check_in_record)
             else:
                 print('Couldn\'t find the check in record for that date')
         else:
-            await self.message.author.send('The format of the command is wrong.')
+            await self.safe_send(self.message.author, 'The format of the command is wrong.', backup=self.message.channel)
 
         await self.message.delete(delay=2)
 
