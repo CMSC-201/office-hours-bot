@@ -1,6 +1,6 @@
 import re
 import os
-from discord import Message, Client
+from discord import Message, Client, User
 
 from paramiko.client import SSHClient
 from paramiko import SFTPClient
@@ -8,6 +8,7 @@ from paramiko import SFTPClient
 import command
 import mongo
 import json
+import asyncio
 from threading import Thread
 from datetime import datetime
 from channels import ChannelAuthority
@@ -29,12 +30,16 @@ class ExtensionThread(Thread):
         ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
         server_roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
         server_extension_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
+        ca: ChannelAuthority = ChannelAuthority()
         try:
             sftp_client: SFTPClient = ssh_client.open_sftp()
             sftp_client.put(extension_path, server_extension_path)
             sftp_client.close()
 
             ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
+            maintenance_channel = ca.get_maintenance_channel()
+            
+            asyncio.run(maintenance_channel.send('SSH Command Executed, Extension Granted'))
         except Exception as e:
             print(e)
 
@@ -55,6 +60,10 @@ class GrantIndividualExtension(command.Command):
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
     __MONGO_ID = '_id'
+    __DISCORD_ID = 'discord'
+    __FIRST_NAME = 'First-Name'
+    __LAST_NAME = 'Last-Name'
+    __SECTION = 'Section'
 
     @staticmethod
     def create_extensions_json(assignments):
@@ -64,12 +73,25 @@ class GrantIndividualExtension(command.Command):
                                                    'student-extensions': {}}
 
             for student in assignment['student-extensions']:
-                due_date = assignment['student-extensions'][student].strftime('%Y.%m.%d.%H.%M.%S')
-                if assignment['student-extensions'][student] > datetime.now():
+                if isinstance(assignment['student-extensions'][student], dict):
+                    # old database entries are simply datetime objects rather than dictionaries with the due-date, open, name, and student/section
+                    if assignment['student-extensions'][student].get('open', True):
+                        due_date = assignment['student-extensions'][student]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
+                        extensions_json[assignment['name']]['student-extensions'][student] = due_date
+                else:
+                    # old database compatibility
+                    due_date = assignment['student-extensions'][student].strftime('%Y.%m.%d.%H.%M.%S')
                     extensions_json[assignment['name']]['student-extensions'][student] = due_date
             for section in assignment['section-extensions']:
-                due_date = assignment['section-extensions'][section].strftime('%Y.%m.%d.%H.%M.%S')
-                extensions_json[assignment['name']]['section-extensions'][section] = due_date
+                if isinstance(assignment['section-extensions'][section], dict):
+                    due_date = assignment['section-extensions'][section]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
+                    if assignment['section-extensions'][section]['open']:
+                        extensions_json[assignment['name']]['section-extensions'][section] = due_date
+                else:
+                    # old database compatibility
+                    due_date = assignment['section-extensions'][section].strftime('%Y.%m.%d.%H.%M.%S')
+                    extensions_json[assignment['name']]['section-extensions'][section] = due_date
+
 
         return json.dumps(extensions_json, indent='\t')
 
@@ -92,6 +114,9 @@ class GrantIndividualExtension(command.Command):
 
             submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
             assignment = submit_assign.find_one({'name': match.group('assign_name')})
+            if not assignment:
+                await self.message.channel.send('Assignment {} not found'.format(match.group('assign_name')))
+                return
             section_id = match.group('section_id')
             student_id = match.group('student_id')
             due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
@@ -102,9 +127,9 @@ class GrantIndividualExtension(command.Command):
                 assignment['section-extensions'] = {}
 
             if assignment and section_id:
-                assignment['section-extensions'][section_id] = due_date
+                assignment['section-extensions'][section_id] = {'section': section_id, 'due-date': due_date, 'name': assignment['name'], 'open': True}
             elif assignment and student_id:
-                assignment['student-extensions'][student_id] = due_date
+                assignment['student-extensions'][student_id] = {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': True}
 
             # update the server side database
             submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
@@ -119,12 +144,29 @@ class GrantIndividualExtension(command.Command):
             # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
             ExtensionThread(self.client).start()
 
+            # find and message the TA that an extension has been granted for a student
+            student_col = mongo.db[self.__STUDENTS_GROUP]
+            ta_collection = mongo.db[self.__TA_GROUP]
+
+            if student_id:
+                the_student = student_col.find_one({self.__UID_FIELD: student_id})
+                the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
+                for ta in ta_collection.find({self.__SECTION: the_student[self.__SECTION]}):
+                    ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
+                    message = '{} ({}) has been granted an extension until {} for assignment {}.'.format(the_student_name, student_id, due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+                    await self.safe_send(ta_discord_user, message)
+            # if it's a section extension, send the TA an update on their section's extension
+            elif section_id:
+                for ta in ta_collection.find({self.__SECTION: section_id}):
+                    ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
+                    message = 'Your section has been granted an extension until {} for assignment {}.'.format(due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+                    await self.safe_send(ta_discord_user, message)
+
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!submit grant extension"):
             return True
         return False
-
 
 
 @command.command_class
@@ -138,11 +180,15 @@ class GrantAssignmentExtension(command.Command):
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
     __UID_FIELD = 'UMBC-Name-Id'
+    __SECTION = 'Section'
 
     __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall20'
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
     __MONGO_ID = '_id'
+    __DISCORD_ID = 'discord'
+    __FIRST_NAME = 'First-Name'
+    __LAST_NAME = 'Last-Name'
 
     @staticmethod
     def create_extensions_json(assignments):
@@ -195,7 +241,6 @@ class GrantAssignmentExtension(command.Command):
             await self.message.channel.send('Granting Extension on GL.')
             # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
             ExtensionThread(self.client).start()
-
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
