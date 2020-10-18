@@ -10,7 +10,7 @@ import json
 import time
 from datetime import datetime, timedelta
 
-from command.submit_interface import add_student, configure_assignment, get_student, grant_extension, setup_interface, remove_assignment, close_assignment
+from command.submit_interface import add_student, configure_assignment, get_student, grant_extension, setup_interface, remove_assignment, close_assignment, check_assignment
 import mongo
 from channels import ChannelAuthority
 
@@ -33,7 +33,8 @@ class SubmitDaemon(Thread):
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
     __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall20'
     __ADMIN__CLOSE_ASSIGNMENT = '/admin/close_assignment.py {} {} {}'
-    __ADMIN_CLOSE_EXTENSION = '/admin/close_extension.py {} {} {}'
+    __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
+    __CLOSE_SECTION_EXTENSION = '/admin/close_extension.py {} section={} {}'
 
     def __init__(self, client):
         super().__init__(daemon=True)
@@ -88,7 +89,7 @@ class SubmitDaemon(Thread):
 
         if 'section' in assignment:
             print('closing extension for section', assignment['section'], assignment['name'])
-            self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN_CLOSE_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
+            self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
 
             if isinstance(assignment['name'], dict):
                 update_open = 'section-extensions.{}.open'.format(assignment['section'])
@@ -111,7 +112,7 @@ class SubmitDaemon(Thread):
 
         elif 'student' in assignment:
             print('closing extension for student', assignment['student'], assignment['name'])
-            self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN_CLOSE_EXTENSION.format(assignment['name'], assignment['student'], ''))
+            self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_STUDENT_EXTENSION.format(assignment['name'], assignment['student'], ''))
 
             if isinstance(assignment['name'], dict):
                 update_open = 'student-extensions.{}.open'.format(assignment['student'])
@@ -142,8 +143,7 @@ class SubmitDaemon(Thread):
             print('Assignment {} was not found. '.format(assignment_name))
             return
 
-        ssh_client = self.connect_ssh()
-        ftp_client = ssh_client.open_sftp()
+
         print('running close assignment script')
 
         self.write_roster()
@@ -155,15 +155,18 @@ class SubmitDaemon(Thread):
                                                        'student-extensions': {}}
 
                 for student in assignment['student-extensions']:
-                    due_date = assignment['student-extensions'][student].strftime('%Y.%m.%d.%H.%M.%S')
-                    if assignment['student-extensions'][student] > datetime.now():
+                    print(assignment['student-extensions'][student])
+                    due_date = assignment['student-extensions'][student]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
+                    if assignment['student-extensions'][student]['due-date'] > datetime.now():
                         extensions_json[assignment['name']]['student-extensions'][student] = due_date
                 for section in assignment['section-extensions']:
-                    due_date = assignment['section-extensions'][section].strftime('%Y.%m.%d.%H.%M.%S')
+                    due_date = assignment['section-extensions'][section]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
                     extensions_json[assignment['name']]['section-extensions'][section] = due_date
 
             json_extensions_file.write(json.dumps(extensions_json, indent='\t'))
 
+        ssh_client = self.connect_ssh()
+        ftp_client = ssh_client.open_sftp()
         ftp_client.put(os.path.join('csv_dump', self.__ROSTER_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME)
         ftp_client.put(os.path.join('csv_dump', self.__EXTENSIONS_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME)
         ftp_client.close()

@@ -31,6 +31,8 @@ class GetAttendance(command.Command):
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
     __USERNAME = 'UMBC-Name-Id'
+    __FIRST_NAME = 'First-Name'
+    __LAST_NAME = 'Last-Name'
 
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.guild)
@@ -45,6 +47,7 @@ class GetAttendance(command.Command):
         if not ra.ta_or_higher(self.message.author):
             await self.message.author.send('You do not have permission to run the command.')
         elif match:
+            students_group = mongo.db[self.__STUDENTS_GROUP]
             section_name = self.__SECTION_STRING.format(match.group('section'))
             date_code = int(match.group('date_code'))
             check_in_record = check_in_collection.find_one({'Section Name': section_name, 'Date': date_code})
@@ -52,13 +55,19 @@ class GetAttendance(command.Command):
                 try:
                     file_name = 'attendance_{}_{}.csv'.format(section_name, date_code)
                     with open(os.path.join('csv_dump', file_name), 'w', newline='') as csv_file:
-                        roster_writer = csv.DictWriter(csv_file, fieldnames=['Student', self.__FIRST_CHECK_IN, self.__SECOND_CHECK_IN, 'Attendance'])
+                        roster_writer = csv.DictWriter(csv_file, fieldnames=['Student', 'Student ID', self.__FIRST_CHECK_IN, self.__SECOND_CHECK_IN, 'Attendance'])
                         roster_writer.writeheader()
 
                         for student in check_in_record:
                             if student not in ['Section Name', 'Date', self.__ALLOW_FIRST_CHECKIN, self.__ALLOW_SECOND_CHECKIN, '_id']:
+                                print(student)
+                                the_student_record = students_group.find_one({self.__USERNAME: student})
+                                student_name = ''
+                                if the_student_record:
+                                    student_name = ' '.join([the_student_record[self.__FIRST_NAME], the_student_record[self.__LAST_NAME]])
+
                                 try:
-                                    roster_writer.writerow({'Student': student,
+                                    roster_writer.writerow({'Student': student_name, 'Student ID': student,
                                                             self.__FIRST_CHECK_IN: check_in_record[student][self.__FIRST_CHECK_IN],
                                                             self.__SECOND_CHECK_IN: check_in_record[student][self.__SECOND_CHECK_IN],
                                                             'Attendance': check_in_record[student][self.__FIRST_CHECK_IN] + check_in_record[student][self.__SECOND_CHECK_IN]})
