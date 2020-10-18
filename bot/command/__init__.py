@@ -104,8 +104,9 @@ class Command:
     async def is_invoked_by_direct_message(message: Message, client: Client):
         return False
 
-    def get_help(self):
-        return '{}\tThis command has no help text.'.format(self.__class__.__name__)
+    @classmethod
+    def get_help(cls):
+        return '{}, this command has no help text.'.format(cls.__name__)
 
 
 ## DO NOT MOVE THIS CODE
