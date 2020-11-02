@@ -20,17 +20,19 @@ class ChannelAuthority:
     __WAITING_CHANNEL_KEY = "waiting"
     __QUEUE_CHANNEL_KEY = "queue"
     __CHANNEL_COLLECTION = "channels"
-    __LAB_CATEGORY_CHANNEL = "lab"
     __OH_SESSION_KEY = "oh_sessions"
     __AUTH_CHANNEL_KEY = "auth"
     __BULLETIN_CHANNEL_KEY = "bulletin"
+    __MAINT_CHANNEL_KEY = 'maint'
+    __LAB_CATEGORY_NAME = 'Lab'
 
     def __init__(self, guild: Guild):
         self.waiting_channel: TextChannel = None
         self.queue_channel: TextChannel = None
-        self.lab_category: CategoryChannel = None
-        self.guild = guild
+        self.lab_sections = {}
+        self.guild: Guild = guild
         self.oh_sessions = None
+        self.lab_sections = {}
         channels = mongo.db[self.__CHANNEL_COLLECTION].find_one()
         if not channels:
             logger.warning("Unable to load channel authority!  Run setup!")
@@ -38,21 +40,23 @@ class ChannelAuthority:
         try:
             waiting_uuid = channels[self.__WAITING_CHANNEL_KEY]
             queue_uuid = channels[self.__QUEUE_CHANNEL_KEY]
-
-            if self.__LAB_CATEGORY_CHANNEL in channels:
-                self.lab_category = self.guild.get_channel(channels[self.__LAB_CATEGORY_CHANNEL])
-
             self.bulletin_category = self.guild.get_channel(channels[self.__BULLETIN_CHANNEL_KEY])
             self.auth_channel: TextChannel = self.guild.get_channel(channels[self.__AUTH_CHANNEL_KEY])
             self.waiting_channel = self.guild.get_channel(waiting_uuid)
             self.queue_channel = self.guild.get_channel(queue_uuid)
+
+            # currently we will simply record all of the lab sections, rather than keeping them in the database.
+            for channel in guild.channels:
+                if self.__LAB_CATEGORY_NAME in channel.name:
+                    self.lab_sections[channel.name] = channel
         except KeyError:
             logger.warning("Unable to load channel authority!  Run setup!")
 
-    def save_channels(self, bulletin_category, waiting_channel, queue_channel, auth_channel) -> None:
+    def save_channels(self, bulletin_category, waiting_channel, queue_channel, auth_channel, maintenance_channel) -> None:
         self.bulletin_category = bulletin_category
         self.waiting_channel = waiting_channel
         self.queue_channel = queue_channel
+        self.maintenance_channel = maintenance_channel
         self.auth_channel = auth_channel
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = {
@@ -60,9 +64,8 @@ class ChannelAuthority:
             self.__WAITING_CHANNEL_KEY: self.waiting_channel.id,
             self.__QUEUE_CHANNEL_KEY: self.queue_channel.id,
             self.__AUTH_CHANNEL_KEY: self.auth_channel.id,
+            self.__MAINT_CHANNEL_KEY: self.maintenance_channel.id,
         }
-        if self.lab_category:
-            document[self.__LAB_CATEGORY_CHANNEL] = self.lab_category.id
 
         collection.delete_many({})
         collection.insert(document)
@@ -79,31 +82,40 @@ class ChannelAuthority:
         del document[channel_name]
         collection.replace_one({"_id": document["_id"]}, document)
 
-    async def start_lab(self, message: Message) -> None:
-        guild: Guild = message.guild
-        ra: RoleAuthority = RoleAuthority(guild)
+    def find_lab_channel(self, the_category: CategoryChannel):
+        current_lab_channel = None
+        for lab_name in self.lab_sections:
+            if the_category == self.lab_sections[lab_name]:
+                current_lab_channel = self.lab_sections[lab_name]
+        return current_lab_channel
+
+    async def start_lab(self, lab_name) -> None:
+        ra: RoleAuthority = RoleAuthority(self.guild)
         # Make the category channel and make it inaccessible to unauthed nerds
-        self.lab_category: CategoryChannel = await guild.create_category("Lab", overwrites={
-            ra.un_authenticated: PermissionOverwrite(read_messages=False)
-        })
+        self.lab_category: CategoryChannel = await self.guild.create_category(self.__LAB_CATEGORY_NAME + lab_name,
+                        overwrites={
+                            ra.ta: PermissionOverwrite(read_messages=False),
+                            ra.student: PermissionOverwrite(read_messages=False),
+                            ra.un_authenticated: PermissionOverwrite(read_messages=False)
+                        })
 
-        await self.lab_category.create_text_channel("General")
-        await self.lab_category.create_voice_channel("Main Lecture")
-        for i in range(1, 7):
-            await self.lab_category.create_voice_channel("Small Group Chat " + str(i))
+        await self.lab_category.create_text_channel("Main Discussion")
+        await self.lab_category.create_voice_channel("Main Discussion")
+        for i in range(5):
+            await self.lab_category.create_voice_channel("Discussion Group {}".format(i + 1))
 
-        self.update_channel(self.__LAB_CATEGORY_CHANNEL, self.lab_category)
+        self.update_channel(self.__LAB_CATEGORY_NAME, self.lab_category)
 
     def lab_running(self) -> bool:
         return self.lab_category is not None
 
-    async def end_lab(self, message):
+    async def end_lab(self, section_name):
         for channel in self.lab_category.channels:
             await channel.delete()
         await self.lab_category.delete()
         self.lab_category = None
 
-        self.remove_channel(self.__LAB_CATEGORY_CHANNEL)
+        self.remove_channel(self.__LAB_CATEGORY_NAME)
 
     def add_oh_session(self, session: OHSession):
         collection = mongo.db[self.__CHANNEL_COLLECTION]
@@ -139,4 +151,12 @@ class ChannelAuthority:
             return True
         else:
             return False
+
+    def is_maintenance_channel(self, channel):
+        collection = mongo.db[self.__CHANNEL_COLLECTION]
+        channels = collection.find_one({})
+        if channel.id == channels.get(self.__MAINT_CHANNEL_KEY, -1):
+            return True
+
+        return False
 

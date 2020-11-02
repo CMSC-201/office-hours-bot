@@ -3,6 +3,7 @@ import logging
 from discord import Message, Client, Member, TextChannel, CategoryChannel, PermissionOverwrite, Role, Permissions
 
 import command
+import mongo
 from channels import ChannelAuthority
 from roles import RoleAuthority
 
@@ -44,19 +45,25 @@ class SetupCommand(command.Command):
                                                                                       student_permissions,
                                                                                       un_authed_permissions)
 
-        staff_category = "Instructor's Area"
-        student_category = "Student's Area"
+        admin_category = "Administration"
+        staff_category = "Instruction"
+        student_category = "Course Rooms"
         waiting_room_name = "waiting-room"
         queue_room_name = "student-requests"
-        auth_room_name = "authentication"
+        auth_channel_name = 'landing-pad'
+        maintenance_channel_name = 'maintenance'
         channel_structure = {
             DMZ_category: {
-                "text": ["landing-pad", "getting-started", "announcements", auth_room_name],
+                "text": ["announcements", "landing-pad"],
                 "voice": [],
             },
+            admin_category: {
+                "text": ['maintenance', 'course-admin', 'instructor-lounge'],
+                "voice": ['maintenance', 'instructor-lounge']
+            },
             staff_category: {
-                "text": ["course-staff-general", queue_room_name],
-                "voice": ["instructor-lounge", "ta-lounge"],
+                "text": ["ta-announcements", 'ta-general', 'grading', 'random-and-meme', queue_room_name],
+                "voice": ['ta-general', 'grading'],
             },
             student_category: {
                 "text": ["general", "tech-support", "memes", waiting_room_name],
@@ -69,6 +76,7 @@ class SetupCommand(command.Command):
         waiting_room: TextChannel = None
         queue_room: TextChannel = None
         auth_room: TextChannel = None
+        maintenance_room: TextChannel = None
         for category, channels in channel_structure.items():
             text, voice = (channels["text"], channels["voice"])
             category_channel: CategoryChannel = await self.guild.create_category(category)
@@ -78,7 +86,9 @@ class SetupCommand(command.Command):
 
             for name in text:
                 channel = await category_channel.create_text_channel(name)
-                if name == auth_room_name:
+                if name == maintenance_channel_name:
+                    maintenance_room = channel
+                elif name == auth_channel_name:
                     auth_room = channel
                 elif name == queue_room_name:
                     queue_room = channel
@@ -104,6 +114,12 @@ class SetupCommand(command.Command):
         add_read: PermissionOverwrite = PermissionOverwrite(read_messages=True)
         remove_media: PermissionOverwrite = PermissionOverwrite(attach_files=False, embed_links=False)
         add_media: PermissionOverwrite = PermissionOverwrite(attach_files=True, embed_links=True)
+        # Overwrite Administrator's Area category read permissions
+        await categories[admin_category].set_permissions(admin_role, overwrite=add_read)
+        await categories[admin_category].set_permissions(ta_role, overwrite=remove_read)
+        await categories[admin_category].set_permissions(student_role, overwrite=remove_read)
+        await categories[admin_category].set_permissions(un_authed_role, overwrite=remove_read)
+        await categories[admin_category].set_permissions(everyone_role, overwrite=remove_read)
         # Overwrite Instructor's Area category read permissions
         await categories[staff_category].set_permissions(admin_role, overwrite=add_read)
         await categories[staff_category].set_permissions(ta_role, overwrite=add_read)
@@ -121,14 +137,12 @@ class SetupCommand(command.Command):
         await all_channels[student_category]["text"]["memes"].set_permissions(student_role, overwrite=add_media)
         # Overwrite Bulletin Board category read permissions
         await categories[DMZ_category].set_permissions(everyone_role, overwrite=add_read)
-        await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(ta_role, overwrite=remove_read)
-        await all_channels[DMZ_category]["text"][auth_room_name].set_permissions(student_role, overwrite=remove_read)
         await all_channels[DMZ_category]["text"]["landing-pad"].set_permissions(ta_role, overwrite=remove_read)
         await all_channels[DMZ_category]["text"]["landing-pad"].set_permissions(student_role, overwrite=remove_read)
 
         logger.info("Updating channel authority with UUIDs {} and {}".format(waiting_room.id, queue_room.id))
         channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
-        channel_authority.save_channels(categories[DMZ_category], waiting_room, queue_room, auth_room)
+        channel_authority.save_channels(categories[DMZ_category], waiting_room, queue_room, auth_room, maintenance_room)
 
         await first.send("Righto! You're good to go, boss!")
 
@@ -190,7 +204,7 @@ class SetupCommand(command.Command):
             if ra.admin in message.author.roles:
                 return True
             else:
-                if ca.waiting_channel == None:
+                if ca.waiting_channel is None:
                     return True
                 await message.channel.send("You can't run setup, " + message.author.mention)
                 return False
