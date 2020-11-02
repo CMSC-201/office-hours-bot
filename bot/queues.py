@@ -30,11 +30,15 @@ class OHSession:
 
     @staticmethod
     def from_dict(dictionary: dict, guild: Guild):
+        member = await guild.fetch_member(dictionary["student"])
+
+        ta = await guild.fetch_member(dictionary["TA"])
+
         return OHSession(
-            member=guild.get_member(dictionary["student"]),
+            member=member,
             request=dictionary["request"],
             announcement=dictionary["announcement"],
-            ta=guild.get_member(dictionary["TA"]),
+            ta=ta,
             room=guild.get_channel(dictionary["room"]),
             role=guild.get_role(dictionary["role"]),
         )
@@ -89,7 +93,9 @@ class QueueAuthority:
             except NotFound:
                 pass
 
-        return OHSession(member=self.guild.get_member(session[self.__MEMBER_ID_FIELD]),
+        the_member = await self.guild.fetch_member(session[self.__MEMBER_ID_FIELD])
+
+        return OHSession(member=the_member,
                          request=session[self.__REQUEST_FIELD],
                          announcement=message,
                          ta=ta)
@@ -120,8 +126,10 @@ class QueueAuthority:
                 pass
 
         collection.replace_one({"_id": document["_id"]}, document)
-        return OHSession(member=self.guild.get_member(output_session[self.__MEMBER_ID_FIELD]),
-                         request=output_session[self.__REQUEST_FIELD],
+
+        the_member = await self.guild.fetch_member(session[self.__MEMBER_ID_FIELD])
+        return OHSession(member=the_member,
+                         request=session[self.__REQUEST_FIELD],
                          announcement=message,
                          ta=None)
 
