@@ -5,6 +5,8 @@ import mongo
 
 
 class OHSession:
+    __MEMBER_ID_FIELD = "member-id"
+
     def __init__(self, member: Member = None, request: str = None, announcement: Message = None, ta: Member = None,
                  room=None, role=None):
         self.member: Member = member
@@ -17,6 +19,7 @@ class OHSession:
     def to_dict(self) -> dict:
         output = {
             "student": self.member.id,
+            self.__MEMBER_ID_FIELD: self.member.id,
             "request": self.request,
             "announcement": self.announcement.id,
             "TA": self.ta.id,
@@ -26,6 +29,9 @@ class OHSession:
         if self.room:
             output["room"] = self.room.id
         return output
+
+    def __repr__(self):
+        return "Member {}, Message {}, TA {}".format(self.member, self.request, self.ta)
 
     @staticmethod
     def from_dict(dictionary: dict, guild: Guild):
@@ -50,6 +56,19 @@ class QueueAuthority:
     def __init__(self, guild: Guild):
         self.guild = guild
 
+    def insert_in_queue(self, session):
+        collection = mongo.db[self.__QUEUE_COLLECTION]
+        document = collection.find_one()
+        if not document:
+            document = {
+                "queue": [],
+                "available_tas": [],
+                "open": True,
+            }
+            collection.insert(document)
+        # doesn't work of course
+        pass
+
     def add_to_queue(self, member: Member, request: str, announcement: Message):
         collection = mongo.db[self.__QUEUE_COLLECTION]
         document = collection.find_one()
@@ -61,6 +80,7 @@ class QueueAuthority:
             }
             collection.insert(document)
 
+        print(member.id)
         document["queue"].append({
             self.__MEMBER_ID_FIELD: member.id,
             self.__REQUEST_FIELD: request,
@@ -90,7 +110,8 @@ class QueueAuthority:
             except NotFound:
                 pass
 
-        return OHSession(member=self.guild.get_member(session[self.__MEMBER_ID_FIELD]),
+        the_member = await self.guild.fetch_member(session[self.__MEMBER_ID_FIELD])
+        return OHSession(member=the_member,
                          request=session[self.__REQUEST_FIELD],
                          announcement=message,
                          ta=ta)
