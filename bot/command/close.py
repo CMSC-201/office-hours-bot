@@ -17,7 +17,7 @@ class EndOHSession(command.Command):
 
         # find the correct session
         this_session = None
-        for session in ca.get_oh_sessions():
+        for session in await ca.get_oh_sessions():
             if self.message.channel in session.room.channels:
                 this_session = session
                 category_channel = session.room
@@ -40,7 +40,7 @@ class EndOHSession(command.Command):
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!close"):
             ca: ChannelAuthority = ChannelAuthority(message.guild)
-            for session in ca.get_oh_sessions():
+            for session in await ca.get_oh_sessions():
                 if message.channel in session.room.channels:
                     return True
         return False

@@ -29,7 +29,7 @@ class OHSession:
         return output
 
     @staticmethod
-    def from_dict(dictionary: dict, guild: Guild):
+    async def from_dict(dictionary: dict, guild: Guild):
         member = await guild.fetch_member(dictionary["student"])
 
         ta = await guild.fetch_member(dictionary["TA"])
