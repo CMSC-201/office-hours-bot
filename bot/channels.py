@@ -113,14 +113,14 @@ class ChannelAuthority:
         document[self.__OH_SESSION_KEY][str(session.room.id)] = session.to_dict()
         collection.replace_one({"_id": document["_id"]}, document)
 
-    def get_oh_sessions(self):
+    async def get_oh_sessions(self):
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = collection.find_one()
         sessions = []
         for room_id, values in document[self.__OH_SESSION_KEY].items():
             session_dict = dict(values)
             session_dict["room"] = room_id
-            from_dict = OHSession.from_dict(values, self.guild)
+            from_dict = await OHSession.from_dict(values, self.guild)
             if from_dict and from_dict.room:  # the room can be null sometimes
                 sessions.append(from_dict)
         return sessions
