@@ -58,7 +58,7 @@ class DueDate(command.Command):
                                                                           assignment_match[self.__DUE_DATE].strftime('%m-%d-%Y %H:%M:%S'))
         if not get_match or not assignment_match:
             response_message = 'I was unable to find which assignment you were looking for.  Options are:\n\t' \
-                               + '\n\t'.join([am[self.__ASSIGN_NAME] for am in assignments_db.find({})])
+                               + ', '.join([am[self.__ASSIGN_NAME] for am in assignments_db.find({})])
 
         if self.message.guild:
             await self.message.channel.send(response_message)
@@ -74,3 +74,10 @@ class DueDate(command.Command):
         if message.content.startswith("!due date"):
             return True
         return False
+
+    @classmethod
+    def get_help(cls):
+        import textwrap
+        return textwrap.dedent(
+            """Get the due date of an assignment by its name.  If no name is specified, it will output all of the assignments in the database.  
+            Command Format: !due date <assignment name>""")
