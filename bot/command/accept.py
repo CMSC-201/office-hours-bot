@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 @command.command_class
 class AcceptStudent(command.Command):
+    __MEMBER_ID_FIELD = "member-id"
+    __REQUEST_TIME = 'request-time'
+
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         if not qa.is_ta_on_duty(self.message.author.id):
@@ -26,45 +29,45 @@ class AcceptStudent(command.Command):
             await msg.delete(delay=7)
             await self.message.delete()
             return
-        # create role for channel
-        role: Role = await self.guild.create_role(name="{}'s OH session".format(command.name(session.member)), hoist=True)
-        num_roles = len(self.guild.roles)
-        # todo find bot role insert this underneath
-        # await role.edit(position=num_roles-2)
-        session.role = role
-        await session.member.add_roles(session.role)
-        await self.message.author.add_roles(session.role)
 
-        # create channel
         ra: RoleAuthority = RoleAuthority(self.guild)
-        session_category: CategoryChannel = await self.guild.create_category_channel(
-            "Session for {}".format(command.name(session.member)),
-            overwrites={
-                role: PermissionOverwrite(read_messages=True, attach_files=True, embed_links=True),
-                ra.student: PermissionOverwrite(read_messages=False),
-                ra.un_authenticated: PermissionOverwrite(read_messages=False)
-            })
-        text_channel: TextChannel = await session_category.create_text_channel("Text Cat")
-        await session_category.create_voice_channel("Voice chat")
-        session.room = session_category
-        # attach user ids and channel ids to OH room info in channel authority
-        ca: ChannelAuthority = ChannelAuthority(self.guild)
-        await session.announcement.delete()
 
-        ca.add_oh_session(session)
-        await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close to end the session!".format(
-            session.member.mention,
-            session.ta.mention,
-        ))
-        await text_channel.send('The question asked/help requested was: {}'.format(session.request))
-        logger.info("OH session for {} accepted by {}".format(
-            command.name(session.member),
-            command.name(self.message.author)))
+        if session.member:
+            role: Role = await self.guild.create_role(name="{}'s OH session".format(command.name(session.member)), hoist=True)
 
-        try:
-            await self.message.delete()
-        except NotFound:
-            await self.message.channel.send('Deleting the accept message can potentially cause errors, allow me to delete it for you.')
+            session.role = role
+            await session.member.add_roles(session.role)
+            await self.message.author.add_roles(session.role)
+            session_category: CategoryChannel = await self.guild.create_category_channel(
+                "Session for {}".format(command.name(session.member)),
+                overwrites={
+                    role: PermissionOverwrite(read_messages=True, attach_files=True, embed_links=True),
+                    ra.student: PermissionOverwrite(read_messages=False),
+                    ra.un_authenticated: PermissionOverwrite(read_messages=False)
+                })
+            text_channel: TextChannel = await session_category.create_text_channel("Text Chat")
+            await session_category.create_voice_channel("Voice Chat")
+            session.room = session_category
+            # attach user ids and channel ids to OH room info in channel authority
+            ca: ChannelAuthority = ChannelAuthority(self.guild)
+            await session.announcement.delete()
+
+            ca.add_oh_session(session)
+            await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close to end the session!".format(
+                session.member.mention,
+                session.ta.mention,
+            ))
+            await text_channel.send('The question asked/help requested was: {}'.format(session.request))
+            logger.info("OH session for {} accepted by {}".format(
+                command.name(session.member),
+                command.name(self.message.author)))
+            try:
+                await self.message.delete()
+            except NotFound:
+                await self.message.channel.send('Deleting the accept message can potentially cause errors, allow me to delete it for you.')
+        else:
+            await self.message.channel.send('The session member is still null, this should never happen of course.  ')
+
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
