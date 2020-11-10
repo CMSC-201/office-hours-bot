@@ -37,15 +37,15 @@ class QueueStatus(command.Command):
             return '{} hours, {} minutes, {} seconds'.format(s//3600, (s % 3600) // 60, s % 60)
 
     async def handle(self):
-
         qa: QueueAuthority = QueueAuthority(self.guild)
         queue = qa.retrieve_queue()
         ra: RoleAuthority = RoleAuthority(self.guild)
 
-        found_student = False
         if ra.ta_or_higher(self.message.author):
             queue.sort(key=lambda x: x[self.__REQUEST_TIME])
             for i, student_data in enumerate(queue):
+                member = await self.guild.fetch_member(student_data['member-id'])
+                student_data['member-name'] = member.display_name
                 await self.message.channel.send(str(student_data))
 
 
