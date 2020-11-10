@@ -41,10 +41,9 @@ class CheckAssignmentThread(Thread):
 
 @command.command_class
 class CheckAssignment(command.Command):
-    __COMMAND_REGEX = r"!submit\s+check\s+(?P<assignment>\w+)\s+(?P<problem_file>(\w|_|\.)+)"
+    __COMMAND_REGEX = r"!submit\s+check\s+(?P<assignment>\w+)\s+(?P<problem_file>(\w|_|\.)+)(\s+user=(P<user>\w+))?"
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
-
 
     __ADMIN_GROUP = 'admin'
     __TA_GROUP = 'ta'
@@ -91,6 +90,7 @@ class CheckAssignment(command.Command):
             if ra.ta_or_higher(self.message.author):
                 # allow access to all submissions
                 await self.message.author.send("I'm about to go looking for you, please be patient... ")
+                search_user = match.group('user')
                 CheckAssignmentThread(self.client, self.message.author, the_user, assignment_name, problem_file_name).start()
             else:
                 # only allow access to their own submissions

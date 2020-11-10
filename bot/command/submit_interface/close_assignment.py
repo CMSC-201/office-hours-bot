@@ -1,3 +1,7 @@
+__DOCSTRING__ = """
+    Totally non-functional.
+"""
+
 import re
 from datetime import datetime, timedelta
 from discord import Message, Client
@@ -11,7 +15,7 @@ from roles import RoleAuthority
 
 
 @command.command_class
-class RemoveAssignment(command.Command):
+class CloseAssignment(command.Command):
     __COMMAND_REGEX = r"!submit\s+configure\s+(?P<assign_name>\w+)\s+remove(\s+(?P<admin>--admin=\w+))?"
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'

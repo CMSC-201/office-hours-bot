@@ -152,13 +152,13 @@ class GrantIndividualExtension(command.Command):
                 the_student = student_col.find_one({self.__UID_FIELD: student_id})
                 the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
                 for ta in ta_collection.find({self.__SECTION: the_student[self.__SECTION]}):
-                    ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
+                    ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
                     message = '{} ({}) has been granted an extension until {} for assignment {}.'.format(the_student_name, student_id, due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
                     await self.safe_send(ta_discord_user, message)
             # if it's a section extension, send the TA an update on their section's extension
             elif section_id:
                 for ta in ta_collection.find({self.__SECTION: section_id}):
-                    ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
+                    ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
                     message = 'Your section has been granted an extension until {} for assignment {}.'.format(due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
                     await self.safe_send(ta_discord_user, message)
 

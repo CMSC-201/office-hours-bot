@@ -78,7 +78,7 @@ class SubmitDaemon(Thread):
             roster_list.extend([[admin[self.__USERNAME], 0] for admin in admin_group.find()])
             roster.writerows(roster_list)
 
-    def close_extension(self, assignment):
+    async def close_extension(self, assignment):
         ca: ChannelAuthority = self.client.channel_authority
         self.connect_ssh()
         self.assignments.find_one({'name': assignment['name']})
@@ -103,7 +103,8 @@ class SubmitDaemon(Thread):
             # asyncio.run(ca.get_maintenance_channel().send('{} extension closed for section {}'.format(assignment['name'], assignment['section'])))
 
             for ta in ta_group.find({self.__SECTION: assignment['section']}):
-                ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
+                ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
+                # ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
                 message = "Your section's extension for assignment {} is closed.  You should recopy the files and begin grading.".format(assignment['name'])
                 try:
                     asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
@@ -128,7 +129,8 @@ class SubmitDaemon(Thread):
             the_student = students_group.find_one({self.__UID_FIELD: assignment['student']})
             the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
             for ta in ta_group.find({self.__SECTION: the_student[self.__SECTION]}):
-                ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
+                ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
+                # ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
                 message = '{} ({})\'s extension for assignment {} is now closed.  You should recopy the files and begin grading. '.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
                 try:
                     asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
@@ -213,9 +215,9 @@ class SubmitDaemon(Thread):
                     for assignment in assignment_queue:
                         if assignment['due-date'] <= datetime.now():
                             if 'student' in assignment:
-                                self.close_extension(assignment)
+                                asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                             elif 'section' in assignment:
-                                self.close_extension(assignment)
+                                asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                             else:
                                 self.close_assignment(assignment['name'])
 
