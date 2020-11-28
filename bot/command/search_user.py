@@ -6,6 +6,7 @@ import re
 import command
 import mongo
 from datetime import datetime as dt
+from datetime import timedelta
 from globals import get_globals
 from queues import QueueAuthority
 from roles import RoleAuthority
@@ -60,7 +61,7 @@ class SearchUsers(command.Command):
             color = Colour(0).dark_gold()
             for person in combined_list:
                 db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
-                embedded_message = Embed(description=db_text, timestamp=dt.now(), colour=color)
+                embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
 
                 await self.message.channel.send(embed=embedded_message)
 
@@ -73,7 +74,7 @@ class SearchUsers(command.Command):
             color = Colour(0).dark_gold()
             for person in found_list:
                 db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
-                embedded_message = Embed(description=db_text, timestamp=dt.now(), colour=color)
+                embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
 
                 await self.message.channel.send(embed=embedded_message)
 
@@ -86,7 +87,7 @@ class SearchUsers(command.Command):
             color = Colour(0).dark_gold()
             for person in found_list:
                 db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
-                embedded_message = Embed(description=db_text, timestamp=dt.now(), colour=color)
+                embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
 
                 await self.message.channel.send(embed=embedded_message)
 
