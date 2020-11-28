@@ -23,6 +23,8 @@ class SearchUsers(command.Command):
     __DISCORD_ID = 'discord'
     __DROPPED = 'dropped'
 
+    permissions = {'student': False, 'ta': True, 'admin': True}
+
     def search_database(self, criteria):
         students_group = mongo.db[self.__STUDENTS_GROUP]
         ta_group = mongo.db[self.__TA_GROUP]
@@ -34,12 +36,13 @@ class SearchUsers(command.Command):
             found_list.extend([first_name_user for first_name_user in group.find(criteria)])
         return found_list
 
+    @command.Command.authenticate
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.message.guild)
         ca: ChannelAuthority = ChannelAuthority(self.message.guild)
         match = re.match(r'!search\s+user\s+(?P<user_identifier>\w+)', self.message.content)
 
-        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel) and match:
+        if ca.is_maintenance_channel(self.message.channel) and match:
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
             admin_group = mongo.db[self.__ADMIN_GROUP]
