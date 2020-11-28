@@ -16,12 +16,12 @@ class RejectStudent(command.Command):
         qa: QueueAuthority = QueueAuthority(self.guild)
 
         student_id = self.message.content.split(" ")[1]
-        student: Member = self.guild.get_member(int(student_id))
+        student: Member = await self.guild.fetch_member(int(student_id))
 
         session: OHSession = await qa.find_and_remove_by_user_id(student)
         await session.announcement.delete()
         reject_message = " ".join(self.message.content.split(" ")[2:])
-        await student.send("Your request was fulfilled by the following message: {}".format(reject_message))
+        await student.send("You have been removed from the office hour queue, because: {}".format(reject_message))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
@@ -42,7 +42,7 @@ class RejectStudent(command.Command):
                         malformed = True
                     else:
                         member_id = int(message.content.split(" ")[1])
-                        member_mentioned: Member = guild.get_member(member_id)
+                        member_mentioned: Member = await guild.fetch_member(member_id)
                         # checks if the supplied id is a valid id
                         if not member_mentioned:
                             malformed = True
