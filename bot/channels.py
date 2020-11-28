@@ -47,6 +47,8 @@ class ChannelAuthority:
 
             # currently we will simply record all of the lab sections, rather than keeping them in the database.
             for channel in guild.channels:
+                if channels.get(self.__MAINT_CHANNEL_KEY, -1) == channel.id:
+                    self.maintenance_channel = channel
                 if self.__LAB_CATEGORY_NAME in channel.name:
                     self.lab_sections[channel.name] = channel
         except KeyError:
@@ -156,7 +158,21 @@ class ChannelAuthority:
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         channels = collection.find_one({})
         if channel.id == channels.get(self.__MAINT_CHANNEL_KEY, -1):
+            if not self.maintenance_channel:
+                self.maintenance_channel = channel
             return True
 
         return False
+
+    def get_maintenance_channel(self):
+        # collection = mongo.db[self.__CHANNEL_COLLECTION]
+        # channels = collection.find_one({})
+        for channel in self.guild.text_channels:
+            # this is a janky solution to fix this until we get the channel situation fixed.
+            print(channel.name)
+            if channel.name == 'maintenance':
+                return self.maintenance_channel
+
+        return None
+
 
