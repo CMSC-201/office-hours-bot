@@ -74,7 +74,7 @@ class Who(command.Command):
         elif self.message.content.startswith('!who is on duty'):
             office_hour_queue = mongo.db[self.__QUEUE_COLLECTION]
             queue_doc = office_hour_queue.find_one()
-            on_duty_tas = [self.guild.get_member(ta_id) for ta_id in queue_doc[self.__AVAILABLE_TAS]]
+            on_duty_tas = [await self.guild.fetch_member(ta_id) for ta_id in queue_doc[self.__AVAILABLE_TAS]]
             if on_duty_tas:
                 await self.message.channel.send('The TAs on duty are:\n' + '\n'.join([x.name for x in on_duty_tas]))
             elif not queue_doc[self.__OFFICE_HOURS_OPEN]:
@@ -90,8 +90,7 @@ class Who(command.Command):
                 await self.message.channel.send('The TA for section {} is {}'.format(section_num, ta_name))
             else:
                 await self.message.channel.send('Unable to find ta for section {}'.format(section_num))
-        if self.message.guild:
-            await self.message.delete(delay=5)
+
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
