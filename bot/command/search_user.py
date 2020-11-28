@@ -23,7 +23,7 @@ class SearchUsers(command.Command):
     __DISCORD_ID = 'discord'
     __DROPPED = 'dropped'
 
-    permissions = {'student': False, 'ta': True, 'admin': True}
+    permissions = {'student': False, 'ta': False, 'admin': True}
 
     def search_database(self, criteria):
         students_group = mongo.db[self.__STUDENTS_GROUP]

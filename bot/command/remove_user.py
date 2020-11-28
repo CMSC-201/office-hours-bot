@@ -23,12 +23,15 @@ class RemoveUser(command.Command):
     __UID_FIELD = 'UMBC-Name-Id'
     __DISCORD_ID = 'discord'
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.message.guild)
         ma: MemberAuthority = MemberAuthority(self.message.guild)
         ca: ChannelAuthority = ChannelAuthority(self.message.guild)
 
-        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
+        if ca.is_maintenance_channel(self.message.channel):
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
             admin_group = mongo.db[self.__ADMIN_GROUP]

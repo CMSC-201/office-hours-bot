@@ -21,6 +21,9 @@ class ModifyUser(command.Command):
     __UID_FIELD = 'UMBC-Name-Id'
     __DISCORD_ID = 'discord'
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
         ra: RoleAuthority = RoleAuthority(self.message.guild)
         ma: MemberAuthority = MemberAuthority(self.message.guild)

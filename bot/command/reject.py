@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 @command.command_class
 class RejectStudent(command.Command):
+
+    permissions = {'student': False, 'ta': True, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
 
