@@ -145,7 +145,17 @@ class Command:
 
     @staticmethod
     def authenticate(the_method):
+        """
+            This will read from the WhateverCommand.permissions object to check
+            that the author of self.message has the proper permissions to run
+            the command, if so the wrapped handle function will be returned.
+            Otherwise it will return a function which posts a message informing
+            the user that they do not have permission to run the command.
 
+            :param the_method: the method that uses the authentication process
+            :return: a wrapper of the_method which ensures proper permissions
+                before execution.
+        """
         async def authentication_wrapper(self, *args, **kwargs):
             from roles import RoleAuthority
             ra: RoleAuthority = RoleAuthority(self.guild)

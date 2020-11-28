@@ -16,6 +16,9 @@ class AcceptStudent(command.Command):
     __MEMBER_ID_FIELD = "member-id"
     __REQUEST_TIME = 'request-time'
 
+    permissions = {'student': False, 'ta': True, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         if not qa.is_ta_on_duty(self.message.author.id):
@@ -33,11 +36,17 @@ class AcceptStudent(command.Command):
         ra: RoleAuthority = RoleAuthority(self.guild)
 
         if session.member:
-            role: Role = await self.guild.create_role(name="{}'s OH session".format(command.name(session.member)), hoist=True)
+            role = None
+            while not role:
+                try:
+                    role: Role = await self.guild.create_role(name="{}'s OH session".format(command.name(session.member)), hoist=True)
 
-            session.role = role
-            await session.member.add_roles(session.role)
-            await self.message.author.add_roles(session.role)
+                    session.role = role
+                    await session.member.add_roles(session.role)
+                    await self.message.author.add_roles(session.role)
+                except NotFound:
+                    await self.message.channel.send('Unable to create the OH session role.')
+
             session_category: CategoryChannel = await self.guild.create_category_channel(
                 "Session for {}".format(command.name(session.member)),
                 overwrites={
@@ -50,7 +59,8 @@ class AcceptStudent(command.Command):
             session.room = session_category
             # attach user ids and channel ids to OH room info in channel authority
             ca: ChannelAuthority = ChannelAuthority(self.guild)
-            await session.announcement.delete()
+
+            await self.safe_delete(session.announcement)
 
             ca.add_oh_session(session)
             await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close to end the session!".format(
@@ -61,10 +71,8 @@ class AcceptStudent(command.Command):
             logger.info("OH session for {} accepted by {}".format(
                 command.name(session.member),
                 command.name(self.message.author)))
-            try:
-                await self.message.delete()
-            except NotFound:
-                await self.message.channel.send('Deleting the accept message can potentially cause errors, allow me to delete it for you.')
+            await self.safe_delete(self.message, admonition='Deleting the accept message can potentially cause errors, allow me to delete it for you.')
+
         else:
             await self.message.channel.send('The session member is still null, this should never happen of course.  ')
 
@@ -84,14 +92,6 @@ class AcceptStudent(command.Command):
                         ca.queue_channel.mention
                     ))
                     await admonishment.delete(delay=7)
-                    await message.delete()
-                    return False
-            else:
-                admonishment = await message.channel.send("Silly {}, you're not a TA!".format(
-                    message.author.mention
-                ))
-                await admonishment.delete(delay=7)
-                await message.delete()
-                return False
 
+        await message.delete()
         return False
