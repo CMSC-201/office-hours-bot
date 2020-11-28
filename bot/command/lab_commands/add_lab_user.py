@@ -45,10 +45,10 @@ class AddToLabSection(command.Command):
             pa: PermissionAuthority = PermissionAuthority()
 
             if found_student:
-                student = self.message.guild.get_member(found_student[self.__DISCORD_ID])
+                student = await self.message.guild.fetch_memeber(found_student[self.__DISCORD_ID])
                 await ca.lab_sections[self.__SECTION_STRING.format(section_number)].set_permissions(student, overwrite=pa.student_overwrite)
             elif found_ta:
-                ta = self.message.guild.get_member(found_ta[self.__DISCORD_ID])
+                ta = await self.message.guild.fetch_memeber(found_ta[self.__DISCORD_ID])
                 await ca.lab_sections[self.__SECTION_STRING.format(section_number)].set_permissions(ta, overwrite=pa.ta_overwrite)
 
     @staticmethod
@@ -56,3 +56,7 @@ class AddToLabSection(command.Command):
         if message.content.startswith('!lab add user'):
             return True
         return False
+
+    @classmethod
+    def get_help(cls):
+        return "This command adds a user to a lab section. \n Command Format: !lab add user <username> <section>"

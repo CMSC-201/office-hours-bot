@@ -95,3 +95,7 @@ class AllowCheckIn(command.Command):
         elif message.content.startswith('!lab allow check in conf'):
             return True
         return False
+
+    @classmethod
+    def get_help(cls):
+        return "This command allows a TA to create a new lab section, students can use the !check in command in a lab section. \n Command Format: !lab allow check in"

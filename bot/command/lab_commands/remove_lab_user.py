@@ -1,10 +1,6 @@
 import logging
 
 from discord import Message, Client, Attachment, Guild, PermissionOverwrite, TextChannel, CategoryChannel, Member, File
-from datetime import datetime, timedelta
-import csv
-import re
-import os
 
 import command
 import mongo
@@ -44,10 +40,10 @@ class RemoveFromLabSection(command.Command):
             pa: PermissionAuthority = PermissionAuthority()
 
             if found_student:
-                student = self.message.guild.get_member(found_student[self.__DISCORD_ID])
+                student = await self.message.guild.fetch_member(found_student[self.__DISCORD_ID])
                 await ca.lab_sections[self.__SECTION_STRING.format(section_number)].set_permissions(student, overwrite=pa.forbid_overwrite)
             elif found_ta:
-                ta = self.message.guild.get_member(found_ta[self.__DISCORD_ID])
+                ta = await self.message.guild.fetch_member(found_ta[self.__DISCORD_ID])
                 await ca.lab_sections[self.__SECTION_STRING.format(section_number)].set_permissions(ta, overwrite=pa.forbid_overwrite)
 
     @staticmethod

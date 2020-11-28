@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import csv
 import re
 import os
+import textwrap
 from pymongo.results import UpdateResult
 
 import command
@@ -128,3 +129,9 @@ class LabCheckIn(command.Command):
         if message.content.startswith('!check in') or message.content.startswith('!checkin'):
             return True
         return False
+
+    @classmethod
+    def get_help(cls):
+        return textwrap.dedent(
+            """This command allows a student to check into the lab section for the day.
+            Command Format: !check in""")

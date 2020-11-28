@@ -77,11 +77,11 @@ class ConfigureLabs(command.Command):
                         section_collection.insert_one(line)
 
                         for ta in ta_group.find({self.__SECTION: line[self.__SECTION]}):
-                            the_ta = the_guild.get_member(ta[self.__DISCORD_ID])
+                            the_ta = await the_guild.fetch_member(ta[self.__DISCORD_ID])
                             await ca.lab_sections[line[self.__SECTION]].set_permissions(the_ta, overwrite=pa.ta_overwrite)
 
                         for student in students_group.find({self.__SECTION: line[self.__SECTION]}):
-                            the_student = the_guild.get_member(student[self.__DISCORD_ID])
+                            the_student = await the_guild.fetch_member(student[self.__DISCORD_ID])
                             await ca.lab_sections[line[self.__SECTION]].set_permissions(the_student, overwrite=pa.student_overwrite)
 
             except Exception as e:
@@ -93,3 +93,14 @@ class ConfigureLabs(command.Command):
             return True
 
         return False
+
+    @classmethod
+    def get_help(cls):
+        import textwrap
+        return textwrap.dedent(
+            """This command allows the course administrators to create the lab sections and sets the permissions.  
+            Command Format: !lab configure
+            Attachment required: a csv containing the data for the labs with column headings and an example line below
+            
+            Section,Days,Time,TA,Nickname
+            11,M,2:30 pm - 3:20 pm,,""")
