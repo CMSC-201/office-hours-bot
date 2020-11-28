@@ -53,8 +53,23 @@ class RoleAuthority:
 
         return self.role_map[role_name] in member.roles
 
+    def is_student(self, member: Member) -> bool:
+        return self.student in member.roles
+
+    def is_ta(self, member: Member) -> bool:
+        return self.ta in member.roles
+
     def is_admin(self, member: Member) -> bool:
         return self.admin in member.roles
+
+    def get_ta_role(self) -> Role:
+        return self.ta
+
+    def get_student_role(self) -> Role:
+        return self.student
+
+    def get_admin_role(self) -> Role:
+        return self.admin
 
     def ta_or_higher(self, member: Member) -> bool:
         """
@@ -63,6 +78,15 @@ class RoleAuthority:
         :return:
         """
         return self.admin in member.roles or self.ta in member.roles
+
+    def has_permission(self, author: Member, permission_object):
+
+        for role, method in zip(['student', 'ta', 'admin'], [self.is_student, self.is_ta, self.is_admin]):
+            if role in permission_object and permission_object[role]:
+                return method(author)
+
+        return False
+
 
 
 class PermissionAuthority:

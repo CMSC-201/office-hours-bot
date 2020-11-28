@@ -1,7 +1,7 @@
 import logging
 
 from discord import Message, Guild, Client, Member
-from discord.errors import Forbidden
+from discord.errors import Forbidden, NotFound
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,9 @@ async def handle_message(message: Message, client: Client):
 
 
 class Command:
+    GUILD_MEMBERS = {}
+    permissions = {}
+
     def __init__(self, message: Message = None, client: Client = None, guild: Guild = None):
         if not message:
             raise ValueError("You must issue a command with a message or guild")
@@ -96,6 +99,38 @@ class Command:
             print(e)
             return False
 
+    async def safe_delete(self, message: Message, delay: int = 0, admonition: str = "") -> bool:
+        try:
+            await message.delete(delay=delay)
+            return True
+        except NotFound:
+            if admonition:
+                await message.channel.send(admonition)
+        except Forbidden:
+            if admonition:
+                await message.channel.send(admonition)
+        return False
+
+    async def get_member(self, user_id, force=False):
+        """
+            This function should reduce the overall inefficiencies caused by the discord API change
+            whereby get_member seems to have been deprecated.
+
+            We will save the first instance of each fetch_member api call and then be permitted to
+            reuse those member classes when needed.
+
+        :param user_id: the user_id or member_id from a guild
+        :param force: if force is set to True, a new fetch_member will be called, regardless of the cache.
+            This can be used to update the member object in the cache from the server.
+        :return: the member object.
+        """
+        if user_id in self.GUILD_MEMBERS and not force:
+            return self.GUILD_MEMBERS[user_id]
+        else:
+            member = await self.guild.fetch_member(user_id)
+            self.GUILD_MEMBERS[user_id] = member
+            return member
+
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         return False
@@ -107,6 +142,19 @@ class Command:
     @classmethod
     def get_help(cls):
         return '{}, this command has no help text.'.format(cls.__name__)
+
+    @staticmethod
+    def authenticate(the_method):
+
+        async def authentication_wrapper(self, *args, **kwargs):
+            from roles import RoleAuthority
+            ra: RoleAuthority = RoleAuthority(self.guild)
+            if ra.has_permission(self.message.author, self.permissions):
+                await the_method(self, *args, **kwargs)
+            else:
+                await self.safe_send(self.message.channel, 'Unable to execute the handle method, you do not have permission.')
+
+        return authentication_wrapper
 
 
 ## DO NOT MOVE THIS CODE

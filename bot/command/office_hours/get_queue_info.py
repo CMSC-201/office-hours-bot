@@ -18,6 +18,8 @@ class QueueStatus(command.Command):
     __MESSAGE_ID_FIELD = "announcement"
     __REQUEST_TIME = 'request-time'
 
+    permissions = {'student': False, 'ta': True, 'admin': True}
+
     def ordinal(self, num):
         suffixes = {1: 'st', 2: 'nd', 3: 'rd'}
         if 10 <= num % 100 <= 20:
@@ -36,17 +38,18 @@ class QueueStatus(command.Command):
         else:
             return '{} hours, {} minutes, {} seconds'.format(s//3600, (s % 3600) // 60, s % 60)
 
+    @command.Command.authenticate
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         queue = qa.retrieve_queue()
-        ra: RoleAuthority = RoleAuthority(self.guild)
 
-        if ra.ta_or_higher(self.message.author):
-            queue.sort(key=lambda x: x[self.__REQUEST_TIME])
-            for i, student_data in enumerate(queue):
-                member = await self.guild.fetch_member(student_data['member-id'])
-                student_data['member-name'] = member.display_name
-                await self.message.channel.send(str(student_data))
+        await self.message.channel.send('Getting Queue Info: ')
+
+        queue.sort(key=lambda x: x[self.__REQUEST_TIME])
+        for i, student_data in enumerate(queue):
+            member = await self.guild.fetch_member(student_data['member-id'])
+            student_data['member-name'] = member.display_name
+            await self.message.channel.send(str(student_data))
 
 
     @staticmethod
