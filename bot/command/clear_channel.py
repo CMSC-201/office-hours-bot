@@ -11,17 +11,14 @@ logger = logging.getLogger(__name__)
 @command.command_class
 class ClearChannel(command.Command):
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
-        ra: RoleAuthority = RoleAuthority(self.message.guild)
-
-        def not_pinned(msg: Message):
-            return not msg.pinned
-
-        if ra.is_admin(self.message.author):
-            if self.message.content.strip().lower() == '!clear all':
-                await self.message.channel.purge(limit=None)
-            elif self.message.content.strip().lower() == '!clear all but pinned':
-                await self.message.channel.purge(limit=None, check=not_pinned)
+        if self.message.content.strip().lower() == '!clear all':
+            await self.message.channel.purge(limit=None)
+        elif self.message.content.strip().lower() == '!clear all but pinned':
+            await self.message.channel.purge(limit=None, check=lambda x: not x.pinned)
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
