@@ -3,9 +3,11 @@ from datetime import datetime as dt
 
 import discord
 from discord import Message, Client, Member
+from datetime import datetime, timedelta, tzinfo, timezone
 
 import command
 from channels import ChannelAuthority
+from roles import RoleAuthority
 from queues import QueueAuthority
 
 logger = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ class EnterQueue(command.Command):
         # Build embedded message
         color = discord.Colour(0).blue()
         embeddedMsg = discord.Embed(description=request,
-                                    timestamp=dt.now(),
+                                    timestamp=dt.now() + timedelta(hours=5),
                                     colour=color)
 
         author: Member = self.message.author
@@ -38,9 +40,8 @@ class EnterQueue(command.Command):
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
 
         await self.safe_send(self.message.author, 'You are now entered in the queue.  A TA should be available to help you shortly.', backup=self.message.channel)
-
         qa.add_to_queue(author, request, announcement)
-        await self.message.delete()
+        await self.safe_delete(self.message)
         logger.info("{} added to queue with request text: {}".format(
             command.name(author),
             request
@@ -74,9 +75,11 @@ class EnterQueue(command.Command):
                 await message.delete()
                 return False
             return True
-        elif message.channel == ca.waiting_channel:
-            await message.author.send('You should reserve this channel for office hour requests only.  Ask your question in general, tech-support or request help using the office hour system.  ')
-            await message.delete(delay=10)
+        elif message.channel == ca.waiting_channel and not message.content.startswith('!status'):
+            ra: RoleAuthority = RoleAuthority(message.guild)
+            if not ra.ta_or_higher(message.author):
+                await message.author.send('You should reserve this channel for office hour requests only.  Ask your question in general, tech-support or request help using the office hour system.  ')
+                await message.delete(delay=10)
         elif message.content.startswith("!request"):
             warning = await message.channel.send("{} you must be in {} to request a place in the queue.".format(
                 message.author.mention,

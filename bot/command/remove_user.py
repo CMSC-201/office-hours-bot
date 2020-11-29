@@ -26,43 +26,41 @@ class RemoveUser(command.Command):
     permissions = {'student': False, 'ta': False, 'admin': True}
 
     @command.Command.authenticate
+    @command.Command.require_maintenance
     async def handle(self):
-        ra: RoleAuthority = RoleAuthority(self.message.guild)
         ma: MemberAuthority = MemberAuthority(self.message.guild)
-        ca: ChannelAuthority = ChannelAuthority(self.message.guild)
 
-        if ca.is_maintenance_channel(self.message.channel):
-            students_group = mongo.db[self.__STUDENTS_GROUP]
-            ta_group = mongo.db[self.__TA_GROUP]
-            admin_group = mongo.db[self.__ADMIN_GROUP]
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
 
-            for group in [students_group, ta_group, admin_group]:
-                match = re.match(r'!remove\s+user\s+(?P<user_identifier>\w+)(\s+(?P<reset>--reset))?', self.message.content)
-                uid = match.group('user_identifier')
-                umbc_id_list = [user for user in group.find({'UMBC-Name-Id': uid})]
+        for group in [students_group, ta_group, admin_group]:
+            match = re.match(r'!remove\s+user\s+(?P<user_identifier>\w+)(\s+(?P<reset>--reset))?', self.message.content)
+            uid = match.group('user_identifier')
+            umbc_id_list = [user for user in group.find({'UMBC-Name-Id': uid})]
 
-                if umbc_id_list:
-                    member_document = umbc_id_list[0]
-                    print(member_document[self.__DISCORD_ID])
-                    member = self.message.guild.get_member(member_document[self.__DISCORD_ID])
-                    if member:
-                        await self.message.channel.send('Deauthenticating User %s' % member.nick)
-                        await ma.deauthenticate_member(member)
+            if umbc_id_list:
+                member_document = umbc_id_list[0]
+                member = self.message.guild.get_member(member_document[self.__DISCORD_ID])
 
-                    if match.group('reset'):
-                        await self.message.channel.send('Resetting User Database Entry...')
-                        result: UpdateResult = group.update_one({self.__UID_FIELD: uid}, {'$set': {self.__DISCORD_ID: ''}})
-                        if result.modified_count:
-                            await self.message.channel.send('User deauthenticated and discord id reset.')
-                        else:
-                            await self.message.channel.send('User deauthenticated but database entry not found/modified.')
+                if member:
+                    await self.message.channel.send('Deauthenticating User %s' % member.nick)
+                    await ma.deauthenticate_member(member)
+
+                if match.group('reset'):
+                    await self.message.channel.send('Resetting User Database Entry...')
+                    result: UpdateResult = group.update_one({self.__UID_FIELD: uid}, {'$set': {self.__DISCORD_ID: ''}})
+                    if result.modified_count:
+                        await self.message.channel.send('User deauthenticated and discord id reset.')
                     else:
-                        await self.message.channel.send('Removing User from Database...')
-                        result: DeleteResult = group.delete_one({self.__UID_FIELD: uid})
-                        if result.deleted_count:
-                            await self.message.channel.send('User removal complete.')
-                        else:
-                            await self.message.channel.send('User deauthenticated but not removed from database.')
+                        await self.message.channel.send('User deauthenticated but database entry not found/modified.')
+                else:
+                    await self.message.channel.send('Removing User from Database...')
+                    result: DeleteResult = group.delete_one({self.__UID_FIELD: uid})
+                    if result.deleted_count:
+                        await self.message.channel.send('User removal complete.')
+                    else:
+                        await self.message.channel.send('User deauthenticated but not removed from database.')
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):

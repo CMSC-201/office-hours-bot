@@ -166,6 +166,30 @@ class Command:
 
         return authentication_wrapper
 
+    @staticmethod
+    def require_maintenance(the_method, **keyword_args):
+        """
+        Ensures that the command which owns the called method is running on the maintenance channel.
+
+        :param the_method: the method to be encapsulated.  Must be a member of a Command child class.
+        :param keyword_args:
+            message: str: if provided, it will be the message displayed to the user upon failure.
+        :return: a channel_authentication_wrapper that ensures that we're on the maintenance
+            channel.
+        """
+
+        async def channel_authentication_wrapper(self, *args, **kwargs):
+            from channels import ChannelAuthority
+            ca: ChannelAuthority = ChannelAuthority(self.guild)
+            if ca.is_maintenance_channel(self.message.channel):
+                await the_method(self, *args, **kwargs)
+            else:
+                await self.safe_send(self.message.channel, keyword_args.get('message', 'This command must be run on the maintenance channel. '))
+
+        return channel_authentication_wrapper
+
+
+
 
 ## DO NOT MOVE THIS CODE
 # The following imports all the modules in command so that they can be added to the

@@ -38,12 +38,11 @@ class SearchUsers(command.Command):
         return found_list
 
     @command.Command.authenticate
+    @command.Command.require_maintenance
     async def handle(self):
-        ra: RoleAuthority = RoleAuthority(self.message.guild)
-        ca: ChannelAuthority = ChannelAuthority(self.message.guild)
         match = re.match(r'!search\s+user\s+(?P<user_identifier>\w+)', self.message.content)
 
-        if ca.is_maintenance_channel(self.message.channel) and match:
+        if match:
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
             admin_group = mongo.db[self.__ADMIN_GROUP]

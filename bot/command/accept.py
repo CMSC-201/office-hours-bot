@@ -93,5 +93,6 @@ class AcceptStudent(command.Command):
                     ))
                     await admonishment.delete(delay=7)
 
-        await message.delete()
+            await message.delete()
+
         return False
