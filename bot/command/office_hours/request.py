@@ -40,12 +40,17 @@ class EnterQueue(command.Command):
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
 
         await self.safe_send(self.message.author, 'You are now entered in the queue.  A TA should be available to help you shortly.', backup=self.message.channel)
+        request_id = 0
+
         qa.add_to_queue(author, request, announcement)
+        self.client.statistics.record_office_hour_request(request_id, self.message.author, request, dt.now())
+
         await self.safe_delete(self.message)
         logger.info("{} added to queue with request text: {}".format(
             command.name(author),
             request
         ))
+
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
