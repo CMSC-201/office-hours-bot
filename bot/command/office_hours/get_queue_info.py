@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @command.command_class
-class QueueStatus(command.Command):
+class GetQueueInfo(command.Command):
     __QUEUE_COLLECTION = 'queues'
     __MEMBER_ID_FIELD = "member-id"
     __REQUEST_FIELD = "request"
@@ -20,7 +20,8 @@ class QueueStatus(command.Command):
 
     permissions = {'student': False, 'ta': True, 'admin': True}
 
-    def ordinal(self, num):
+    @staticmethod
+    def ordinal(num):
         suffixes = {1: 'st', 2: 'nd', 3: 'rd'}
         if 10 <= num % 100 <= 20:
             suffix = 'th'
@@ -29,7 +30,8 @@ class QueueStatus(command.Command):
             suffix = suffixes.get(num % 10, 'th')
         return str(num) + suffix
 
-    def format_time(self, td: timedelta):
+    @staticmethod
+    def format_time(td: timedelta):
         s = td.seconds
         if s < 60:
             return '{} seconds'.format(s)
@@ -43,7 +45,7 @@ class QueueStatus(command.Command):
         qa: QueueAuthority = QueueAuthority(self.guild)
         queue = qa.retrieve_queue()
 
-        await self.message.channel.send('Getting Queue Info: ')
+        await self.safe_send(self.message.channel, 'Getting Queue Info: ')
 
         queue.sort(key=lambda x: x[self.__REQUEST_TIME])
         for i, student_data in enumerate(queue):

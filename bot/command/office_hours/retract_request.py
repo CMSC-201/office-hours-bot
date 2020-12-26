@@ -1,13 +1,8 @@
 import logging
-from datetime import datetime as dt
-
-import discord
-from discord import Message, Client, Member
-from datetime import datetime, timedelta, tzinfo, timezone
-
 import command
+
+from discord import Message, Client, Member
 from channels import ChannelAuthority
-from roles import RoleAuthority
 from queues import QueueAuthority, OHSession
 
 logger = logging.getLogger(__name__)
@@ -15,7 +10,11 @@ logger = logging.getLogger(__name__)
 
 @command.command_class
 class RetractRequest(command.Command):
-    async def handle(self):
+
+    permissions = {'student': True, 'ta': True, 'admin': True}
+
+    @command.Command.authenticate
+    async def handle(self, new_message=None):
         qa: QueueAuthority = QueueAuthority(self.guild)
         ca: ChannelAuthority = ChannelAuthority(self.message.guild)
 
@@ -24,12 +23,14 @@ class RetractRequest(command.Command):
                 await self.safe_send(self.message.author, "You are not in the queue.  If you want to be added, you should use the !request command. ")
                 await self.safe_delete(self.message, delay=7)
                 return
-
-            else:
+            elif new_message and new_message.content.strip().lower() in ['y', 'yes']:
                 session: OHSession = await qa.find_and_remove_by_user_id(self.message.author)
                 await self.safe_delete(session.announcement)
                 await self.safe_delete(self.message, delay=7)
                 await self.safe_send(self.message.author, "You have been removed from the office hour queue.  ")
+            else:
+                await self.safe_send(self.message.channel, 'Are you sure you wish to remove yourself from the office hour queue? (y/yes) or (n/no)')
+                return True
         else:
             await self.safe_send(self.message.author, "Your request-retract should be done in the waiting channel.  ")
 
@@ -39,3 +40,17 @@ class RetractRequest(command.Command):
             return True
 
         return False
+
+
+class RetractRequestTests:
+    def __init__(self, instructor_bots, ta_bots, student_bots):
+        pass
+
+    def in_waiting_channel_and_queue(self):
+        pass
+
+    def in_waiting_channel_and_not_in_queue(self):
+        pass
+
+    def not_in_waiting_channel(self):
+        pass
