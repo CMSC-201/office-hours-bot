@@ -113,7 +113,7 @@ class SetupCommand(command.Command):
         remove_read: PermissionOverwrite = PermissionOverwrite(read_messages=False)
         add_read: PermissionOverwrite = PermissionOverwrite(read_messages=True)
         remove_media: PermissionOverwrite = PermissionOverwrite(attach_files=False, embed_links=False)
-        add_media: PermissionOverwrite = PermissionOverwrite(attach_files=True, embed_links=True)
+        add_media: PermissionOverwrite = PermissionOverwrite(attach_files=True, embed_links=True, read_messages=True)
         # Overwrite Administrator's Area category read permissions
         await categories[admin_category].set_permissions(admin_role, overwrite=add_read)
         await categories[admin_category].set_permissions(ta_role, overwrite=remove_read)
@@ -184,8 +184,8 @@ class SetupCommand(command.Command):
         admin_permissions: Permissions = Permissions.all()
         un_authed_permissions: Permissions = Permissions.none()
         un_authed_permissions.update(read_message_history=True,
-                                     read_messages=True,
-                                     send_messages=True)
+                                     read_messages=False,
+                                     send_messages=False)
         ta_permissions: Permissions = Permissions.all()
         ta_permissions.update(administrator=False,
                               admin_permissions=False,

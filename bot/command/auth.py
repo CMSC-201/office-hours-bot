@@ -15,7 +15,7 @@ class AuthenticateStudent(command.Command):
         ma: MemberAuthority = MemberAuthority(self.guild)
 
         key = self.message.content.split()[1]
-        member: Member = self.guild.get_member(self.message.author.id)
+        member: Member = await self.guild.fetch_member(self.message.author.id)
 
         await self.message.author.send('Starting your authentication process...')
         result = await ma.authenticate_member(member, key)
@@ -32,7 +32,7 @@ class AuthenticateStudent(command.Command):
         else:
             await self.message.author.send("There is no user account associated with this key.\n\tTry again, make sure to copy and paste the key with !auth.\n\tIf you're still having trouble, please contact course staff.")
         if self.message.guild:
-            self.message.delete()
+            await self.message.delete()
 
     @staticmethod
     async def is_invoked_by_direct_message(message: Message, client: Client):

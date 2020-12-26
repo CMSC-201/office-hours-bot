@@ -2,6 +2,7 @@ import logging
 
 from discord import Message, Guild, Client, Member
 from discord.errors import Forbidden, NotFound
+from roles import RoleAuthority
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ def is_bot_mentioned(message: Message, client: Client) -> bool:
 
 
 supported_commands = []
+current_commands = []
 the_guild = None
 
 
@@ -48,18 +50,29 @@ async def handle_message(message: Message, client: Client):
     :return:
     """
 
+    global current_commands
+
+    for the_message, command in current_commands:
+        if message.author == the_message.author:
+            current_commands.remove((the_message, command))
+            if await command.handle(message):
+                current_commands.append((the_message, command))
+                return
+
     if not message.guild:
         for cmd_class in supported_commands:
             if await cmd_class.is_invoked_by_direct_message(message, client):
                 command = cmd_class(message, client, the_guild)
-                await command.handle()
-                break
+                if await command.handle():
+                    current_commands.append((message, command))
+                return
     else:
         for cmd_class in supported_commands:
             if await cmd_class.is_invoked_by_message(message, client):
                 command = cmd_class(message, client)
-                await command.handle()
-                break
+                if await command.handle():
+                    current_commands.append((message, command))
+                return
 
 
 class Command:
@@ -144,7 +157,7 @@ class Command:
         return '{}, this command has no help text.'.format(cls.__name__)
 
     @staticmethod
-    def authenticate(the_method):
+    def authenticate(the_method, **keyword_arguments):
         """
             This will read from the WhateverCommand.permissions object to check
             that the author of self.message has the proper permissions to run
@@ -153,16 +166,19 @@ class Command:
             the user that they do not have permission to run the command.
 
             :param the_method: the method that uses the authentication process
+            :param keyword_arguments:
+                message: str: if provided, it will be the message displayed to the user upon failure.
             :return: a wrapper of the_method which ensures proper permissions
                 before execution.
         """
         async def authentication_wrapper(self, *args, **kwargs):
-            from roles import RoleAuthority
             ra: RoleAuthority = RoleAuthority(self.guild)
             if ra.has_permission(self.message.author, self.permissions):
                 await the_method(self, *args, **kwargs)
             else:
-                await self.safe_send(self.message.channel, 'Unable to execute the handle method, you do not have permission.')
+                await self.safe_send(
+                    self.message.channel,
+                    keyword_arguments.get('message', 'Unable to execute the command, you do not have permission.'))
 
         return authentication_wrapper
 
@@ -184,7 +200,9 @@ class Command:
             if ca.is_maintenance_channel(self.message.channel):
                 await the_method(self, *args, **kwargs)
             else:
-                await self.safe_send(self.message.channel, keyword_args.get('message', 'This command must be run on the maintenance channel. '))
+                await self.safe_send(
+                    self.message.channel,
+                    keyword_args.get('message', 'This command must be run on the maintenance channel. '))
 
         return channel_authentication_wrapper
 

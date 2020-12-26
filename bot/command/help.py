@@ -20,6 +20,9 @@ class Help(command.Command):
                                             "Go to {} to see all the ways I may serve you!".format(
                 sender.mention, self.prefix + "tahelp.md"
             ))
+            for cmd in command.supported_commands:
+                if ra.has_permission(self.message.author, cmd.permissions):
+                    print(cmd.__name__, cmd.get_help(), sep='\t')
         else:
             await self.message.channel.send("You can find a guide to using office hours here: {}".format(
                 self.prefix + "student.md"
@@ -29,3 +32,10 @@ class Help(command.Command):
         if message.content.startswith("!help"):
             return True
         return False
+
+    @classmethod
+    def get_help(cls):
+        help_string = """
+         
+        """
+        return help_string

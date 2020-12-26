@@ -12,6 +12,11 @@ class Bark(command.Command):
     async def is_invoked_by_message(message: Message, client: Client):
         return message.content.startswith("!bark")
 
+    @classmethod
+    def get_help(self):
+        return 'Bark: This command will elicit a test response from the bot. \n\t!bark'
+
+
 @command.command_class
 class HelloThere(command.Command):
     async def handle(self):
@@ -20,3 +25,30 @@ class HelloThere(command.Command):
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         return message.content.startswith("!hello there")
+
+    @classmethod
+    def get_help(self):
+        return 'HelloThere: This command will display Obi Wan Kenobi.\n\t!hello there'
+
+
+@command.command_class
+class Squawk(command.Command):
+    async def handle(self, new_message=None):
+        if new_message:
+            if new_message.content.strip().lower() in ['y', 'yes', '!yes']:
+                await self.message.channel.send("Squawk!\nDo you want to squawk again? (y/n)")
+                return True
+            else:
+                await self.message.channel.send('You have elected to stop squawking.')
+                return False
+        else:
+            await self.message.channel.send("Squawk!\nDo you want to squawk again? (y/n)")
+            return True
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        return message.content.startswith("!squawk")
+
+    @classmethod
+    def get_help(self):
+        return 'This command will elicit a repetition test response from the bot. \n\t!squawk'
