@@ -76,7 +76,7 @@ if __name__ == '__main__':
         returned = False
         while not returned:
             try:
-                client.run(token, False)
+                client.run(token, submit_daemon=False)
                 returned = True
             except Exception as e:
                 returned = True
