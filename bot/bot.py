@@ -67,7 +67,7 @@ def set_up_logs():
 
 if __name__ == '__main__':
     set_up_logs()
-    client = MyClient()
+    client = MyClient(submit_daemon=False)
     info = get_globals()
     if info:
         token = info['props']['token']
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         returned = False
         while not returned:
             try:
-                client.run(token, submit_daemon=False)
+                client.run(token)
                 returned = True
             except Exception as e:
                 returned = True
