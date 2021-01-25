@@ -33,6 +33,7 @@ class ChannelAuthority:
         self.guild: Guild = guild
         self.oh_sessions = None
         self.lab_sections = {}
+        self.maintenance_channel: TextChannel = None
         channels = mongo.db[self.__CHANNEL_COLLECTION].find_one()
         if not channels:
             logger.warning("Unable to load channel authority!  Run setup!")

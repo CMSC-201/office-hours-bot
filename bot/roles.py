@@ -81,12 +81,13 @@ class RoleAuthority:
 
     def has_permission(self, author: Member, permission_object):
 
+        permission = False
+
         for role, method in zip(['student', 'ta', 'admin'], [self.is_student, self.is_ta, self.is_admin]):
             if role in permission_object and permission_object[role]:
-                return method(author)
+                permission = permission or method(author)
 
-        return False
-
+        return permission
 
 
 class PermissionAuthority:

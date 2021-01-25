@@ -46,11 +46,11 @@ class UpdateUsers(command.Command):
                     for line in users_reader:
                         if all(col_name in line and line[col_name].strip() for col_name in self.__COLUMN_NAMES) and line[self.__ROLE].strip().lower() in ['student', 'ta', 'admin']:
 
-                            current_student = dict(line)
+                            current_student = {key: line[key].strip() for key in dict(line)}
                             current_student[self.__ROLE] = line[self.__ROLE].strip().lower()
 
                             new_hash = hashlib.sha256()
-                            name_id = ' '.join([line['First-Name'], line['Last-Name'], line[self.__UID_FIELD]])
+                            name_id = ' '.join([line['First-Name'].strip(), line['Last-Name'].strip(), line[self.__UID_FIELD].strip()])
                             new_hash.update(name_id.encode('utf-8'))
 
                             # add any new data elements to the current student's record before inserting

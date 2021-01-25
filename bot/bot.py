@@ -1,7 +1,7 @@
 import logging
 
 import discord
-from discord import Message, Guild, Member, User
+from discord import Message, Guild, Member, User, Intents
 
 from channels import ChannelAuthority
 from command import handle_message, set_default_guild
@@ -14,9 +14,12 @@ logger = logging.getLogger('bot_main')
 
 class MyClient(discord.Client):
     def __init__(self, **options):
-        super().__init__(**options)
+        intents = Intents.default()
+        # this will case a crash
+        intents.members = True
+        super().__init__(intents=intents)
         self.channel_authority: ChannelAuthority = None
-        self.submit_daemon = SubmitDaemon(self)
+        self.submit_daemon = SubmitDaemon(self) if options.get('submit_daemon', False) else None
 
     async def on_ready(self):
         logger.info('Logged on as {0}!'.format(self.user))
@@ -25,7 +28,8 @@ class MyClient(discord.Client):
 
         set_default_guild(self.guilds[0])
         logger.info("Bot started.  Waiting for messages.")
-        self.submit_daemon.start()
+        if self.submit_daemon:
+            self.submit_daemon.start()
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
@@ -43,7 +47,7 @@ class MyClient(discord.Client):
 
     async def on_member_join(self, member: Member):
         # update this message with your own course and message
-        await member.send('Welcome to Discord Office Hours for CMSC 201, Fall 2020\n '
+        await member.send('Welcome to Discord Office Hours for CMSC 201, Spring 2021\n '
                           'I am the 201Bot.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
 
 
@@ -72,9 +76,10 @@ if __name__ == '__main__':
         returned = False
         while not returned:
             try:
-                client.run(token)
+                client.run(token, False)
                 returned = True
             except Exception as e:
+                returned = True
                 print(e)
                 print('Restarting Bot from Exception Failure...')
 
