@@ -8,7 +8,7 @@ from queues import QueueAuthority
 logger = logging.getLogger(__name__)
 
 @command.command_class
-class Who(command.Command):
+class Active(command.Command):
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
 
@@ -32,7 +32,7 @@ class Who(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if message.content.startswith("!who"):
+        if message.content.startswith("!active"):
             ca: ChannelAuthority = ChannelAuthority(message.guild)
             qa: QueueAuthority = QueueAuthority(message.guild)
 
