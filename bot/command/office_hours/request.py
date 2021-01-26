@@ -43,7 +43,7 @@ class EnterQueue(command.Command):
         request_id = 0
 
         qa.add_to_queue(author, request, announcement)
-        self.client.statistics.record_office_hour_request(request_id, self.message.author, request, dt.now())
+        # self.client.statistics.record_office_hour_request(request_id, self.message.author, request, dt.now())
 
         await self.safe_delete(self.message)
         logger.info("{} added to queue with request text: {}".format(
