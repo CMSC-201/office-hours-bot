@@ -37,7 +37,7 @@ class StartOfficeHours(command.Command):
         qa: QueueAuthority = QueueAuthority(self.guild)
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         # Add TA to list of available TAs. Return True if fresh opening, True if newly added TA
-        fresh_open, is_new_ta = qa.open_office_hours(self.message.author.id)
+        fresh_open, is_new_ta = await qa.open_office_hours(self.message.author.id)
         if fresh_open:
             await ca.queue_channel.send("Office hours are live!")
             await ca.waiting_channel.send(
@@ -62,13 +62,13 @@ class EndOfficeHours(command.Command):
         # Remove TA from list of available TAs.
 
         if "force" in self.message.content:
-            qa.force_close_office_hours()
+            await qa.force_close_office_hours()
             await ca.queue_channel.send(command.name(self.message.author) + " has forced OH to close.")
             await ca.waiting_channel.send(
                 "Ok, y'all.  Office hours have ended for now.  An announcement will appear here when they have reopened.")
             return
 
-        is_open, was_removed, ta_count = qa.close_office_hours(self.message.author.id)
+        is_open, was_removed, ta_count = await qa.close_office_hours(self.message.author.id)
         if ta_count > 0 and is_open and was_removed:
             await ca.queue_channel.send(command.name(self.message.author) + " has checked out of office hours.")
         # Last TA was removed, or TA queue was empty when called
