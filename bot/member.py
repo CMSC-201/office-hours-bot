@@ -62,7 +62,7 @@ class MemberAuthority:
                 # there is a 32 character limit for nicknames
                 await member.edit(nick='{}-preauth'.format(name)[0:32])
 
-                result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: member.id}})
+                result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: int(member.id)}})
 
                 if result.modified_count > 0:
                     # there is a 32 character limit for nicknames
