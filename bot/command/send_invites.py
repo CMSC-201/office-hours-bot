@@ -24,12 +24,14 @@ class SendInvites(command.Command):
     __ADMIN_GROUP = 'admin'
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
+    __USERNAME = 'UMBC-Name-Id'
 
     __EMAIL_SETTINGS = 'reflector-email'
     __EMAIL_USERNAME = 'email-username'
     __EMAIL_PASSWORD = 'email-password'
     __TYPE = 'type'
     __EMAIL_SENT = 'email-sent'
+    __MONGO_ID = '_id'
 
     state_variables = {__EMAIL_USERNAME: '', __EMAIL_PASSWORD: ''}
 
@@ -62,6 +64,37 @@ class SendInvites(command.Command):
             users_to_send.extend(list(admin_group.find(restrictions)))
 
         return users_to_send
+
+    def find_users(self, user_list):
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+        usernames = user_list.lower().split()
+        users_to_send = []
+        for username in usernames:
+            student = students_group.find_one({self.__USERNAME: username})
+            if student:
+                users_to_send.append(student)
+            else:
+                ta = ta_group.find_one({self.__USERNAME: username})
+                if ta:
+                    users_to_send.append(ta)
+                else:
+                    admin = admin_group.find_one({self.__USERNAME: username})
+                    if admin:
+                        users_to_send.append(admin)
+
+        return users_to_send
+
+    def update_user_email_status(self, user, code):
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+
+        for group in [students_group, ta_group, admin_group]:
+            found_user = group.find_one({self.__MONGO_ID: user[self.__MONGO_ID]})
+            if found_user:
+                group.update_one({self.__MONGO_ID: user[self.__MONGO_ID]}, {'$set': {self.__EMAIL_SENT: code}})
 
     async def handle(self):
 
@@ -107,7 +140,12 @@ class SendInvites(command.Command):
                 await self.message.channel.send(str(smtp_auth_error))
                 return
 
-            users_to_send = self.get_user_send_group(group, new=('--new' in self.message.content))
+            users_to_send = []
+            if group in ['all', 'admin', 'tas', 'students']:
+                users_to_send = self.get_user_send_group(group, new=('--new' in self.message.content))
+            else:
+                if '-to' in self.message.content:
+                    users_to_send = self.find_users(self.message.content.split('-to')[1])
 
             for user in users_to_send:
                 student_name = ' '.join([user['First-Name'], user['Last-Name']])
@@ -134,7 +172,7 @@ class SendInvites(command.Command):
                     print(smtp_not_supported)
 
                 await self.message.channel.send('Email invite sent to %s' % student_name)
-
+                self.update_user_email_status(user, 1)
         else:
             await self.message.channel.send('You are not an administrator, so cannot run this command.')
 
@@ -153,6 +191,12 @@ class SendInvites(command.Command):
                     await message.channel.send('You must attach a text or html message to be sent. ')
                     return False
             else:
+                return False
+        elif message.content.startswith('!send invites') and '-to' in message.content:
+            if message.attachments:
+                return True
+            else:
+                await message.channel.send('You must attach a text or html message to be sent. ')
                 return False
 
         return False
