@@ -45,10 +45,10 @@ class AddToLabSection(command.Command):
             pa: PermissionAuthority = PermissionAuthority()
 
             if found_student:
-                student = await self.message.guild.fetch_memeber(found_student[self.__DISCORD_ID])
+                student = await self.get_member(found_student[self.__DISCORD_ID])
                 await ca.lab_sections[self.__SECTION_STRING.format(section_number)].set_permissions(student, overwrite=pa.student_overwrite)
             elif found_ta:
-                ta = await self.message.guild.fetch_memeber(found_ta[self.__DISCORD_ID])
+                ta = await self.get_member(found_ta[self.__DISCORD_ID])
                 await ca.lab_sections[self.__SECTION_STRING.format(section_number)].set_permissions(ta, overwrite=pa.ta_overwrite)
 
     @staticmethod
