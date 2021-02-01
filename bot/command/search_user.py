@@ -79,6 +79,10 @@ class SearchUsers(command.Command):
 
             if not found_list:
                 await self.message.channel.send('No results were found')
+        elif re.match(r'!search\s+user\s+--discord\s*=\s*(?P<discord_id>\d+)', self.message.content):
+            match = re.match(r'!search\s+user\s+--discord\s*=\s*(?P<discord_id>\d+)', self.message.content)
+            students_group = mongo.db[self.__STUDENTS_GROUP]
+            students_group.find_one({self.__DISCORD_ID: int(match.group('discord_id'))})
         elif re.match(r'!search\s+user\s+--dropped', self.message.content):
 
             found_list = self.search_database({self.__DROPPED: True})
@@ -98,4 +102,38 @@ class SearchUsers(command.Command):
         if message.content.startswith("!search user"):
             return True
 
+        return False
+
+
+@command.command_class
+class UpdateUsersToIntID(command.Command):
+    __ADMIN_GROUP = 'admin'
+    __TA_GROUP = 'ta'
+    __STUDENTS_GROUP = 'student'
+    __DISCORD_ID = 'discord'
+    __DROPPED = 'dropped'
+
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
+    def update_group(self, group):
+        for person in group.find():
+            try:
+                group.update_one({'_id': person['_id']}, {'$set': {self.__DISCORD_ID: int(person[self.__DISCORD_ID])}})
+            except ValueError:
+                pass
+
+    @command.Command.require_maintenance
+    @command.Command.authenticate
+    async def handle(self):
+        students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+        for group in [students_group, ta_group, admin_group]:
+            self.update_group(group)
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+
+        if message.content.startswith('!update database discord ids to int'):
+            return True
         return False
