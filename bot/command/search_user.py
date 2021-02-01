@@ -41,7 +41,7 @@ class SearchUsers(command.Command):
     @command.Command.require_maintenance
     async def handle(self):
         match = re.match(r'!search\s+user\s+(?P<user_identifier>\w+)', self.message.content)
-
+        color = Colour(0).dark_gold()
         if match:
             students_group = mongo.db[self.__STUDENTS_GROUP]
             ta_group = mongo.db[self.__TA_GROUP]
@@ -57,7 +57,7 @@ class SearchUsers(command.Command):
                 umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': match.group('user_identifier')})])
 
             combined_list = first_name_list + last_name_list + umbc_id_list
-            color = Colour(0).dark_gold()
+
             for person in combined_list:
                 db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
                 embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
@@ -74,7 +74,6 @@ class SearchUsers(command.Command):
             for person in found_list:
                 db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
                 embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
-
                 await self.message.channel.send(embed=embedded_message)
 
             if not found_list:
@@ -82,7 +81,12 @@ class SearchUsers(command.Command):
         elif re.match(r'!search\s+user\s+--discord\s*=\s*(?P<discord_id>\d+)', self.message.content):
             match = re.match(r'!search\s+user\s+--discord\s*=\s*(?P<discord_id>\d+)', self.message.content)
             students_group = mongo.db[self.__STUDENTS_GROUP]
-            students_group.find_one({self.__DISCORD_ID: int(match.group('discord_id'))})
+            the_student = students_group.find_one({self.__DISCORD_ID: int(match.group('discord_id'))})
+
+            db_text = '\n'.join('{}: {}'.format(attr, the_student[attr]) for attr in the_student)
+            embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
+            await self.message.channel.send(embed=embedded_message)
+
         elif re.match(r'!search\s+user\s+--dropped', self.message.content):
 
             found_list = self.search_database({self.__DROPPED: True})
