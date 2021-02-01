@@ -15,10 +15,12 @@ class AuthenticateStudent(command.Command):
         ma: MemberAuthority = MemberAuthority(self.guild)
 
         key = self.message.content.split()[1]
-        member: Member = await self.guild.fetch_member(self.message.author.id)
-
+        # fetch to start the auth process.
         await self.message.author.send('Starting your authentication process...')
+        member: Member = await self.guild.fetch_member(self.message.author.id)
         result = await ma.authenticate_member(member, key)
+        # fetch again to get the nickname
+        member: Member = await self.guild.fetch_member(self.message.author.id)
         if result == MemberAuthority.AUTHENTICATED:
             logger.info("Authenticated user {0.display_name} ({0.id}) as {0.nick}".format(member))
             await self.message.author.send('''You are now authenticated!  You can return to the office hour server.\n  
