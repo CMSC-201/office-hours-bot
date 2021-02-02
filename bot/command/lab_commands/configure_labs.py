@@ -90,7 +90,10 @@ class ConfigureLabs(command.Command):
                         logger.info('Finding TA')
                         for ta in ta_group.find({self.__SECTION: line[self.__SECTION]}):
                             the_ta = await self.get_member(ta[self.__DISCORD_ID])
-                            await ca.lab_sections[lab_section_name].set_permissions(the_ta, overwrite=pa.ta_overwrite)
+                            try:
+                                await ca.lab_sections[lab_section_name].set_permissions(the_ta, overwrite=pa.ta_overwrite)
+                            except NotFound:
+                                logger.info('Unable to find the ta, continuing')
 
                         logger.info('Finding Students')
                         for student in students_group.find({self.__SECTION: line[self.__SECTION]}):
@@ -98,7 +101,7 @@ class ConfigureLabs(command.Command):
                                 the_student = await the_guild.fetch_member(student[self.__DISCORD_ID])
                                 await ca.lab_sections[lab_section_name].set_permissions(the_student, overwrite=pa.student_overwrite)
                             except NotFound:
-                                pass
+                                logger.info('Unable to find the student, continuing')
             except Exception as e:
                 logger.warning(str(e), str(type(e)))
 
