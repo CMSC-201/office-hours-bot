@@ -144,7 +144,7 @@ class UpdateUsers(command.Command):
         admin_group = mongo.db[self.__ADMIN_GROUP]
 
         for line in users_reader:
-            if all(col_name in line and line[col_name].strip() for col_name in self.__COLUMN_NAMES) and line[self.__ROLE].strip().lower() in ['student', 'ta', 'admin']:
+            if all(col_name in line for col_name in self.__COLUMN_NAMES) and line[self.__ROLE].strip().lower() in ['student', 'ta', 'admin']:
 
                 current_student = {key: line[key].strip() for key in dict(line)}
                 current_student[self.__ROLE] = line[self.__ROLE].strip().lower()
@@ -176,7 +176,16 @@ class UpdateUsers(command.Command):
                 else:
                     await self.message.channel.send('Bad Role %s' % current_student[self.__ROLE])
             else:
+                if line[self.__ROLE].strip().lower() not in ['student', 'ta', 'admin']:
+                    await self.message.channel.send('Role must be student, ta, admin.')
+                else:
+                    bad_columns = []
+                    for col_name in self.__COLUMN_NAMES:
+                        if col_name.strip() not in line:
+                            bad_columns.append(col_name)
+                    await self.message.channel.send('Column Names Not Found: ' + ', '.join(bad_columns))
                 await self.message.channel.send('Bad line: ' + str(line))
+
 
     def generate_user_code(self, user):
         new_hash = hashlib.sha256()
