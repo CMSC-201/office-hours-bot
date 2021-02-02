@@ -1,7 +1,7 @@
 import json
 import logging
 
-from discord import Guild, TextChannel, Message, Client, CategoryChannel, PermissionOverwrite
+from discord import Guild, TextChannel, Message, Client, CategoryChannel, PermissionOverwrite, Role
 from discord.abc import GuildChannel
 
 import mongo
@@ -25,6 +25,12 @@ class ChannelAuthority:
     __BULLETIN_CHANNEL_KEY = "bulletin"
     __MAINT_CHANNEL_KEY = 'maint'
     __LAB_CATEGORY_NAME = 'Lab'
+    __SPECIAL_SECTIONS = 'special-sections'
+
+    __CHANNEL_NAME = 'section-name'
+    __CHANNEL_ID = 'channel-id'
+    __CHANNEL_STUDENT_ROLE_ID = 'student-role-id'
+    __CHANNEL_LEADER_ROLE_ID = 'leader-role-id'
 
     def __init__(self, guild: Guild):
         self.waiting_channel: TextChannel = None
@@ -33,6 +39,7 @@ class ChannelAuthority:
         self.guild: Guild = guild
         self.oh_sessions = None
         self.lab_sections = {}
+        self.special_sections = mongo.db[self.__SPECIAL_SECTIONS]
         self.maintenance_channel: TextChannel = None
         channels = mongo.db[self.__CHANNEL_COLLECTION].find_one()
         if not channels:
@@ -73,6 +80,24 @@ class ChannelAuthority:
         collection.delete_many({})
         collection.insert(document)
 
+    def add_special_section(self, category_channel: CategoryChannel, student_role: Role, leader_role: Role):
+        channel_entry = {self.__CHANNEL_NAME: category_channel.name, self.__CHANNEL_ID: category_channel.id,
+                         self.__CHANNEL_STUDENT_ROLE_ID: student_role.id, self.__CHANNEL_LEADER_ROLE_ID: leader_role.id}
+        self.special_sections.insert_one(channel_entry)
+
+    async def remove_special_section(self, section_name):
+        the_section = self.special_sections.find_one({self.__CHANNEL_NAME: section_name})
+        category_channel = await self.guild.get_channel(the_section[self.__CHANNEL_ID])
+
+        if the_section:
+            await self.guild.get_role(the_section[self.__CHANNEL_STUDENT_ROLE_ID]).delete()
+            await self.guild.get_role(the_section[self.__CHANNEL_LEADER_ROLE_ID]).delete()
+            for sub_channel in category_channel.channels:
+                await sub_channel.delete()
+            await category_channel.delete()
+
+        self.special_sections.delete_one({self.__CHANNEL_NAME: section_name})
+
     def update_channel(self, channel_name: str, channel: GuildChannel) -> None:
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = collection.find_one()
@@ -96,11 +121,11 @@ class ChannelAuthority:
         ra: RoleAuthority = RoleAuthority(self.guild)
         # Make the category channel and make it inaccessible to unauthed nerds
         self.lab_category: CategoryChannel = await self.guild.create_category(self.__LAB_CATEGORY_NAME + lab_name,
-                        overwrites={
-                            ra.ta: PermissionOverwrite(read_messages=False),
-                            ra.student: PermissionOverwrite(read_messages=False),
-                            ra.un_authenticated: PermissionOverwrite(read_messages=False)
-                        })
+                                                                              overwrites={
+                                                                                  ra.ta: PermissionOverwrite(read_messages=False),
+                                                                                  ra.student: PermissionOverwrite(read_messages=False),
+                                                                                  ra.un_authenticated: PermissionOverwrite(read_messages=False)
+                                                                              })
 
         await self.lab_category.create_text_channel("Main Discussion")
         await self.lab_category.create_voice_channel("Main Discussion")
@@ -175,5 +200,3 @@ class ChannelAuthority:
                 return self.maintenance_channel
 
         return None
-
-
