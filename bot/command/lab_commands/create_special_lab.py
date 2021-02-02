@@ -112,10 +112,8 @@ class ConfigureLabs(command.Command):
         """
         :param lab_title: a string containing the name of the special lab section.
         """
-        ra: RoleAuthority = RoleAuthority(self.guild)
-
-        student_role = await self.guild.create_role(name=lab_title+'Student', permissions=ra.student.permissions, mentionable=True)
-        leader_role = await self.guild.create_role(name=lab_title+'Leader', permissions=ra.ta.permissions, mentionable=True)
+        student_role = await self.guild.create_role(name=lab_title+'Student', permissions=Permissions.none(), mentionable=True)
+        leader_role = await self.guild.create_role(name=lab_title+'Leader', permissions=Permissions.none(), mentionable=True)
         return student_role, leader_role
 
     def find_user_by_username(self, username):
@@ -151,7 +149,7 @@ class ConfigureLabs(command.Command):
         section_data: Attachment = self.message.attachments[0]
         the_guild: Guild = self.message.guild
 
-        match = re.match(r'!lab\s+create\s+special\s+(?P<lab_name>(\w|-)+)', self.message.content)
+        match = re.match(r'!lab\s+create\s+special\s+section\s+(?P<lab_name>(\w|-)+)', self.message.content)
         if not match:
             await self.message.channel.send('Improper format, please give a name of the lab section, and attach a csv list of members.  ')
         lab_section_name = match.group('lab_name')
@@ -166,26 +164,20 @@ class ConfigureLabs(command.Command):
                 student_overwrite, leader_overwrite = self.create_permission_overwrites()
 
                 logger.info('Creating Section Category Channel: ')
-                ca.lab_sections[lab_section_name] = await the_guild.create_category(lab_section_name, overwrites={
+                new_category = await the_guild.create_category(lab_section_name, overwrites={
                     ra.ta: PermissionOverwrite(read_messages=False),
                     ra.student: PermissionOverwrite(read_messages=False),
                     ra.un_authenticated: PermissionOverwrite(read_messages=False),
                     student_role: student_overwrite,
                     leader_role: leader_overwrite,
                 })
-                logger.info('Creating Section {} Text'.format(lab_section_name))
-                text_channel = await ca.lab_sections[lab_section_name].create_text_channel('Section Text')
-                logger.info('Creating Section {} Voice'.format(lab_section_name))
-                voice_channel = await ca.lab_sections[lab_section_name].create_voice_channel('Section Voice')
+                logger.info('\tAdding new category channel to special section database. ')
+                ca.add_special_section(new_category, student_role, leader_role)
 
-                section_entry = {
-                    'Section Name': lab_section_name,
-                    'Section Category': ca.lab_sections[lab_section_name].id,
-                    'Text Channel': text_channel.id,
-                    'Voice Channel': voice_channel.id
-                }
-                logger.info('Inserting lab into section db')
-                section_collection.insert_one(section_entry)
+                logger.info('Creating Section {} Text'.format(lab_section_name))
+                await ca.lab_sections[lab_section_name].create_text_channel('Section Text')
+                logger.info('Creating Section {} Voice'.format(lab_section_name))
+                await ca.lab_sections[lab_section_name].create_voice_channel('Section Voice')
 
                 for user_name in section_reader:
                     try:
