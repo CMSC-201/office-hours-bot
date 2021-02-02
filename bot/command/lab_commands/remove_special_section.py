@@ -2,6 +2,8 @@ import logging
 import command
 from channels import ChannelAuthority
 import re
+from discord import Message, Client
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,3 +32,10 @@ class RemoveSpecialSection(command.Command):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         re_match = re.match(r'!remove\s+special\s+section\s+(?P<section_name>(\w|-)+)', self.message.content)
         await ca.remove_special_section(re_match.group('section_name'))
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        if message.content.startswith('!lab create special'):
+            return True
+
+        return False
