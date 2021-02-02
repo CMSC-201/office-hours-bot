@@ -83,9 +83,12 @@ class ConfigureLabs(command.Command):
                         if line[self.__TA_GROUP]:
                             section_ta = ta_group.find_one({self.__USERNAME: line[self.__TA_GROUP].strip().lower()})
                             the_ta = await self.get_member(section_ta[self.__DISCORD_ID])
-                            await ca.lab_sections[lab_section_name].set_permissions(the_ta, overwrite=pa.ta_overwrite)
-                            section_ta[self.__SECTION] = line[self.__SECTION]
-                            ta_group.update_one({self.__USERNAME: line[self.__TA_GROUP].strip().lower()}, {'$set': {self.__SECTION: section_ta[self.__SECTION]}})
+                            try:
+                                await ca.lab_sections[lab_section_name].set_permissions(the_ta, overwrite=pa.ta_overwrite)
+                                section_ta[self.__SECTION] = line[self.__SECTION]
+                                ta_group.update_one({self.__USERNAME: line[self.__TA_GROUP].strip().lower()}, {'$set': {self.__SECTION: section_ta[self.__SECTION]}})
+                            except NotFound:
+                                logger.info('Unable to find the ta, continuing')
 
                         logger.info('Finding TA')
                         for ta in ta_group.find({self.__SECTION: line[self.__SECTION]}):
