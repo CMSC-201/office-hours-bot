@@ -87,7 +87,7 @@ class ChannelAuthority:
 
     async def remove_special_section(self, section_name):
         the_section = self.special_sections.find_one({self.__CHANNEL_NAME: section_name})
-        category_channel = await self.guild.get_channel(the_section[self.__CHANNEL_ID])
+        category_channel = self.guild.get_channel(the_section[self.__CHANNEL_ID])
 
         if the_section:
             await self.guild.get_role(the_section[self.__CHANNEL_STUDENT_ROLE_ID]).delete()
