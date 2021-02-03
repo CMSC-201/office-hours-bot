@@ -146,65 +146,70 @@ class ConfigureLabs(command.Command):
         ta_group = mongo.db[self.__TA_GROUP]
         admin_group = mongo.db[self.__ADMIN_GROUP]
 
-        section_data: Attachment = self.message.attachments[0]
         the_guild: Guild = self.message.guild
 
-        match = re.match(r'!lab\s+create\s+special\s+section\s+(?P<lab_name>(\w|-)+)', self.message.content)
+        match = re.match(r'!create\s+special\s+section\s+(?P<lab_name>(\w|-)+)\s+(--usernames\s*=\s*)(?P<usernames>(\w|\s)+)', self.message.content)
         if not match:
-            await self.message.channel.send('Improper format, please give a name of the lab section, and attach a csv list of members.  ')
+            await self.message.channel.send('Improper format, please give a name of the lab section followed by --usernames=[usernames space separated]')
+            return
+
         lab_section_name = match.group('lab_name')
 
         try:
             section_collection = mongo.db[self.__SECTION_DATA]
-            await section_data.save(self.__LAB_SECTION_FILE_NAME)
-            with open(self.__LAB_SECTION_FILE_NAME) as lab_sections:
-                section_reader = csv.reader(lab_sections)
 
-                student_role, leader_role = await self.lab_create_roles(lab_section_name)
-                student_overwrite, leader_overwrite = self.create_permission_overwrites()
+            student_role, leader_role = await self.lab_create_roles(lab_section_name)
+            student_overwrite, leader_overwrite = self.create_permission_overwrites()
 
-                logger.info('Creating Section Category Channel: ')
-                new_category = await the_guild.create_category(lab_section_name, overwrites={
-                    ra.ta: PermissionOverwrite(read_messages=False),
-                    ra.student: PermissionOverwrite(read_messages=False),
-                    ra.un_authenticated: PermissionOverwrite(read_messages=False),
-                    student_role: student_overwrite,
-                    leader_role: leader_overwrite,
-                })
-                logger.info('\tAdding new category channel to special section database. ')
-                ca.add_special_section(new_category, student_role, leader_role)
+            logger.info('Creating Section Category Channel: ')
+            new_category = await the_guild.create_category(lab_section_name, overwrites={
+                ra.ta: PermissionOverwrite(read_messages=False),
+                ra.student: PermissionOverwrite(read_messages=False),
+                ra.un_authenticated: PermissionOverwrite(read_messages=False),
+                student_role: student_overwrite,
+                leader_role: leader_overwrite,
+            })
+            logger.info('\tAdding new category channel to special section database. ')
+            ca.add_special_section(new_category, student_role, leader_role)
 
-                logger.info('Creating Section {} Text'.format(lab_section_name))
-                await ca.lab_sections[lab_section_name].create_text_channel('Section Text')
-                logger.info('Creating Section {} Voice'.format(lab_section_name))
-                await ca.lab_sections[lab_section_name].create_voice_channel('Section Voice')
+            logger.info('Creating Section {} Text'.format(lab_section_name))
+            await new_category.create_text_channel('Section Text')
+            logger.info('Creating Section {} Voice'.format(lab_section_name))
+            await new_category.create_voice_channel('Section Voice')
 
-                for user_name in section_reader:
-                    try:
-                        section_student = students_group.find_one({self.__USERNAME: user_name})
-                        if section_student:
-                            discord_student = await self.guild.fetch_member(section_student[self.__DISCORD_ID])
+            usernames = match.group('usernames').lower().split()
+            await self.message.channel.send('Adding the following users to the channels: ' + ', '.join(usernames))
+            for user_name in usernames:
+                try:
+                    section_student = students_group.find_one({self.__USERNAME: user_name})
+                    if section_student:
+                        discord_student = await self.guild.fetch_member(section_student[self.__DISCORD_ID])
+                        if discord_student:
                             await discord_student.add_roles(student_role)
-                            await self.message.channel.send('\tAdding student {} to the section.')
-                        else:
-                            section_ta = ta_group.find_one({self.__USERNAME: user_name})
-                            admin_ta = admin_group.find_one({self.__USERNAME: user_name})
-                            if section_ta:
-                                discord_ta = await self.guild.fetch_member(section_ta[self.__DISCORD_ID])
-                                await discord_ta.add_roles(leader_role)
-                                await self.message.channel.send('\tAdding ta {} to the section.')
-                            if admin_ta:
-                                discord_admin = await self.guild.fetch_member(section_ta[self.__DISCORD_ID])
+                            await self.message.channel.send('\tAdding student {} to the section.'.format(section_student[self.__USERNAME]))
+                    else:
+                        section_ta = ta_group.find_one({self.__USERNAME: user_name})
+                        admin_ta = admin_group.find_one({self.__USERNAME: user_name})
+                        if admin_ta:
+                            discord_admin = await self.guild.fetch_member(section_ta[self.__DISCORD_ID])
+                            if discord_admin:
                                 await discord_admin.add_roles(leader_role)
-                                await self.message.channel.send('\tAdding admin {} to the section.')
-                    except NotFound:
-                        await self.message.channel.send('Unable to find discord member for username {}.')
+                                await self.message.channel.send('\tAdding admin {} to the section.'.format(discord_admin[self.__USERNAME]))
+                            else:
+                                await self.message.channel.send('\tUnable to find discord username for {}.'.format(discord_admin[self.__USERNAME]))
+                        elif section_ta:
+                            discord_ta = await self.guild.fetch_member(section_ta[self.__DISCORD_ID])
+                            if discord_ta:
+                                await discord_ta.add_roles(leader_role)
+                                await self.message.channel.send('\tAdding ta {} to the section.'.format(section_ta[self.__USERNAME]))
+                except NotFound:
+                    await self.message.channel.send('Unable to find discord member for username {}.'.format(section_ta[self.__USERNAME]))
         except Exception as e:
             logger.warning(str(e), str(type(e)))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if message.content.startswith('!lab create special') and message.attachments:
+        if message.content.startswith('!create special section'):
             return True
 
         return False
