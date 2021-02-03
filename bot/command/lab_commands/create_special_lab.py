@@ -73,7 +73,7 @@ class ConfigureLabs(command.Command):
         lab_leader_permissions = PermissionOverwrite(
             add_reactions=True,
             administrator=False,
-            attach_files=False,
+            attach_files=True,
             ban_members=True,
             change_nickname=False,
             connect=True,
