@@ -203,7 +203,7 @@ class ConfigureLabs(command.Command):
                                 await discord_ta.add_roles(leader_role)
                                 await self.message.channel.send('\tAdding ta {} to the section.'.format(section_ta[self.__USERNAME]))
                 except NotFound:
-                    await self.message.channel.send('Unable to find discord member for username {}.'.format(section_ta[self.__USERNAME]))
+                    await self.message.channel.send('Unable to find discord member for username {}.'.format(user_name))
         except Exception as e:
             logger.warning(str(e), str(type(e)))
 
