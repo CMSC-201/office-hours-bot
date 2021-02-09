@@ -57,7 +57,7 @@ class ConfigureLabs(command.Command):
             move_members=False,
             mute_members=False,
             priority_speaker=False,
-            read_message_history=False,
+            read_message_history=True,
             read_messages=True,
             send_messages=True,
             send_tts_messages=False,
