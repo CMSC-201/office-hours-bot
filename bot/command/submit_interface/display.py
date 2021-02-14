@@ -61,7 +61,7 @@ class ConfigureAssignment(command.Command):
 
                 embedded_message = Embed(description='\n'.join(lines), timestamp=datetime.now() + timedelta(hours=4), colour=Colour(0).teal())
                 total_string = '\t'.join([':'.join([key, str(assignment[key])]) for key in assignment])
-                for i in range(0, len(total_string) // 1000 + 1, 1000):
+                for i in range(0, len(total_string), 1000):
                     await self.message.channel.send(total_string[i: i + 1000])
                 # await self.message.channel.send(embed=embedded_message)
                 embedded_message = Embed(description=self.format_assignment(assignment))

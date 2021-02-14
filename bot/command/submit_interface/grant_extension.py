@@ -16,7 +16,7 @@ from roles import RoleAuthority
 
 
 class ExtensionThread(Thread):
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall20'
+    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/spring21'
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
 
@@ -56,7 +56,7 @@ class GrantIndividualExtension(command.Command):
     __STUDENTS_GROUP = 'student'
     __UID_FIELD = 'UMBC-Name-Id'
 
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall20'
+    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/spring21'
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
     __MONGO_ID = '_id'

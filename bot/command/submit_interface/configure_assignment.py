@@ -26,7 +26,7 @@ class AssignmentCreationThread(Thread):
     __SECTION = 'Section'
 
     __ROSTER_NAME = 'submit_roster.csv'
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall20'
+    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/spring21'
 
     def __init__(self, guild, client, assignment_name, due_time):
         super().__init__(daemon=True)

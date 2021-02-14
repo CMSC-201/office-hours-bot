@@ -1,6 +1,6 @@
 from threading import Thread
 import paramiko
-from paramiko.ssh_exception import AuthenticationException
+from paramiko.ssh_exception import AuthenticationException, SSHException
 from discord import User
 from discord.errors import Forbidden
 import asyncio
@@ -31,7 +31,7 @@ class SubmitDaemon(Thread):
 
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall20'
+    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/spring21'
     __ADMIN__CLOSE_ASSIGNMENT = '/admin/close_assignment.py {} {} {}'
     __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
     __CLOSE_SECTION_EXTENSION = '/admin/close_extension.py {} section={} {}'
@@ -52,6 +52,8 @@ class SubmitDaemon(Thread):
             try:
                 self.ssh_client.exec_command('ls')
             except ConnectionError:
+                self.ssh_client = None
+            except SSHException:
                 self.ssh_client = None
 
         if not self.ssh_client:
