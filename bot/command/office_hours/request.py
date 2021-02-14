@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 @command.command_class
 class EnterQueue(command.Command):
+
+    async def notify_on_duty_tas(self):
+        pass
+
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         request = "[Student did not supply text]"
@@ -50,6 +54,8 @@ class EnterQueue(command.Command):
             command.name(author),
             request
         ))
+
+        await self.notify_on_duty_tas()
 
 
     @staticmethod
