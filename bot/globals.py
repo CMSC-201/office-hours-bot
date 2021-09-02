@@ -23,6 +23,7 @@ def get_globals():
             "prefix": os.environ.get("BOT_PREFIX"),
             "mongodb-address": os.environ.get("MONGODB_URI"),
             "queue_url": os.environ.get("QUEUE_URL"),
+            "submit-daemon": os.environ.get("SUBMIT_DAEMON")
         }
 
     return info
