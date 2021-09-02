@@ -70,14 +70,19 @@ if __name__ == '__main__':
     info = get_globals()
 
     logger.info(str(info['props']))
-
-    use_submit_daemon = True if 'submit_daemon' in info['props'] and info['props']['submit_daemon'] == 'true' else False
-    client = MyClient(submit_daemon=use_submit_daemon)
+    print(info['props'])
 
     if info:
         token = info['props']['token']
         prefix = info['props']['prefix']
         uuids = info['uuids']
+        use_submit_daemon = True if 'submit_daemon' in info['props'] and info['props']['submit_daemon'] == 'true' else False
+        if use_submit_daemon:
+            logger.info('Using Submit Daemon')
+        else:
+            logger.info('Not Using Submit Daemon')
+        client = MyClient(submit_daemon=use_submit_daemon)
+
         returned = False
         while not returned:
             try:
