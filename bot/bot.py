@@ -67,8 +67,11 @@ def set_up_logs():
 
 if __name__ == '__main__':
     set_up_logs()
-    client = MyClient(submit_daemon=False)
     info = get_globals()
+
+    use_submit_daemon = True if 'submit-daemon' in info['props'] and info['props']['submit-daemon'] == 'true' else False
+    client = MyClient(submit_daemon=use_submit_daemon)
+
     if info:
         token = info['props']['token']
         prefix = info['props']['prefix']
