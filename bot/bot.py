@@ -69,7 +69,7 @@ if __name__ == '__main__':
     set_up_logs()
     info = get_globals()
 
-    use_submit_daemon = True if 'submit-daemon' in info['props'] and info['props']['submit-daemon'] == 'true' else False
+    use_submit_daemon = True if 'submit_daemon' in info['props'] and info['props']['submit_daemon'] == 'true' else False
     client = MyClient(submit_daemon=use_submit_daemon)
 
     if info:
