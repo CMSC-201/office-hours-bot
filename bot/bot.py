@@ -19,7 +19,7 @@ class MyClient(discord.Client):
         intents.members = True
         super().__init__(intents=intents)
         self.channel_authority: ChannelAuthority = None
-        self.submit_daemon = SubmitDaemon(self) if options.get('submit_daemon', False) else None
+        self.submit_daemon = SubmitDaemon(self)  # if options.get('submit_daemon', False) else None
 
     async def on_ready(self):
         logger.info('Logged on as {0}!'.format(self.user))
