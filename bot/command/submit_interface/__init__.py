@@ -58,7 +58,7 @@ class SubmitDaemon(Thread):
 
         if not self.ssh_client:
             self.ssh_client = paramiko.client.SSHClient()
-            self.ssh_client.load_system_host_keys()
+            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             admin = self.submit_admins.find_one()
             try:
                 self.ssh_client.connect('gl.umbc.edu', username=admin['username'], password=admin['password'])
