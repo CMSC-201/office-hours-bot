@@ -153,6 +153,8 @@ class SubmitDaemon(Thread):
         self.write_roster()
 
         extensions_json = {}
+        if not os.path.exists('csv_dump'):
+            os.makedirs('csv_dump')
         with open(os.path.join('csv_dump', self.__EXTENSIONS_NAME), 'w') as json_extensions_file:
             for assignment in self.assignments.find():
                 extensions_json[assignment['name']] = {'section-extensions': {},
