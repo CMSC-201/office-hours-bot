@@ -48,6 +48,8 @@ class AssignmentCreationThread(Thread):
 
         ftp_client: SFTPClient = ssh_client.open_sftp()
 
+        if not os.path.exists('csv_dump'):
+            os.makedirs('csv_dump')
         with open(os.path.join('csv_dump', self.__ROSTER_NAME), 'w', newline='') as csv_file:
             roster = csv.writer(csv_file)
             roster_list = [[student[self.__USERNAME], student[self.__SECTION]] for student in students_group.find()]
