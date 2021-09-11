@@ -31,7 +31,7 @@ class SubmitDaemon(Thread):
 
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/spring21'
+    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall21'
     __ADMIN__CLOSE_ASSIGNMENT = '/admin/close_assignment.py {} {} {}'
     __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
     __CLOSE_SECTION_EXTENSION = '/admin/close_extension.py {} section={} {}'
