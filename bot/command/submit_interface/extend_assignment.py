@@ -80,20 +80,20 @@ class GrantAssignmentExtension(command.Command):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         ra: RoleAuthority = RoleAuthority(self.guild)
         if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
-            print('extending assignment start')
             match = re.match(self.__COMMAND_REGEX, self.message.content)
             if not match:
-                await self.message.channel.send("Usage: ...")
+                await self.message.channel.send("Usage: !submit extend assignment=[assignment name] [due date format MM-DD-YYYY HH:MM:SS]")
                 return
             submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
             assignment_name = match.group('assign_name')
             assignment = submit_assign.find_one({'name': match.group('assign_name')})
             if assignment:
                 due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
-                print(assignment_name)
                 # update the server side database
                 assignment['due-date'] = due_date
-                print(due_date)
+                # reopen the assignment if it's closed.
+                assignment['open'] = True
+
                 submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
                 # create new GL side extensions json
                 extension_json = self.create_extensions_json(submit_assign, due_date)
@@ -102,7 +102,7 @@ class GrantAssignmentExtension(command.Command):
                 AssignmentExtensionThread(self.client, assignment_name).start()
                 with open(extension_path, 'w') as json_extensions_file:
                     json_extensions_file.write(extension_json)
-                await self.message.channel.send('Granting Extension on GL.')
+                await self.message.channel.send('Granting Extension for {} on GL until {}.'.format(assignment_name, due_date))
             # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
 
     @staticmethod
