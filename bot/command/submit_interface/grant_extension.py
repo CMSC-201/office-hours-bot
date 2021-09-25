@@ -136,6 +136,9 @@ class GrantIndividualExtension(command.Command):
             # create new GL side extensions json
             extension_json = self.create_extensions_json(submit_assign)
             # create temporary file to send to the GL server
+
+            if not os.path.exists('csv_dump'):
+                os.makedirs('csv_dump')
             extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
             with open(extension_path, 'w') as json_extensions_file:
                 json_extensions_file.write(extension_json)
