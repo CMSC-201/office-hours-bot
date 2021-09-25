@@ -17,7 +17,7 @@ class WhatTimeIsIt(command.Command):
 
     async def handle(self):
         current_time = datetime.now()
-        self.message.channel.send(current_time.strftime("The time is now %H:%M:%S on %m-%d-%y"))
+        await self.message.channel.send(current_time.strftime("The time is now %H:%M:%S on %m-%d-%y"))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
