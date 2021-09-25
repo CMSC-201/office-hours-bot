@@ -26,6 +26,10 @@ class HelloThere(command.Command):
     async def is_invoked_by_message(message: Message, client: Client):
         return message.content.startswith("!hello there")
 
+    @staticmethod
+    async def is_invoked_by_direct_message(message: Message, client: Client):
+        return message.content.startswith("!hello there")
+
     @classmethod
     def get_help(self):
         return 'HelloThere: This command will display Obi Wan Kenobi.\n\t!hello there'
