@@ -22,6 +22,14 @@ class CloseAssignment(command.Command):
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
 
+    __ROSTER_NAME = 'submit_roster.csv'
+    __EXTENSIONS_NAME = 'extensions.json'
+
+    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall21'
+    __ADMIN__CLOSE_ASSIGNMENT = '/admin/close_assignment.py {} {} {}'
+    __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
+    __CLOSE_SECTION_EXTENSION = '/admin/close_extension.py {} section={} {}'
+
     def close_assignment(self, assignment_name):
         assignment = self.assignments.find_one({'name': assignment_name})
 
@@ -79,7 +87,9 @@ class CloseAssignment(command.Command):
             else:
                 admin_match = submit_col.find_one({})
 
-            # re close the assignment.
+            assignment_name = match.group('assign_name')
+
+            self.close_assignment(assignment_name)
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
