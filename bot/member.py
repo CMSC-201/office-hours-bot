@@ -73,9 +73,16 @@ class MemberAuthority:
 
                 if result.modified_count > 0:
                     # there is a 32 character limit for nicknames
-                    await member.edit(nick=name[0:32])
-                    await member.add_roles(found_role)
-                    await member.remove_roles(ra.un_authenticated)
+                    try:
+                        await member.edit(nick=name[0:32])
+                    except Forbidden as f:
+                        print(f)
+
+                    try:
+                        await member.add_roles(found_role)
+                        await member.remove_roles(ra.un_authenticated)
+                    except Forbidden as f:
+                        print(f)
 
                     pa: PermissionAuthority = PermissionAuthority()
                     # add lab authorization.
