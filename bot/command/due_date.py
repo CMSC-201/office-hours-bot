@@ -65,11 +65,13 @@ class DueDate(command.Command):
         else:
             await self.message.author.send(response_message)
 
+    @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!due date"):
             return True
         return False
 
+    @staticmethod
     async def is_invoked_by_direct_message(message: Message, client: Client):
         if message.content.startswith("!due date"):
             return True
