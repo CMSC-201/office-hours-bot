@@ -45,7 +45,8 @@ class AuthenticateStudent(command.Command):
         if message.content.startswith("!auth"):
             if len(message.content.split()) != 2:
                 warning = await message.author.send("Please try again.  The format is !auth [your key]")
-                await warning.delete(delay=7)
+                if message.guild:
+                    await warning.delete(delay=7)
                 return False
 
             return True
