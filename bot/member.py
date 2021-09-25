@@ -1,6 +1,7 @@
 import logging
 
 from discord import Guild, Member, Role, User
+from discord.errors import Forbidden
 
 import mongo
 from roles import RoleAuthority, PermissionAuthority
@@ -60,7 +61,13 @@ class MemberAuthority:
             else:
                 name = ' '.join([found_person[first_or_last] for first_or_last in self.__NAME_FIELDS])
                 # there is a 32 character limit for nicknames
-                await member.edit(nick='{}-preauth'.format(name)[0:32])
+                print(member.id)
+                try:
+                    await member.edit(nick='{}-preauth'.format(name)[0:32])
+                except Forbidden:
+                    pass
+
+
 
                 result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: int(member.id)}})
 
