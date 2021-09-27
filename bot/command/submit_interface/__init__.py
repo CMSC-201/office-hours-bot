@@ -126,16 +126,17 @@ class SubmitDaemon(Thread):
                 due_date = assignment['due-date']
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': False}}})
             print('{} extension closed for {}'.format(assignment['name'], assignment['student']))
-            # asyncio.run(ca.get_maintenance_channel().send('{} extension closed for {}'.format(assignment['name'], assignment['student'])))
 
             the_student = students_group.find_one({self.__UID_FIELD: assignment['student']})
             the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
             for ta in ta_group.find({self.__SECTION: the_student[self.__SECTION]}):
                 ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-                # ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
+
                 message = '{} ({})\'s extension for assignment {} is now closed.  You should recopy the files and begin grading. '.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
+                maintenance_message = '{} ({})\'s extension for assignment {} is now closed.'.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
                 try:
                     asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
+                    asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send(maintenance_message), self.event_loop)
                 except Forbidden:
                     asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
 
@@ -146,7 +147,6 @@ class SubmitDaemon(Thread):
             # await self.client.channel_authority.maintenance_channel.send('Assignment {} was not found. '.format(assignment_name))
             print('Assignment {} was not found. '.format(assignment_name))
             return
-
 
         print('running close assignment script')
 
@@ -215,22 +215,22 @@ class SubmitDaemon(Thread):
         assignment_queue = self.get_assignment_queue()
         while True:
             try:
-                if assignment_queue:
-                    for assignment in assignment_queue:
-                        if assignment['due-date'] <= datetime.now():
-                            if 'student' in assignment:
-                                asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
-                            elif 'section' in assignment:
-                                asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
-                            else:
-                                self.close_assignment(assignment['name'])
+                for assignment in assignment_queue:
+                    if assignment['due-date'] <= datetime.now():
+                        if 'student' in assignment:
+                            asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
+                        elif 'section' in assignment:
+                            asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
+                        else:
+                            self.close_assignment(assignment['name'])
+
+                assignment_queue = self.get_assignment_queue()
 
                 if assignment_queue and assignment_queue[0]['due-date'] - timedelta(seconds=60) < datetime.now():
                     time.sleep(1)
                 else:
                     time.sleep(30)
-
-                assignment_queue = self.get_assignment_queue()
+                    assignment_queue = self.get_assignment_queue()
 
             except Exception as e:
                 # this may be overkill but basically any exception should be printed, then the loop should start again.
