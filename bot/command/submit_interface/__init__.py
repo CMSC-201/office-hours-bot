@@ -88,7 +88,6 @@ class SubmitDaemon(Thread):
         students_group = mongo.db[self.__STUDENTS_GROUP]
         ta_group = mongo.db[self.__TA_GROUP]
 
-
         if 'section' in assignment:
             print('closing extension for section', assignment['section'], assignment['name'])
             self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
@@ -138,10 +137,10 @@ class SubmitDaemon(Thread):
                 message = '{} ({})\'s extension for assignment {} is now closed.  You should recopy the files and begin grading. '.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
                 maintenance_message = '{} ({})\'s extension for assignment {} is now closed.'.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
                 try:
-                    await ta_discord_user.send(message)
-                    await ca.get_maintenance_channel().send(maintenance_message)
+                    asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
+                    asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send(maintenance_message), self.event_loop)
                 except Forbidden:
-                    await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
+                    asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message), self.event_loop)
 
     def close_assignment(self, assignment_name):
         assignment = self.assignments.find_one({'name': assignment_name})
