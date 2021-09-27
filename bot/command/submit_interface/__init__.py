@@ -114,7 +114,7 @@ class SubmitDaemon(Thread):
                     asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
 
         elif 'student' in assignment:
-            print('closing extension for student', assignment['student'], assignment['name'])
+            print('Closing {} extension for student {}'.format(assignment['name'], assignment['student']))
             self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_STUDENT_EXTENSION.format(assignment['name'], assignment['student'], ''))
 
             if isinstance(assignment['name'], dict):
@@ -215,12 +215,15 @@ class SubmitDaemon(Thread):
         print('\n'.join(str(i) + ": " + str(a) for i, a in enumerate(assignment_queue)))
 
     def run(self):
-        assignment_queue = self.get_assignment_queue()
+
         while True:
+            assignment_queue = self.get_assignment_queue()
+
             try:
                 for assignment in assignment_queue:
                     if assignment['due-date'] <= datetime.now():
                         if 'student' in assignment:
+                            print('Closing {} extension for {} in the thread.'.format(assignment['name'], assignment['student']))
                             asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                         elif 'section' in assignment:
                             asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
@@ -228,7 +231,6 @@ class SubmitDaemon(Thread):
                             self.close_assignment(assignment['name'])
 
                 time.sleep(30)
-                assignment_queue = self.get_assignment_queue()
 
             except Exception as e:
                 # this may be overkill but basically any exception should be printed, then the loop should start again.
