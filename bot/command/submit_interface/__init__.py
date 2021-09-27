@@ -120,11 +120,14 @@ class SubmitDaemon(Thread):
             if isinstance(assignment['name'], dict):
                 update_open = 'student-extensions.{}.open'.format(assignment['student'])
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: False}})
+                asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send("Updated Database with Student Extension Closure"), self.event_loop)
             else:
                 update_open = 'student-extensions.{}'.format(assignment['student'])
                 student_id = assignment['student']
                 due_date = assignment['due-date']
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': False}}})
+                asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send("Updated Database with Student Extension Closure"), self.event_loop)
+
             print('{} extension closed for {}'.format(assignment['name'], assignment['student']))
 
             the_student = students_group.find_one({self.__UID_FIELD: assignment['student']})
@@ -135,10 +138,10 @@ class SubmitDaemon(Thread):
                 message = '{} ({})\'s extension for assignment {} is now closed.  You should recopy the files and begin grading. '.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
                 maintenance_message = '{} ({})\'s extension for assignment {} is now closed.'.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
                 try:
-                    asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
-                    asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send(maintenance_message), self.event_loop)
+                    await ta_discord_user.send(message)
+                    await ca.get_maintenance_channel().send(maintenance_message)
                 except Forbidden:
-                    asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
+                    await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
 
     def close_assignment(self, assignment_name):
         assignment = self.assignments.find_one({'name': assignment_name})
