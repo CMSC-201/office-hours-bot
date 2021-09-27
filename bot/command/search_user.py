@@ -40,7 +40,7 @@ class SearchUsers(command.Command):
     @command.Command.authenticate
     @command.Command.require_maintenance
     async def handle(self):
-        match = re.match(r'!search\s+user\s+(?P<user_identifier>\w+)', self.message.content)
+        match = re.match(r'!search\s+user\s+(?P<user_identifier>(.*))', self.message.content)
         color = Colour(0).dark_gold()
         if match:
             students_group = mongo.db[self.__STUDENTS_GROUP]
@@ -52,9 +52,9 @@ class SearchUsers(command.Command):
             umbc_id_list = []
 
             for group in [students_group, ta_group, admin_group]:
-                first_name_list.extend([first_name_user for first_name_user in group.find({'First-Name': match.group('user_identifier')})])
-                last_name_list.extend([first_name_user for first_name_user in group.find({'Last-Name': match.group('user_identifier')})])
-                umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': match.group('user_identifier')})])
+                first_name_list.extend([first_name_user for first_name_user in group.find({'First-Name': match.group('user_identifier').strip()})])
+                last_name_list.extend([first_name_user for first_name_user in group.find({'Last-Name': match.group('user_identifier').strip()})])
+                umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': match.group('user_identifier').strip()})])
 
             combined_list = first_name_list + last_name_list + umbc_id_list
 
