@@ -227,13 +227,8 @@ class SubmitDaemon(Thread):
                         else:
                             self.close_assignment(assignment['name'])
 
+                time.sleep(30)
                 assignment_queue = self.get_assignment_queue()
-
-                if assignment_queue and assignment_queue[0]['due-date'] - timedelta(seconds=60) < datetime.now():
-                    time.sleep(1)
-                else:
-                    time.sleep(30)
-                    assignment_queue = self.get_assignment_queue()
 
             except Exception as e:
                 # this may be overkill but basically any exception should be printed, then the loop should start again.
