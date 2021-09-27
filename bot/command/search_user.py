@@ -40,33 +40,10 @@ class SearchUsers(command.Command):
     @command.Command.authenticate
     @command.Command.require_maintenance
     async def handle(self):
-        match = re.match(r'!search\s+user\s+(?P<user_identifier>(.*))', self.message.content)
+        general_match = re.match(r'!search\s+user\s+(?P<user_identifier>(.*))', self.message.content)
         color = Colour(0).dark_gold()
-        if match:
-            students_group = mongo.db[self.__STUDENTS_GROUP]
-            ta_group = mongo.db[self.__TA_GROUP]
-            admin_group = mongo.db[self.__ADMIN_GROUP]
 
-            first_name_list = []
-            last_name_list = []
-            umbc_id_list = []
-
-            for group in [students_group, ta_group, admin_group]:
-                first_name_list.extend([first_name_user for first_name_user in group.find({'First-Name': match.group('user_identifier').strip()})])
-                last_name_list.extend([first_name_user for first_name_user in group.find({'Last-Name': match.group('user_identifier').strip()})])
-                umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': match.group('user_identifier').strip()})])
-
-            combined_list = first_name_list + last_name_list + umbc_id_list
-
-            for person in combined_list:
-                db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
-                embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
-
-                await self.message.channel.send(embed=embedded_message)
-
-            if not combined_list:
-                await self.message.channel.send('No results were found')
-        elif re.match(r'!search\s+user\s+--unauthed', self.message.content):
+        if re.match(r'!search\s+user\s+--unauthed', self.message.content):
 
             found_list = self.search_database({self.__DISCORD_ID: ''})
 
@@ -99,6 +76,30 @@ class SearchUsers(command.Command):
                 await self.message.channel.send(embed=embedded_message)
 
             if not found_list:
+                await self.message.channel.send('No results were found')
+        elif general_match:
+            students_group = mongo.db[self.__STUDENTS_GROUP]
+            ta_group = mongo.db[self.__TA_GROUP]
+            admin_group = mongo.db[self.__ADMIN_GROUP]
+
+            first_name_list = []
+            last_name_list = []
+            umbc_id_list = []
+
+            for group in [students_group, ta_group, admin_group]:
+                first_name_list.extend([first_name_user for first_name_user in group.find({'First-Name': general_match.group('user_identifier').strip()})])
+                last_name_list.extend([first_name_user for first_name_user in group.find({'Last-Name': general_match.group('user_identifier').strip()})])
+                umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': general_match.group('user_identifier').strip()})])
+
+            combined_list = first_name_list + last_name_list + umbc_id_list
+
+            for person in combined_list:
+                db_text = '\n'.join('{}: {}'.format(attr, person[attr]) for attr in person)
+                embedded_message = Embed(description=db_text, timestamp=dt.now() + timedelta(hours=4), colour=color)
+
+                await self.message.channel.send(embed=embedded_message)
+
+            if not combined_list:
                 await self.message.channel.send('No results were found')
 
     @staticmethod
