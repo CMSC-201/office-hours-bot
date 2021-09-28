@@ -58,3 +58,10 @@ class QueueStatus(command.Command):
             return True
 
         return False
+
+    @staticmethod
+    async def is_invoked_by_direct_message(message: Message, client: Client):
+        if message.content.startswith("!status"):
+            return True
+
+        return False
