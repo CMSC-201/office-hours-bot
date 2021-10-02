@@ -193,9 +193,13 @@ class ChannelAuthority:
     def get_maintenance_channel(self):
         # collection = mongo.db[self.__CHANNEL_COLLECTION]
         # channels = collection.find_one({})
+
+        # collection = mongo.db[self.__CHANNEL_COLLECTION]
+        # channels = collection.find_one()
+        # print(channels)
+
+        # this is a janky solution to fix this until we get the channel situation fixed.
         for channel in self.guild.text_channels:
-            # this is a janky solution to fix this until we get the channel situation fixed.
-            print(channel.name)
             if channel.name == 'maintenance':
                 return self.maintenance_channel
 
