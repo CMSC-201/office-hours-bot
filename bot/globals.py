@@ -22,7 +22,6 @@ def get_globals():
             "token": os.environ.get("BOT_TOKEN"),
             "prefix": os.environ.get("BOT_PREFIX"),
             "mongodb-address": os.environ.get("MONGODB_URI"),
-            "queue_url": os.environ.get("QUEUE_URL"),
             "submit_daemon": os.environ.get("SUBMIT_DAEMON", False),
             "base_submit_dir": os.environ.get("BASE_SUBMIT_DIR", ""),
         }

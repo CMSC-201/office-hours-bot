@@ -1,5 +1,5 @@
 __DOCSTRING__ = """
-    Totally non-functional.
+    
 """
 
 import re
@@ -12,6 +12,8 @@ from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
 
 import command
 import mongo
+import globals
+
 from channels import ChannelAuthority
 from roles import RoleAuthority
 
@@ -25,7 +27,7 @@ class CloseAssignment(command.Command):
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
 
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall21'
+    __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __ADMIN__CLOSE_ASSIGNMENT = '/admin/close_assignment.py {} {} {}'
     __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
     __CLOSE_SECTION_EXTENSION = '/admin/close_extension.py {} section={} {}'

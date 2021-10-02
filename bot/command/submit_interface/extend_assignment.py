@@ -8,6 +8,7 @@ from paramiko import SFTPClient
 import command
 import mongo
 import json
+import globals
 import asyncio
 from threading import Thread
 from datetime import datetime
@@ -16,7 +17,7 @@ from roles import RoleAuthority
 
 
 class AssignmentExtensionThread(Thread):
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall21'
+    __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
 
@@ -46,7 +47,7 @@ class GrantAssignmentExtension(command.Command):
     __UID_FIELD = 'UMBC-Name-Id'
     __SECTION = 'Section'
 
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall21'
+    __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
     __MONGO_ID = '_id'

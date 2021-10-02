@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timedelta
 
 from command.submit_interface import add_student, configure_assignment, get_student, grant_extension, setup_interface, remove_assignment, close_assignment, check_assignment
+import globals
 import mongo
 from channels import ChannelAuthority
 
@@ -31,7 +32,7 @@ class SubmitDaemon(Thread):
 
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall21'
+    __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __ADMIN__CLOSE_ASSIGNMENT = '/admin/close_assignment.py {} {} {}'
     __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
     __CLOSE_SECTION_EXTENSION = '/admin/close_extension.py {} section={} {}'
@@ -73,6 +74,9 @@ class SubmitDaemon(Thread):
         ta_group = mongo.db[self.__TA_GROUP]
         admin_group = mongo.db[self.__ADMIN_GROUP]
 
+        if not os.path.exists('csv_dump'):
+            os.makedirs('csv_dump')
+
         with open(os.path.join('csv_dump', self.__ROSTER_NAME), 'w', newline='') as csv_file:
             roster = csv.writer(csv_file)
             roster_list = [[student[self.__USERNAME], student[self.__SECTION]] for student in students_group.find()]
@@ -81,6 +85,7 @@ class SubmitDaemon(Thread):
             roster.writerows(roster_list)
 
     async def close_extension(self, assignment):
+        print('Starting Close Extension Function!')
         ca: ChannelAuthority = self.client.channel_authority
         self.connect_ssh()
         self.assignments.find_one({'name': assignment['name']})
@@ -155,8 +160,6 @@ class SubmitDaemon(Thread):
         self.write_roster()
 
         extensions_json = {}
-        if not os.path.exists('csv_dump'):
-            os.makedirs('csv_dump')
         with open(os.path.join('csv_dump', self.__EXTENSIONS_NAME), 'w') as json_extensions_file:
             for assignment in self.assignments.find():
                 extensions_json[assignment['name']] = {'section-extensions': {},
@@ -214,7 +217,6 @@ class SubmitDaemon(Thread):
         print('\n'.join(str(i) + ": " + str(a) for i, a in enumerate(assignment_queue)))
 
     def run(self):
-
         while True:
             assignment_queue = self.get_assignment_queue()
 

@@ -5,6 +5,7 @@ from discord import Message, Client
 from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
 
 import command
+import globals
 import mongo
 from channels import ChannelAuthority
 from roles import RoleAuthority
@@ -13,7 +14,7 @@ import asyncio
 
 
 class CheckAssignmentThread(Thread):
-    __BASE_SUBMIT_DIR = '/afs/umbc.edu/users/e/r/eric8/pub/cmsc201/fall21'
+    __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __MESSAGE = 'Your {} assignment is:\n```{}```'
     __MESSAGE_CANNOT_FIND = 'I couldn\'t find the assignment you asked for: {}'
     __USERNAME = 'UMBC-Name-Id'
