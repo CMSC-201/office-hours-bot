@@ -1,3 +1,4 @@
+import locale
 from threading import Thread
 import paramiko
 from paramiko.ssh_exception import AuthenticationException, SSHException
@@ -86,7 +87,7 @@ class SubmitDaemon(Thread):
 
     async def close_extension(self, assignment):
         print('Starting Close Extension Function!')
-        ca: ChannelAuthority = self.client.channel_authority
+        ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
         self.connect_ssh()
         self.assignments.find_one({'name': assignment['name']})
 
@@ -147,11 +148,14 @@ class SubmitDaemon(Thread):
                 except Forbidden:
                     await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
 
-    def close_assignment(self, assignment_name):
+    async def close_assignment(self, assignment_name):
+        ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
+        maintenance_channel = ca.get_maintenance_channel()
+
         assignment = self.assignments.find_one({'name': assignment_name})
 
         if not assignment:
-            # await self.client.channel_authority.maintenance_channel.send('Assignment {} was not found. '.format(assignment_name))
+            await maintenance_channel.send('Assignment {} was not found. '.format(assignment_name))
             print('Assignment {} was not found. '.format(assignment_name))
             return
 
@@ -181,12 +185,14 @@ class SubmitDaemon(Thread):
         ftp_client.put(os.path.join('csv_dump', self.__ROSTER_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME)
         ftp_client.put(os.path.join('csv_dump', self.__EXTENSIONS_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME)
         ftp_client.close()
-
+        await maintenance_channel.send('New roster and extension files written to GL server by FTP. ')
         roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
         extensions_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
         print('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN__CLOSE_ASSIGNMENT.format(assignment_name, roster_path, extensions_path))
         self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN__CLOSE_ASSIGNMENT.format(assignment_name, roster_path, extensions_path))
+        await maintenance_channel.send('Sending ssh command to close assignment {} on the GL server. '.format(assignment_name))
         self.assignments.update_one({'name': assignment_name}, {'$set': {'open': False}})
+        await maintenance_channel.send('Updating Database with assignment {} closure. '.format(assignment_name))
 
     def get_assignment_queue(self):
         assignment_queue = []
@@ -219,7 +225,8 @@ class SubmitDaemon(Thread):
     def run(self):
         while True:
             assignment_queue = self.get_assignment_queue()
-
+            # print(assignment_queue)
+            # asyncio.run_coroutine_threadsafe(ChannelAuthority(self.client.guilds[0]).get_maintenance_channel().send('Thread is alive'), self.event_loop)
             try:
                 for assignment in assignment_queue:
                     if assignment['due-date'] <= datetime.now():
@@ -229,9 +236,9 @@ class SubmitDaemon(Thread):
                         elif 'section' in assignment:
                             asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                         else:
-                            self.close_assignment(assignment['name'])
+                            asyncio.run_coroutine_threadsafe(self.close_assignment(assignment['name']), self.event_loop)
 
-                time.sleep(30)
+                time.sleep(5)
 
             except Exception as e:
                 # this may be overkill but basically any exception should be printed, then the loop should start again.

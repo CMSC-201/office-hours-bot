@@ -1,7 +1,7 @@
 from discord import Message, Client
 
 import command
-
+import channels
 
 @command.command_class
 class Bark(command.Command):
@@ -56,3 +56,21 @@ class Squawk(command.Command):
     @classmethod
     def get_help(self):
         return 'This command will elicit a repetition test response from the bot. \n\t!squawk'
+
+
+@command.command_class
+class MaintenancePing(command.Command):
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
+    @command.Command.authenticate
+    async def handle(self, new_message=None):
+        mc = channels.ChannelAuthority(self.guild).get_maintenance_channel()
+        await mc.send('You have pinged the maintenance channel. ')
+
+    @staticmethod
+    async def is_invoked_by_message(message: Message, client: Client):
+        return message.content.startswith("!maintenance ping")
+
+    @classmethod
+    def get_help(self):
+        return 'This command will elicit a test response from the bot on the maintenance channel. \n\t!maintenance ping'
