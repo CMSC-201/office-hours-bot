@@ -5,7 +5,7 @@ what_time.py
 
     Responds with the server/docker container time.
 
-    Roles:      All
+    Roles:      All (authed)
     Channels:   All, DM
 """
 __author__ = 'EJH'
@@ -30,6 +30,9 @@ class WhatTimeIsIt(command.Command):
         The command is run by typing: !what time is it
     """
 
+    permissions = {'student': True, 'ta': True, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
         current_time = datetime.now()
         await self.message.channel.send(current_time.strftime("The time is now %H:%M:%S on %m-%d-%y"))
@@ -47,3 +50,11 @@ class WhatTimeIsIt(command.Command):
             return True
 
         return False
+
+    @classmethod
+    def get_help(cls):
+        help_string = """
+            !what time is it
+                This command gives the time on the server (or the docker component) where this bot is running.
+        """
+        return help_string
