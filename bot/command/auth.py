@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 @command.command_class
 class AuthenticateStudent(command.Command):
+    permissions = {'all': True}
+
+    @command.Command.authenticate
     async def handle(self):
         ma: MemberAuthority = MemberAuthority(self.guild)
 
@@ -65,3 +68,11 @@ class AuthenticateStudent(command.Command):
             await message.author.send("Don't share your key via any channel, only send it to me, the discord bot in a DM!")
             await message.delete(delay=5)
         return False
+
+    @classmethod
+    def get_help(cls):
+        return """!auth [your key]
+            You should authenticate by entering your key which was delivered to you by email, search for cs201reflector@gmail.com's message.  
+            Once you find that email, the key along with the full command will be there.  Copy and paste it and tell me (the bot) the key in a DM.  
+            Then I'll authenticate you, and you should see all of the channels on the server.  
+        """
