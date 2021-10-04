@@ -2,12 +2,12 @@ import logging
 
 from discord import Message, Client, Member, TextChannel, CategoryChannel, PermissionOverwrite, Role, Permissions
 
+import globals
 import command
-from channels import ChannelAuthority
 from member import MemberAuthority
-from roles import RoleAuthority
 
 logger = logging.getLogger(__name__)
+
 
 @command.command_class
 class AuthenticateStudent(command.Command):
@@ -38,8 +38,10 @@ class AuthenticateStudent(command.Command):
 
     @staticmethod
     async def is_invoked_by_direct_message(message: Message, client: Client):
+        class_name = globals.get_globals()['props'].get('class_name', 'CMSC 201')
+        bot_name = globals.get_globals()['props'].get('class_name', '201Bot')
         if message.content.startswith("!auth resend"):
-            await message.author.send('Welcome to Discord Office Hours for CMSC 201, Fall 2020\n I am the 201Bot.' +
+            await message.author.send('Welcome to Discord Office Hours for {}}\n I am the {}}.'.format(class_name, bot_name) +
                                       '\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
             return False
         if message.content.startswith("!auth"):
@@ -55,8 +57,10 @@ class AuthenticateStudent(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
+        class_name = globals.get_globals()['props'].get('class_name', 'CMSC 201')
+        bot_name = globals.get_globals()['props'].get('class_name', '201Bot')
         if message.content.startswith("!auth resend"):
-            await message.author.send('Welcome to Discord Office Hours for CMSC 201, Fall 2020\n I am the 201Bot.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
+            await message.author.send('Welcome to Discord Office Hours for {}\n I am the {}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.'.format(class_name, bot_name))
         elif message.content.startswith("!auth"):
             await message.author.send("Don't share your key via any channel, only send it to me, the discord bot in a DM!")
             await message.delete(delay=5)
