@@ -91,12 +91,12 @@ class RoleAuthority:
         """
         permission = False
 
+        if 'all' in permission_object and permission_object['all']:
+            return True
+
         for role, method in zip(['student', 'ta', 'admin'], [self.is_student, self.is_ta, self.is_admin]):
             if role in permission_object and permission_object[role]:
                 permission = permission or method(author)
-
-        if 'all' in permission_object:
-            permission = True
 
         return permission
 
