@@ -80,12 +80,23 @@ class RoleAuthority:
         return self.admin in member.roles or self.ta in member.roles
 
     def has_permission(self, author: Member, permission_object):
+        """
+            has_permission should determine if the caller of the command has permission to execute it.
 
+            If the 'all': True permission is set, then anyone can call this regardless of whether they are authenticated.
+
+        :param author: the user who messaged the bot.
+        :param permission_object: a dictionary with the roles and booleans as values.
+        :return: boolean, True if permission is granted, False if denied
+        """
         permission = False
 
         for role, method in zip(['student', 'ta', 'admin'], [self.is_student, self.is_ta, self.is_admin]):
             if role in permission_object and permission_object[role]:
                 permission = permission or method(author)
+
+        if 'all' in permission_object:
+            permission = True
 
         return permission
 
