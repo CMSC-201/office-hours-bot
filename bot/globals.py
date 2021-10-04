@@ -24,6 +24,8 @@ def get_globals():
             "mongodb-address": os.environ.get("MONGODB_URI"),
             "submit_daemon": os.environ.get("SUBMIT_DAEMON", False),
             "base_submit_dir": os.environ.get("BASE_SUBMIT_DIR", ""),
+            "bot_name": os.environ.get("BOT_NAME", "201Bot"),
+            "class_name": os.environ.get("CLASS_NAME", "CMSC 201"),
         }
 
     return info
