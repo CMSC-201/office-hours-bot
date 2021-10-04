@@ -35,6 +35,7 @@ class Who(command.Command):
 
         student_col = mongo.db[self.__STUDENTS_GROUP]
         ta_collection = mongo.db[self.__TA_GROUP]
+        admin_collection = mongo.db[self.__ADMIN_GROUP]
 
         match_ta = re.match(r'!who\s+is\s+my\s+(?P<person>\w+)', self.message.content)
         if match_ta:
@@ -85,8 +86,12 @@ class Who(command.Command):
             match = re.match(r'!who\s+is\s+the\s+ta\s+for\s+section\s+(?P<section_num>\d+)', self.message.content)
             section_num = match.group('section_num')
             the_ta = ta_collection.find_one({self.__SECTION: section_num})
+            the_admin = admin_collection.find_one({self.__SECTION: section_num})
             if the_ta:
                 ta_name = ' '.join([the_ta[self.__FIRST_NAME], the_ta[self.__LAST_NAME]])
+                await self.message.channel.send('The TA for section {} is {}'.format(section_num, ta_name))
+            elif the_admin:
+                ta_name = ' '.join([the_admin[self.__FIRST_NAME], the_admin[self.__LAST_NAME]])
                 await self.message.channel.send('The TA for section {} is {}'.format(section_num, ta_name))
             else:
                 await self.message.channel.send('Unable to find ta for section {}'.format(section_num))
