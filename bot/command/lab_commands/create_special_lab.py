@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @command.command_class
-class ConfigureLabs(command.Command):
+class CreateSpecialLabSection(command.Command):
     """
         This command should create the lab roles for the sections, create the section categories and each with a voice and text chat.
 
