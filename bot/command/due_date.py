@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 
 @command.command_class
 class DueDate(command.Command):
-    # old assignments collection.
-    # __ASSIGNMENTS = 'assignments'
     __ASSIGNMENTS = 'submit-assignments'
     __ASSIGN_NAME = 'name'
     __DB_ID = '_id'
