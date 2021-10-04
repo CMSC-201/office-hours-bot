@@ -33,11 +33,10 @@ class MyClient(discord.Client):
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
-
         if message.guild:
             logger.info('Message ({0.channel.name}):{0.author}: {0.content}'.format(message))
         else:
-            logger.info('Message (DirectMsg):{0.author}: {0.content}'.format(message))
+            logger.info('Message (DirectMsg, {0.channel.recipient}):{0.author}: {0.content}'.format(message))
 
         # Ignore bot messages
         if message.author == self.user:
