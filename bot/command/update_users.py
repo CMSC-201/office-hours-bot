@@ -32,6 +32,8 @@ class UpdateUsers(command.Command):
     __KEY = 'key'
     __SECTION = 'Section'
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
     async def get_dict_reader(self, file_name):
         """
         :param file_name: the file name to the csv
@@ -82,29 +84,29 @@ class UpdateUsers(command.Command):
 
         return comma_csv, default_col_names
 
+    @command.Command.authenticate
+    @command.Command.require_maintenance
     async def handle(self):
-        ra: RoleAuthority = RoleAuthority(self.message.guild)
-        if ra.admin:
-            if self.message.attachments:
-                attachment: Attachment = self.message.attachments[0]
-                await attachment.save('update_users.csv')
-            else:
-                await self.message.channel.send('Did you attach a csv with the new users?')
-                return
-            try:
-                csv_file_name = 'update_users.csv'
-                comma_csv, default_col_names = await self.get_dict_reader(csv_file_name)
-                with open(csv_file_name) as csv_file:
-                    users_reader = csv.DictReader(csv_file, delimiter="," if comma_csv else '\t')
-                    ignore_duplicates = True if '--ignore-duplicates' in self.message.content else False
+        if self.message.attachments:
+            attachment: Attachment = self.message.attachments[0]
+            await attachment.save('update_users.csv')
+        else:
+            await self.message.channel.send('Did you attach a csv with the new users?')
+            return
+        try:
+            csv_file_name = 'update_users.csv'
+            comma_csv, default_col_names = await self.get_dict_reader(csv_file_name)
+            with open(csv_file_name) as csv_file:
+                users_reader = csv.DictReader(csv_file, delimiter="," if comma_csv else '\t')
+                ignore_duplicates = False if '--show-duplicates' in self.message.content else True
 
-                    if default_col_names:
-                        await self.load_default_data(users_reader, ignore_duplicates)
-                    else:
-                        await self.load_rex_data(users_reader, ignore_duplicates)
+                if default_col_names:
+                    await self.load_default_data(users_reader, ignore_duplicates)
+                else:
+                    await self.load_rex_data(users_reader, ignore_duplicates)
 
-            except OSError:
-                logger.info('Unable to open file user_database.csv')
+        except OSError:
+            logger.info('Unable to open file user_database.csv')
 
     async def load_rex_data(self, users_reader, ignore_duplicates):
         """
