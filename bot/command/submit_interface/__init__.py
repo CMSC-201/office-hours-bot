@@ -4,6 +4,7 @@ import paramiko
 from paramiko.ssh_exception import AuthenticationException, SSHException
 from discord import User
 from discord.errors import Forbidden
+import logging
 import asyncio
 import os
 import csv
@@ -64,9 +65,9 @@ class SubmitDaemon(Thread):
             admin = self.submit_admins.find_one()
             try:
                 self.ssh_client.connect('gl.umbc.edu', username=admin['username'], password=admin['password'])
-                print('logged into ssh...')
+                logging.info('Logged into ssh on the GL server.')
             except AuthenticationException:
-                print('not able to authenticate.')
+                logging.info('GL server not able to authenticate.')
 
         return self.ssh_client
 
@@ -86,16 +87,17 @@ class SubmitDaemon(Thread):
             roster.writerows(roster_list)
 
     async def close_extension(self, assignment):
-        print('Starting Close Extension Function!')
+        logging.info('Starting Close Extension Function')
         ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
         self.connect_ssh()
         self.assignments.find_one({'name': assignment['name']})
 
         students_group = mongo.db[self.__STUDENTS_GROUP]
         ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
 
         if 'section' in assignment:
-            print('closing extension for section', assignment['section'], assignment['name'])
+            logging.info('closing extension for section', assignment['section'], assignment['name'])
             self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
 
             if isinstance(assignment['name'], dict):
@@ -106,7 +108,7 @@ class SubmitDaemon(Thread):
                 section_id = assignment['section']
                 due_date = assignment['due-date']
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'section': section_id, 'due-date': due_date, 'name': assignment['name'], 'open': False}}})
-            print('{} extension closed for section {}'.format(assignment['name'], assignment['section']))
+            logging.info('{} extension closed for section {}'.format(assignment['name'], assignment['section']))
             # asyncio.run(ca.get_maintenance_channel().send('{} extension closed for section {}'.format(assignment['name'], assignment['section'])))
 
             for ta in ta_group.find({self.__SECTION: assignment['section']}):
@@ -119,13 +121,13 @@ class SubmitDaemon(Thread):
                     asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
 
         elif 'student' in assignment:
-            print('Closing {} extension for student {}'.format(assignment['name'], assignment['student']))
+            logging.info('Closing {} extension for student {}'.format(assignment['name'], assignment['student']))
             self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_STUDENT_EXTENSION.format(assignment['name'], assignment['student'], ''))
 
             if isinstance(assignment['name'], dict):
                 update_open = 'student-extensions.{}.open'.format(assignment['student'])
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: False}})
-                await ca.get_maintenance_channel().send("Updated Database with Student Extension Closure")
+                await ca.get_maintenance_channel().send("Updated Database with Student Extension Closure - dict")
             else:
                 update_open = 'student-extensions.{}'.format(assignment['student'])
                 student_id = assignment['student']
@@ -133,20 +135,29 @@ class SubmitDaemon(Thread):
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': False}}})
                 await ca.get_maintenance_channel().send("Updated Database with Student Extension Closure")
 
-            print('{} extension closed for {}'.format(assignment['name'], assignment['student']))
+            logging.info('{} extension closed for {}'.format(assignment['name'], assignment['student']))
 
             the_student = students_group.find_one({self.__UID_FIELD: assignment['student']})
             the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
+            message = '{} ({})\'s extension for assignment {} is now closed.  You should recopy the files and begin grading. '.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
+            maintenance_message = '{} ({})\'s extension for assignment {} is now closed.'.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
+
             for ta in ta_group.find({self.__SECTION: the_student[self.__SECTION]}):
                 ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-
-                message = '{} ({})\'s extension for assignment {} is now closed.  You should recopy the files and begin grading. '.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
-                maintenance_message = '{} ({})\'s extension for assignment {} is now closed.'.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
                 try:
                     await ta_discord_user.send(message)
-                    await ca.get_maintenance_channel().send(maintenance_message)
                 except Forbidden:
                     await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
+
+            for ta in admin_group.find({self.__SECTION: the_student[self.__SECTION]}):
+                ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
+                try:
+                    await ta_discord_user.send(message)
+                except Forbidden:
+                    await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
+
+            await ca.get_maintenance_channel().send(maintenance_message)
+
 
     async def close_assignment(self, assignment_name):
         ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
@@ -231,11 +242,13 @@ class SubmitDaemon(Thread):
                 for assignment in assignment_queue:
                     if assignment['due-date'] <= datetime.now():
                         if 'student' in assignment:
-                            print('Closing {} extension for {} in the thread.'.format(assignment['name'], assignment['student']))
+                            logging.info('Closing {} extension for {} in the thread.'.format(assignment['name'], assignment['student']))
                             asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                         elif 'section' in assignment:
+                            logging.info('Closing {} extension for section {} in the thread.'.format(assignment['name'], assignment['section']))
                             asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                         else:
+                            logging.info('Closing the assignment: {}'.format(assignment['name'], assignment['section']))
                             asyncio.run_coroutine_threadsafe(self.close_assignment(assignment['name']), self.event_loop)
 
                 time.sleep(5)
