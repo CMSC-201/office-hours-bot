@@ -111,10 +111,16 @@ class SubmitDaemon(Thread):
             logging.info('{} extension closed for section {}'.format(assignment['name'], assignment['section']))
             # asyncio.run(ca.get_maintenance_channel().send('{} extension closed for section {}'.format(assignment['name'], assignment['section'])))
 
+            message = "Your section's extension for assignment {} is closed.  You should recopy the files and begin grading.".format(assignment['name'])
             for ta in ta_group.find({self.__SECTION: assignment['section']}):
                 ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-                # ta_discord_user: User = self.client.get_user(ta[self.__DISCORD_ID])
-                message = "Your section's extension for assignment {} is closed.  You should recopy the files and begin grading.".format(assignment['name'])
+                try:
+                    asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
+                except Forbidden:
+                    asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
+
+            for ta in admin_group.find({self.__SECTION: assignment['section']}):
+                ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
                 try:
                     asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
                 except Forbidden:
@@ -157,7 +163,6 @@ class SubmitDaemon(Thread):
                     await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
 
             await ca.get_maintenance_channel().send(maintenance_message)
-
 
     async def close_assignment(self, assignment_name):
         ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
