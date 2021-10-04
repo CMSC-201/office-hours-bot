@@ -148,6 +148,7 @@ class GrantIndividualExtension(command.Command):
             # find and message the TA that an extension has been granted for a student
             student_col = mongo.db[self.__STUDENTS_GROUP]
             ta_collection = mongo.db[self.__TA_GROUP]
+            admin_collection = mongo.db[self.__ADMIN_GROUP]
 
             if student_id:
                 the_student = student_col.find_one({self.__UID_FIELD: student_id})
@@ -157,6 +158,11 @@ class GrantIndividualExtension(command.Command):
                     ExtensionThread(self.client).start()
 
                     the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
+                    for admin in admin_collection.find({self.__SECTION: section_id}):
+                        ta_discord_user: User = await self.client.fetch_user(admin[self.__DISCORD_ID])
+                        message = '{} ({}) has been granted an extension until {} for assignment {}.'.format(the_student_name, student_id, due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+                        await self.safe_send(ta_discord_user, message)
+
                     for ta in ta_collection.find({self.__SECTION: the_student[self.__SECTION]}):
                         ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
                         message = '{} ({}) has been granted an extension until {} for assignment {}.'.format(the_student_name, student_id, due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
@@ -165,6 +171,11 @@ class GrantIndividualExtension(command.Command):
                     await self.message.channel.send('Unable to find the student {}, no extension was granted. '.format(student_id))
             # if it's a section extension, send the TA an update on their section's extension
             elif section_id:
+                for admin in admin_collection.find({self.__SECTION: section_id}):
+                    ta_discord_user: User = await self.client.fetch_user(admin[self.__DISCORD_ID])
+                    message = 'Your section has been granted an extension until {} for assignment {}.'.format(due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+                    await self.safe_send(ta_discord_user, message)
+
                 for ta in ta_collection.find({self.__SECTION: section_id}):
                     ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
                     message = 'Your section has been granted an extension until {} for assignment {}.'.format(due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
