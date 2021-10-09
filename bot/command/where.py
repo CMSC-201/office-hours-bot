@@ -30,7 +30,6 @@ class Where(command.Command):
 
     async def handle(self):
 
-        ra: RoleAuthority = RoleAuthority(self.guild)
         lecture_collect = mongo.db[self.__LECTURE_LINKS]
 
         match = re.match(r'!where\s+(are|is)\s+the\s+lecture[s]?(\s+(today))', self.message.content)
