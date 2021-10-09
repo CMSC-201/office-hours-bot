@@ -253,7 +253,7 @@ class SubmitDaemon(Thread):
                             logging.info('Closing {} extension for section {} in the thread.'.format(assignment['name'], assignment['section']))
                             asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                         else:
-                            logging.info('Closing the assignment: {}'.format(assignment['name'], assignment['section']))
+                            logging.info('Closing the assignment: {}'.format(assignment['name']))
                             asyncio.run_coroutine_threadsafe(self.close_assignment(assignment['name']), self.event_loop)
 
                 time.sleep(5)
