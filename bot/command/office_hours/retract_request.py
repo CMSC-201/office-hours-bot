@@ -46,17 +46,3 @@ class RetractRequest(command.Command):
             return True
 
         return False
-
-
-class RetractRequestTests:
-    def __init__(self, instructor_bots, ta_bots, student_bots):
-        pass
-
-    def in_waiting_channel_and_queue(self):
-        pass
-
-    def in_waiting_channel_and_not_in_queue(self):
-        pass
-
-    def not_in_waiting_channel(self):
-        pass
