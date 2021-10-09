@@ -122,9 +122,9 @@ class ChannelAuthority:
         # Make the category channel and make it inaccessible to unauthed nerds
         self.lab_category: CategoryChannel = await self.guild.create_category(self.__LAB_CATEGORY_NAME + lab_name,
                                                                               overwrites={
-                                                                                  ra.ta: PermissionOverwrite(read_messages=False),
-                                                                                  ra.student: PermissionOverwrite(read_messages=False),
-                                                                                  ra.un_authenticated: PermissionOverwrite(read_messages=False)
+                                                                                  ra.get_ta_role(): PermissionOverwrite(read_messages=False),
+                                                                                  ra.get_student_role(): PermissionOverwrite(read_messages=False),
+                                                                                  ra.get_unauthenticated_role(): PermissionOverwrite(read_messages=False)
                                                                               })
 
         await self.lab_category.create_text_channel("Main Discussion")
