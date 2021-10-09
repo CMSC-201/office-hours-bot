@@ -44,7 +44,7 @@ class MemberAuthority:
         found_group = None
         print(member, member.id)
 
-        for group, role in zip([students_group, ta_group, admin_group], [ra.student, ra.ta, ra.admin]):
+        for group, role in zip([students_group, ta_group, admin_group], [ra.get_student_role(), ra.get_ta_role(), ra.get_admin_role()]):
             person = group.find_one({'key': key})
             if person:
                 found_person = person
@@ -67,8 +67,6 @@ class MemberAuthority:
                 except Forbidden:
                     pass
 
-
-
                 result = found_group.update_one({self.__UID_FIELD: found_person[self.__UID_FIELD]}, {'$set': {self.__DISCORD_ID_FIELD: int(member.id)}})
 
                 if result.modified_count > 0:
@@ -80,7 +78,7 @@ class MemberAuthority:
 
                     try:
                         await member.add_roles(found_role)
-                        await member.remove_roles(ra.un_authenticated)
+                        await member.remove_roles(ra.get_unauthenticated_role())
                     except Forbidden as f:
                         print(f)
 
@@ -105,5 +103,5 @@ class MemberAuthority:
         for role in member.roles:
             if not role.is_default():
                 await member.remove_roles(role)
-            await member.add_roles(ra.un_authenticated)
+            await member.add_roles(ra.get_unauthenticated_role())
         return True
