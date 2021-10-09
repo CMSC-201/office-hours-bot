@@ -20,3 +20,6 @@ This is a one-time thing.  Once you are authenticated, you are assigned your rea
 
 ### Requesting Help
 Once you are authenticated, you can go to the channel waiting-room, wherein you can use the `!request [description of you request]` command.  This will put you into a waiting queue to get help from course staff.
+
+### Removing From Queue
+If you are currently in the office hours queue and don't require help any more, you can remove yourself from the queue using `!retract_request`.
