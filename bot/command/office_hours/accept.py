@@ -51,8 +51,8 @@ class AcceptStudent(command.Command):
                 "Session for {}".format(command.name(session.member)),
                 overwrites={
                     role: PermissionOverwrite(read_messages=True, attach_files=True, embed_links=True),
-                    ra.student: PermissionOverwrite(read_messages=False),
-                    ra.un_authenticated: PermissionOverwrite(read_messages=False)
+                    ra.get_student_role(): PermissionOverwrite(read_messages=False),
+                    ra.get_unauthenticated_role(): PermissionOverwrite(read_messages=False)
                 })
             text_channel: TextChannel = await session_category.create_text_channel("Text Chat")
             await session_category.create_voice_channel("Voice Chat")

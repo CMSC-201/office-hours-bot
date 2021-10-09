@@ -201,7 +201,7 @@ class SetupCommand(command.Command):
         ca: ChannelAuthority = ChannelAuthority(message.guild)
         if command.is_bot_mentioned(message, client) and ("setup" in message.content or "set up" in message.content):
             ra: RoleAuthority = RoleAuthority(message.guild)
-            if ra.admin in message.author.roles:
+            if ra.is_admin(message.author):
                 return True
             else:
                 if ca.waiting_channel is None:

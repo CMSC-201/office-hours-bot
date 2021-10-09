@@ -27,8 +27,6 @@ class DueDate(command.Command):
         students_group = mongo.db[self.__STUDENTS_GROUP]
 
         sender: Member = self.message.author
-        ra: RoleAuthority = RoleAuthority(self.guild)
-
         get_match = re.match(r'!due\s+date\s+(?P<assignment_name>\w+)', self.message.content)
 
         response_message = 'Unable to process your command, bad format.  '
