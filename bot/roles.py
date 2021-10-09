@@ -1,16 +1,19 @@
 from typing import Optional
 
 from discord import Permissions, Guild, Role, Member, PermissionOverwrite
+import mongo
 
 
-# TODO: store the role ids in mongo so we can rename them
 class RoleAuthority:
     __ADMIN_NAME = "Admin"
     __STUDENT_NAME = "Student"
     __UNAUTHED_NAME = "Unauthed"
     __TA_NAME = "TA"
     __EVERYONE_NAME = "@everyone"
+    __ROLE_LIST = [__ADMIN_NAME, __STUDENT_NAME, __UNAUTHED_NAME, __TA_NAME, __EVERYONE_NAME]
     __LAB_CHANNEL = 'lab'
+
+    __ROLE_COLLECTION = 'role-collection'
 
     def __init__(self, guild: Guild):
         self.admin: Optional[Role] = None
@@ -19,22 +22,21 @@ class RoleAuthority:
         self.ta: Optional[Role] = None
         self.everyone: Optional[Role] = None
 
+        self.role_db = mongo.db[self.__ROLE_COLLECTION]
+
         self.role_map = {}
 
-        for role in guild.roles:
-            self.role_map[role.name] = role
-            if role.name == self.__ADMIN_NAME:
-                self.admin = role
-            elif role.name == self.__STUDENT_NAME:
-                self.student = role
-            elif role.name == self.__UNAUTHED_NAME:
-                self.un_authenticated = role
-            elif role.name == self.__TA_NAME:
-                self.ta = role
-            elif role.name == self.__EVERYONE_NAME:
-                self.everyone = role
-            elif self.__LAB_CHANNEL in role.name:
-                pass
+        for role_name in self.__ROLE_LIST:
+            role_data = self.role_db.find_one({'role-name': role_name})
+            if role_data:
+                self.role_map[role_name] = guild.get_role(role_data['role-id'])
+            else:
+                for role in guild.roles:
+                    if role.name == role_name:
+                        self.role_map[role.name] = role
+                        self.role_db.insert_one({'role-name': role_name,
+                                                 'role-id': role.id})
+                        break
 
     async def add_role(self, member: Member, role_name: str):
         """
@@ -54,30 +56,30 @@ class RoleAuthority:
         return self.role_map[role_name] in member.roles
 
     def is_student(self, member: Member) -> bool:
-        return self.student in member.roles
+        return self.role_map[self.__STUDENT_NAME] in member.roles
 
     def is_ta(self, member: Member) -> bool:
-        return self.ta in member.roles
+        return self.role_map[self.__TA_NAME] in member.roles
 
     def is_admin(self, member: Member) -> bool:
-        return self.admin in member.roles
+        return self.role_map[self.__ADMIN_NAME] in member.roles
 
     def get_ta_role(self) -> Role:
-        return self.ta
+        return self.role_map[self.__TA_NAME]
 
     def get_student_role(self) -> Role:
-        return self.student
+        return self.role_map[self.__STUDENT_NAME]
 
     def get_admin_role(self) -> Role:
-        return self.admin
+        return self.role_map[self.__ADMIN_NAME]
 
     def ta_or_higher(self, member: Member) -> bool:
         """
         True if the member is a TA or higher privilege, false otherwise
-        :param member:
+        :param member: a Member object
         :return:
         """
-        return self.admin in member.roles or self.ta in member.roles
+        return self.role_map[self.__ADMIN_NAME] in member.roles or self.role_map[self.__TA_NAME] in member.roles
 
     def has_permission(self, author: Member, permission_object):
         """
@@ -101,6 +103,7 @@ class RoleAuthority:
         return permission
 
 
+#TODO: remove permission authorities, use only the role authority, have it manage permissions as well since permissions are linked to roles.
 class PermissionAuthority:
     def __init__(self):
         # role permissions
