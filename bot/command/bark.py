@@ -8,12 +8,18 @@ import channels
 class Bark(command.Command):
     permissions = {'all': True, 'student': True, 'ta': True, 'admin': True}
 
-    @command.Command.authenticate
     async def handle(self):
+        """
+            Do not authenticate this command, so that the command will not test any of the authentication wrappers.
+        """
         await self.message.channel.send("Ruff!")
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
+        return message.content.startswith("!bark")
+
+    @staticmethod
+    async def is_invoked_by_direct_message(message: Message, client: Client):
         return message.content.startswith("!bark")
 
     @classmethod
@@ -25,6 +31,7 @@ class Bark(command.Command):
 class HelloThere(command.Command):
     permissions = {'student': True, 'ta': True, 'admin': True}
 
+    @command.Command.authenticate
     async def handle(self):
         await self.message.channel.send('https://media1.tenor.com/images/2eada1bbeb4ed4182079cf00070324a2/tenor.gif?itemid=13903117')
 
@@ -60,6 +67,10 @@ class Squawk(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
+        return message.content.startswith("!squawk")
+
+    @staticmethod
+    async def is_invoked_by_direct_message(message: Message, client: Client):
         return message.content.startswith("!squawk")
 
     @classmethod
