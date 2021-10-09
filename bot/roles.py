@@ -1,6 +1,6 @@
 from typing import Optional
 
-from discord import Permissions, Guild, Role, Member, PermissionOverwrite
+from discord import Permissions, Guild, Role, Member, PermissionOverwrite, User
 import mongo
 
 
@@ -16,6 +16,8 @@ class RoleAuthority:
     __ROLE_COLLECTION = 'role-collection'
 
     def __init__(self, guild: Guild):
+        self.guild = guild
+
         self.role_db = mongo.db[self.__ROLE_COLLECTION]
 
         self.role_map = {}
@@ -81,7 +83,7 @@ class RoleAuthority:
         """
         return self.role_map[self.__ADMIN_NAME] in member.roles or self.role_map[self.__TA_NAME] in member.roles
 
-    def has_permission(self, author: Member, permission_object):
+    async def has_permission(self, author: Member, permission_object):
         """
             has_permission should determine if the caller of the command has permission to execute it.
 
@@ -95,6 +97,12 @@ class RoleAuthority:
 
         if 'all' in permission_object and permission_object['all']:
             return True
+
+        # in the case of a DM, instead of being given a Member, the author is in fact a User (who doesn't have roles since they aren't
+        #       associated with a guild at the time.  fetch the member by their id, and determine if they have permission to execute
+        #       the command within the guild
+        if isinstance(author, User):
+            author = await self.guild.fetch_member(author.id)
 
         for role, method in zip(['student', 'ta', 'admin'], [self.is_student, self.is_ta, self.is_admin]):
             if role in permission_object and permission_object[role]:
