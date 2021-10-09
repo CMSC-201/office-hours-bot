@@ -5,6 +5,7 @@ from discord import Message, Client, Member, TextChannel, CategoryChannel, Permi
 import globals
 import command
 from member import MemberAuthority
+from channels import ChannelAuthority
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class AuthenticateStudent(command.Command):
     @command.Command.authenticate
     async def handle(self):
         ma: MemberAuthority = MemberAuthority(self.guild)
-
+        ca: ChannelAuthority = ChannelAuthority(self.guild)
         key = self.message.content.split()[1]
         # fetch to start the auth process.
         await self.message.author.send('Starting your authentication process...')
@@ -26,8 +27,9 @@ class AuthenticateStudent(command.Command):
         member: Member = await self.guild.fetch_member(self.message.author.id)
         if result == MemberAuthority.AUTHENTICATED:
             logger.info("Authenticated user {0.display_name} ({0.id}) as {0.nick}".format(member))
-            await self.message.author.send('''You are now authenticated!  You can return to the office hour server.\n  
+            await self.safe_send(self.message.author, '''You are now authenticated!  You can return to the office hour server.\n  
                                 I live here so I won't actually be going anywhere, but you don't have to talk to me anymore.''')
+            await self.safe_send(ca.get_maintenance_channel(), "Authenticated user {0.display_name} ({0.id}) as {0.nick}".format(member))
         elif result == MemberAuthority.SAME_ACCOUNT:
             await self.message.author.send("This account has already been authenticated, go to the discord server for your class and you should see the rooms.")
         elif result == MemberAuthority.DUPLICATE_ACCOUNT:
