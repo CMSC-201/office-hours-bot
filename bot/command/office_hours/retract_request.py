@@ -41,6 +41,13 @@ class RetractRequest(command.Command):
 
         return False
 
+    @staticmethod
+    async def is_invoked_by_direct_message(message: Message, client: Client):
+        if message.content.startswith("!retract"):
+            return True
+
+        return False
+
 
 class RetractRequestTests:
     def __init__(self, instructor_bots, ta_bots, student_bots):
