@@ -17,7 +17,6 @@ class RetractRequest(command.Command):
     async def handle(self, new_message=None):
         qa: QueueAuthority = QueueAuthority(self.guild)
         ca: ChannelAuthority = ChannelAuthority(self.message.guild)
-
         if self.message.channel == ca.waiting_channel:
             if not qa.is_member_in_queue(self.message.author):
                 await self.safe_send(self.message.author, "You are not in the queue.  If you want to be added, you should use the !request command. ")
@@ -26,8 +25,8 @@ class RetractRequest(command.Command):
             elif new_message and new_message.content.strip().lower() in ['y', 'yes']:
                 session: OHSession = await qa.find_and_remove_by_user_id(self.message.author)
                 await self.safe_delete(session.announcement)
-                await self.safe_delete(self.message, delay=7)
                 await self.safe_send(self.message.author, "You have been removed from the office hour queue.  ")
+                await self.safe_delete(self.message, delay=7)
             else:
                 await self.safe_send(self.message.channel, 'Are you sure you wish to remove yourself from the office hour queue? (y/yes) or (n/no)')
                 return True
