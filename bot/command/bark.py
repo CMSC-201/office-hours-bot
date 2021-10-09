@@ -45,6 +45,7 @@ class HelloThere(command.Command):
 class Squawk(command.Command):
     permissions = {'student': True, 'ta': True, 'admin': True}
 
+    @command.Command.authenticate
     async def handle(self, new_message=None):
         if new_message:
             if new_message.content.strip().lower() in ['y', 'yes', '!yes']:
