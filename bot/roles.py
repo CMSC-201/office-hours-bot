@@ -16,12 +16,6 @@ class RoleAuthority:
     __ROLE_COLLECTION = 'role-collection'
 
     def __init__(self, guild: Guild):
-        self.admin: Optional[Role] = None
-        self.student: Optional[Role] = None
-        self.un_authenticated: Optional[Role] = None
-        self.ta: Optional[Role] = None
-        self.everyone: Optional[Role] = None
-
         self.role_db = mongo.db[self.__ROLE_COLLECTION]
 
         self.role_map = {}
@@ -75,6 +69,9 @@ class RoleAuthority:
 
     def get_unauthenticated_role(self) -> Role:
         return self.role_map[self.__UNAUTHED_NAME]
+
+    def get_everyone_role(self) -> Role:
+        return self.role_map[self.__EVERYONE_NAME]
 
     def ta_or_higher(self, member: Member) -> bool:
         """

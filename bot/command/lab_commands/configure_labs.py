@@ -67,9 +67,9 @@ class ConfigureLabs(command.Command):
                     lab_section_name = self.__SECTION_STRING.format(line[self.__SECTION])
                     logger.info('Creating Section Category Channel')
                     ca.lab_sections[lab_section_name] = await the_guild.create_category(lab_section_name, overwrites={
-                        ra.ta: PermissionOverwrite(read_messages=False),
-                        ra.student: PermissionOverwrite(read_messages=False),
-                        ra.un_authenticated: PermissionOverwrite(read_messages=False)
+                        ra.get_ta_role(): PermissionOverwrite(read_messages=False),
+                        ra.get_student_role(): PermissionOverwrite(read_messages=False),
+                        ra.get_unauthenticated_role(): PermissionOverwrite(read_messages=False)
                     })
                     logger.info('Creating Section Text')
                     text_channel = await ca.lab_sections[lab_section_name].create_text_channel('Section Text')

@@ -163,9 +163,9 @@ class CreateSpecialLabSection(command.Command):
 
             logger.info('Creating Section Category Channel: ')
             new_category = await the_guild.create_category(lab_section_name, overwrites={
-                ra.ta: PermissionOverwrite(read_messages=False),
-                ra.student: PermissionOverwrite(read_messages=False),
-                ra.un_authenticated: PermissionOverwrite(read_messages=False),
+                ra.get_ta_role(): PermissionOverwrite(read_messages=False),
+                ra.get_student_role(): PermissionOverwrite(read_messages=False),
+                ra.get_unauthenticated_role(): PermissionOverwrite(read_messages=False),
                 student_role: student_overwrite,
                 leader_role: leader_overwrite,
             })
