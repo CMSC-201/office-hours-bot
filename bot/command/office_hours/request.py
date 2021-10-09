@@ -67,7 +67,7 @@ class EnterQueue(command.Command):
             if len(message.content.split()) == 1:
                 warning = await message.channel.send("You must ask a question so we can know how to help you.  The format should be !request <your question here>")
                 await warning.delete(delay=7)
-                await message.delete()
+                await message.delete(delay=7)
                 return False
             elif not qa.is_office_hours_open():
                 warning = await message.channel.send(
@@ -75,7 +75,7 @@ class EnterQueue(command.Command):
                         message.author.mention,
                         ca.waiting_channel.mention))
                 await warning.delete(delay=7)
-                await message.delete()
+                await message.delete(delay=7)
                 return False
             if qa.is_member_in_queue(message.author):
                 warning = await message.channel.send(
@@ -83,18 +83,18 @@ class EnterQueue(command.Command):
                         message.author.mention,
                         ca.waiting_channel.mention))
                 await warning.delete(delay=7)
-                await message.delete()
+                await message.delete(delay=7)
                 return False
             return True
         elif message.channel == ca.waiting_channel and not message.content.startswith('!status'):
             ra: RoleAuthority = RoleAuthority(message.guild)
             if not ra.ta_or_higher(message.author):
                 await message.author.send('You should reserve this channel for office hour requests only.  Ask your question in general, tech-support or request help using the office hour system.  ')
-                await message.delete(delay=10)
+                await message.delete(delay=7)
         elif message.content.startswith("!request"):
             warning = await message.channel.send("{} you must be in {} to request a place in the queue.".format(
                 message.author.mention,
                 ca.waiting_channel.mention))
             await warning.delete(delay=7)
-            await message.delete()
+            await message.delete(delay=7)
         return False
