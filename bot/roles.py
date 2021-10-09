@@ -73,6 +73,9 @@ class RoleAuthority:
     def get_admin_role(self) -> Role:
         return self.role_map[self.__ADMIN_NAME]
 
+    def get_unauthenticated_role(self) -> Role:
+        return self.role_map[self.__UNAUTHED_NAME]
+
     def ta_or_higher(self, member: Member) -> bool:
         """
         True if the member is a TA or higher privilege, false otherwise
