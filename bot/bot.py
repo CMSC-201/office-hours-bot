@@ -46,9 +46,11 @@ class MyClient(discord.Client):
         await handle_message(message, self)
 
     async def on_member_join(self, member: Member):
-        # update this message with your own course and message
-        await member.send('Welcome to Discord Office Hours for CMSC 201, Spring 2021\n '
-                          'I am the 201Bot.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
+        global_info = get_globals()
+        class_name = global_info['props'].get('class_name', 'CMSC 201')
+        bot_name = global_info['props'].get('bot_name', 'CMSC 201 Bot')
+        await member.send('Welcome to Discord Office Hours for {}}\n '
+                          'I am the {}}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.'.format(class_name, bot_name))
 
 
 def set_up_logs():
