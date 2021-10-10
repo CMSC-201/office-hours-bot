@@ -1,5 +1,6 @@
 import logging
 
+import time
 import discord
 from discord import Message, Guild, Member, User, Intents
 
@@ -69,7 +70,6 @@ if __name__ == '__main__':
     info = get_globals()
 
     logger.info(str(info['props']))
-    print(info['props'])
 
     if info:
         token = info['props']['token']
@@ -89,8 +89,9 @@ if __name__ == '__main__':
                 returned = True
             except Exception as e:
                 returned = True
-                print(e)
-                print('Restarting Bot from Exception Failure...')
+                logger.error(repr(e))
+                logger.info('Restarting Bot from Exception Failure...')
+                time.sleep(5)
 
     else:
-        print("Something failed (this is very vague)")
+        logger.error("Something failed (this is very vague)")
