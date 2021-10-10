@@ -262,8 +262,6 @@ class SubmitDaemon(Thread):
     def run(self):
         while True:
             assignment_queue = self.get_assignment_queue()
-            # print(assignment_queue)
-            # asyncio.run_coroutine_threadsafe(ChannelAuthority(self.client.guilds[0]).get_maintenance_channel().send('Thread is alive'), self.event_loop)
             try:
                 for assignment in assignment_queue:
                     if assignment['due-date'] <= datetime.now():
@@ -277,10 +275,11 @@ class SubmitDaemon(Thread):
                             logging.info('Closing the assignment: {}'.format(assignment['name']))
                             asyncio.run_coroutine_threadsafe(self.close_assignment(assignment['name']), self.event_loop)
 
-                time.sleep(5)
-
             except Exception as e:
                 # this may be overkill but basically any exception should be printed, then the loop should start again.
                 # assignment closing should never be killed by an exception
-                print('Exception in the assignment queue')
-                print(type(e), e)
+                logging.error('Exception in the assignment queue')
+                logging.error(str(type(e)) + " : " + str(e))
+
+            # keep this to prevent any exception from looping through very quickly causing multiple closures.
+            time.sleep(5)
