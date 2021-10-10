@@ -193,10 +193,10 @@ class SubmitDaemon(Thread):
 
         if not assignment:
             await maintenance_channel.send('Assignment {} was not found. '.format(assignment_name))
-            print('Assignment {} was not found. '.format(assignment_name))
+            logging.info('Assignment {} was not found. '.format(assignment_name))
             return
 
-        print('running close assignment script')
+        logging.info('Running close assignment script for assignment {}'.format(assignment_name))
 
         self.write_roster()
 
@@ -207,7 +207,6 @@ class SubmitDaemon(Thread):
                                                        'student-extensions': {}}
 
                 for student in assignment['student-extensions']:
-                    print(assignment['student-extensions'][student])
                     due_date = assignment['student-extensions'][student]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
                     if assignment['student-extensions'][student]['due-date'] > datetime.now():
                         extensions_json[assignment['name']]['student-extensions'][student] = due_date
