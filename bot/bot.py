@@ -16,7 +16,8 @@ logger = logging.getLogger('bot_main')
 class MyClient(discord.Client):
     def __init__(self, **options):
         intents = Intents.default()
-        # this will case a crash
+        # you must enable the member intents in the app/bot settings or else this will crash the bot.
+        # but you must also set intents.members = True otherwise you cannot get any member data.
         intents.members = True
         super().__init__(intents=intents)
         self.channel_authority: ChannelAuthority = None
@@ -29,7 +30,7 @@ class MyClient(discord.Client):
 
         set_default_guild(self.guilds[0])
         logger.info("Bot started.  Waiting for messages.")
-        if self.submit_daemon:
+        if self.submit_daemon and not self.submit_daemon.is_alive():
             self.submit_daemon.start()
 
     async def on_message(self, message: Message):
