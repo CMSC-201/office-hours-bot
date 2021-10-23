@@ -28,6 +28,9 @@ class Where(command.Command):
 
     __LECTURE_LINKS = 'lecture-links'
 
+    permissions = {'student': True, 'ta': True, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
 
         lecture_collect = mongo.db[self.__LECTURE_LINKS]
