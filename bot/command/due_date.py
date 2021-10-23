@@ -22,6 +22,9 @@ class DueDate(command.Command):
     __DISCORD_ID = 'discord'
     __SECTION = 'Section'
 
+    permissions = {'student': True, 'ta': True, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
         assignments_db = mongo.db[self.__ASSIGNMENTS]
         students_group = mongo.db[self.__STUDENTS_GROUP]
