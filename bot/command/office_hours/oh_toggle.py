@@ -25,8 +25,7 @@ async def is_oh_command(client, message, types):
                 await message.channel.send("You can't do this, " + message.author.mention)
                 return False
         else:
-            await message.channel.send("You have to be in " +
-                                       ca.queue_channel.mention + " to {} office hours.".format(types))
+            await message.channel.send(f"You have to be in {ca.queue_channel.mention} to {types} office hours.")
             return False
     return False
 
