@@ -101,12 +101,12 @@ class Command:
         :return: True if message sent, otherwise False
         """
         try:
-            await destination.send(message)
+            await destination.send(message, **kwargs)
             return True
         except Forbidden as f:
             logging.info(repr(f))
             if kwargs.get('backup', None):
-                return await self.safe_send(kwargs['backup'], message)
+                return await self.safe_send(kwargs['backup'], message, **kwargs)
             return False
         except Exception as e:
             logging.info(repr(e))
@@ -174,7 +174,7 @@ class Command:
 
         async def authentication_wrapper(self, *args, **kwargs):
             ra: RoleAuthority = RoleAuthority(self.guild)
-            if ra.has_permission(self.message.author, self.permissions):
+            if await ra.has_permission(self.message.author, self.permissions):
                 return await the_method(self, *args, **kwargs)
             else:
                 await self.safe_send(
