@@ -2,6 +2,7 @@ from discord import Message, Client
 from roles import RoleAuthority
 import command
 
+
 @command.command_class
 class AmI(command.Command):
     async def handle(self, new_message=None):
