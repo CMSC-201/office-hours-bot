@@ -118,18 +118,24 @@ class SubmitDaemon(Thread):
                 section_id = assignment['section']
                 due_date = assignment['due-date']
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'section': section_id, 'due-date': due_date, 'name': assignment['name'], 'open': True, 'closing': True}}})
-
-                logging.info('closing extension for section', assignment['section'], assignment['name'])
-                self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
+                logging.info(f'closing {assignment["name"]} extension for section {assignment["section"]}')
+                print('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
+                _, std_output, _ = self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
+                for line in std_output.readlines():
+                    print(line)
 
                 update_open = 'section-extensions.{}'.format(assignment['section'])
                 section_id = assignment['section']
                 due_date = assignment['due-date']
                 self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'section': section_id, 'due-date': due_date, 'name': assignment['name'], 'open': False}}})
 
+                maintenance_message = 'Section {}\'s extension for assignment {} is now closed.'.format(section_id, assignment['name'])
+                await ca.get_maintenance_channel().send(maintenance_message)
+
                 logging.info('{} extension closed for section {}'.format(assignment['name'], assignment['section']))
 
                 message = "Your section's extension for assignment {} is closed.  You should recopy the files and begin grading.".format(assignment['name'])
+
                 for ta in ta_group.find({self.__SECTION: assignment['section']}):
                     ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
                     try:
