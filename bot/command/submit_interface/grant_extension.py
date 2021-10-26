@@ -66,6 +66,8 @@ class GrantIndividualExtension(command.Command):
     __LAST_NAME = 'Last-Name'
     __SECTION = 'Section'
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
     @staticmethod
     def create_extensions_json(assignments):
         extensions_json = {}
@@ -96,90 +98,91 @@ class GrantIndividualExtension(command.Command):
 
         return json.dumps(extensions_json, indent='\t')
 
+    @command.Command.authenticate
+    @command.Command.require_maintenance
     async def handle(self):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
-        ra: RoleAuthority = RoleAuthority(self.guild)
-        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
-            match = re.match(self.__COMMAND_REGEX, self.message.content)
-            if not match:
-                await self.message.channel.send("Usage: ...")
-                return
-            submit_col = mongo.db[self.__SUBMIT_SYSTEM_ADMINS]
-            if match.group('admin'):
-                admin_match = submit_col.find_one({'username': match.group('admin')})
-            else:
-                admin_match = submit_col.find_one({})
-            if not admin_match:
-                await self.message.channel.send('Unable to find administrator account, terminating.')
-                return
+        match = re.match(self.__COMMAND_REGEX, self.message.content)
+        if not match:
+            await self.message.channel.send("Usage: ...")
+            return
+        submit_col = mongo.db[self.__SUBMIT_SYSTEM_ADMINS]
+        if match.group('admin'):
+            admin_match = submit_col.find_one({'username': match.group('admin')})
+        else:
+            admin_match = submit_col.find_one({})
+        if not admin_match:
+            await self.message.channel.send('Unable to find administrator account, terminating.')
+            return
 
-            submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
-            assignment = submit_assign.find_one({'name': match.group('assign_name')})
-            if not assignment:
-                await self.message.channel.send('Assignment {} not found'.format(match.group('assign_name')))
-                return
-            section_id = match.group('section_id')
-            student_id = match.group('student_id')
-            due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
+        submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        assignment = submit_assign.find_one({'name': match.group('assign_name')})
+        if not assignment:
+            await self.message.channel.send('Assignment {} not found'.format(match.group('assign_name')))
+            return
+        section_id = match.group('section_id')
+        student_id = match.group('student_id')
+        due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
 
-            if 'student-extensions' not in assignment:
-                assignment['student-extensions'] = {}
-            if 'section-extensions' not in assignment:
-                assignment['section-extensions'] = {}
+        if 'student-extensions' not in assignment:
+            assignment['student-extensions'] = {}
+        if 'section-extensions' not in assignment:
+            assignment['section-extensions'] = {}
 
-            if assignment and section_id:
-                assignment['section-extensions'][section_id] = {'section': section_id, 'due-date': due_date, 'name': assignment['name'], 'open': True}
-            elif assignment and student_id:
-                assignment['student-extensions'][student_id] = {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': True}
+        if assignment and section_id:
+            assignment['section-extensions'][section_id] = {'section': section_id, 'due-date': due_date, 'name': assignment['name'], 'open': True}
+        elif assignment and student_id:
+            assignment['student-extensions'][student_id] = {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': True}
 
-            # update the server side database
-            submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
-            # create new GL side extensions json
-            extension_json = self.create_extensions_json(submit_assign)
-            # create temporary file to send to the GL server
+        # update the server side database
+        submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
+        # create new GL side extensions json
+        extension_json = self.create_extensions_json(submit_assign)
+        # create temporary file to send to the GL server
 
-            if not os.path.exists('csv_dump'):
-                os.makedirs('csv_dump')
-            extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
-            with open(extension_path, 'w') as json_extensions_file:
-                json_extensions_file.write(extension_json)
+        if not os.path.exists('csv_dump'):
+            os.makedirs('csv_dump')
+        extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
+        with open(extension_path, 'w') as json_extensions_file:
+            json_extensions_file.write(extension_json)
 
-            # find and message the TA that an extension has been granted for a student
-            student_col = mongo.db[self.__STUDENTS_GROUP]
-            ta_collection = mongo.db[self.__TA_GROUP]
-            admin_collection = mongo.db[self.__ADMIN_GROUP]
+        # find and message the TA that an extension has been granted for a student
+        student_col = mongo.db[self.__STUDENTS_GROUP]
+        ta_collection = mongo.db[self.__TA_GROUP]
+        admin_collection = mongo.db[self.__ADMIN_GROUP]
 
-            if student_id:
-                the_student = student_col.find_one({self.__UID_FIELD: student_id})
-                if the_student:
-                    await self.message.channel.send('Granting Extension on GL.')
-                    # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
-                    ExtensionThread(self.client).start()
+        await self.message.channel.send('Granting Extension on GL.')
+        # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
+        ExtensionThread(self.client).start()
 
-                    the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
-                    message = '{} ({}) has been granted an extension until {} for assignment {}.'.format(the_student_name, student_id, due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
-                    await ca.get_maintenance_channel().send(message)
+        if student_id:
+            the_student = student_col.find_one({self.__UID_FIELD: student_id})
+            if the_student:
 
-                    for admin in admin_collection.find({self.__SECTION: the_student[self.__SECTION]}):
-                        ta_discord_user: User = await self.client.fetch_user(admin[self.__DISCORD_ID])
-                        await self.safe_send(ta_discord_user, message)
+                the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
+                message = '{} ({}) has been granted an extension until {} for assignment {}.'.format(the_student_name, student_id, due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+                await ca.get_maintenance_channel().send(message)
 
-                    for ta in ta_collection.find({self.__SECTION: the_student[self.__SECTION]}):
-                        ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-                        await self.safe_send(ta_discord_user, message)
-                else:
-                    await self.message.channel.send('Unable to find the student {}, no extension was granted. '.format(student_id))
-            # if it's a section extension, send the TA an update on their section's extension
-            elif section_id:
-                message = 'Your section has been granted an extension until {} for assignment {}.'.format(due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
-
-                for admin in admin_collection.find({self.__SECTION: section_id}):
+                for admin in admin_collection.find({self.__SECTION: the_student[self.__SECTION]}):
                     ta_discord_user: User = await self.client.fetch_user(admin[self.__DISCORD_ID])
                     await self.safe_send(ta_discord_user, message)
 
-                for ta in ta_collection.find({self.__SECTION: section_id}):
+                for ta in ta_collection.find({self.__SECTION: the_student[self.__SECTION]}):
                     ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
                     await self.safe_send(ta_discord_user, message)
+            else:
+                await self.message.channel.send('Unable to find the student {}, no extension was granted. '.format(student_id))
+        # if it's a section extension, send the TA an update on their section's extension
+        elif section_id:
+            message = 'Your section has been granted an extension until {} for assignment {}.'.format(due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+
+            for admin in admin_collection.find({self.__SECTION: section_id}):
+                ta_discord_user: User = await self.client.fetch_user(admin[self.__DISCORD_ID])
+                await self.safe_send(ta_discord_user, message)
+
+            for ta in ta_collection.find({self.__SECTION: section_id}):
+                ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
+                await self.safe_send(ta_discord_user, message)
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
