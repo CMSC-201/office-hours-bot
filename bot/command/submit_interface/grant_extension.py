@@ -104,7 +104,7 @@ class GrantIndividualExtension(command.Command):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         match = re.match(self.__COMMAND_REGEX, self.message.content)
         if not match:
-            await self.message.channel.send("Usage: ...")
+            await self.message.channel.send("Usage: !submit grant extension [assignment] [student=[student_username]] [section=section_number] [MM-DD-YYYY] [HH:MM:SS]")
             return
         submit_col = mongo.db[self.__SUBMIT_SYSTEM_ADMINS]
         if match.group('admin'):
