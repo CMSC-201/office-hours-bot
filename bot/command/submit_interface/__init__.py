@@ -109,7 +109,7 @@ class SubmitDaemon(Thread):
             admin_group = mongo.db[self.__ADMIN_GROUP]
 
             if 'section' in assignment:
-                if 'closing' in the_assignment['section-extensions'][assignment['section']] or not the_assignment['section-extensions'][assignment['section']]['open']:
+                if not the_assignment['section-extensions'][assignment['section']]['open']: # 'closing' in the_assignment['section-extensions'][assignment['section']] or
                     raise AlreadyClosingException(f'This extension has already started it\'s close function: {assignment["name"]}: {assignment["section"]}', assignment)
 
                 self.connect_ssh()
