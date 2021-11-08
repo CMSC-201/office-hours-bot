@@ -92,6 +92,21 @@ class SubmitDaemon(Thread):
             roster_list.extend([[admin[self.__USERNAME], 0] for admin in admin_group.find()])
             roster.writerows(roster_list)
 
+    async def send_extension_closure_messages(self, ca: ChannelAuthority, search_group, message: str):
+        """
+        Sends an extension closure message to the admins and tas associated with a particular section
+
+        :param ca: a ChannelAuthority object
+        :param search_group: the mongo find iterator
+        :param message: the string message
+        """
+        for user in search_group:
+            discord_user: User = await self.client.fetch_user(user[self.__DISCORD_ID])
+            try:
+                asyncio.run_coroutine_threadsafe(discord_user.send(message), self.event_loop)
+            except Forbidden:
+                asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
+
     async def close_extension(self, assignment):
         await self.lock.acquire()
         try:
@@ -135,23 +150,11 @@ class SubmitDaemon(Thread):
                 logging.info('{} extension closed for section {}'.format(assignment['name'], assignment['section']))
 
                 message = "Your section's extension for assignment {} is closed.  You should recopy the files and begin grading.".format(assignment['name'])
-
-                for ta in ta_group.find({self.__SECTION: assignment['section']}):
-                    ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-                    try:
-                        asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
-                    except Forbidden:
-                        asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
-
-                for ta in admin_group.find({self.__SECTION: assignment['section']}):
-                    ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-                    try:
-                        asyncio.run_coroutine_threadsafe(ta_discord_user.send(message), self.event_loop)
-                    except Forbidden:
-                        asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
+                await self.send_extension_closure_messages(ca, ta_group.find({self.__SECTION: assignment['section']}), message)
+                await self.send_extension_closure_messages(ca, admin_group.find({self.__SECTION: assignment['section']}), message)
 
             elif 'student' in assignment:
-                if 'closing' in the_assignment['student-extensions'][assignment['student']] or not the_assignment['student-extensions'][assignment['student']]['open']:
+                if not the_assignment['student-extensions'][assignment['student']]['open']: # 'closing' in the_assignment['student-extensions'][assignment['student']] or
                     raise AlreadyClosingException(f'This extension has already started it\'s close function: {assignment["name"]}: {assignment["student"]}', assignment)
 
                 self.connect_ssh()
@@ -183,19 +186,8 @@ class SubmitDaemon(Thread):
 
                 maintenance_message = '{} ({})\'s extension for assignment {} is now closed.'.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
 
-                for ta in ta_group.find({self.__SECTION: the_student[self.__SECTION]}):
-                    ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-                    try:
-                        await ta_discord_user.send(message)
-                    except Forbidden:
-                        await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
-
-                for ta in admin_group.find({self.__SECTION: the_student[self.__SECTION]}):
-                    ta_discord_user: User = await self.client.fetch_user(ta[self.__DISCORD_ID])
-                    try:
-                        await ta_discord_user.send(message)
-                    except Forbidden:
-                        await ca.get_maintenance_channel().send('Unable to message the TA. ' + maintenance_message)
+                await self.send_extension_closure_messages(ca, ta_group.find({self.__SECTION: the_student[self.__SECTION]}), message)
+                await self.send_extension_closure_messages(ca, admin_group.find({self.__SECTION: the_student[self.__SECTION]}), message)
 
                 await ca.get_maintenance_channel().send(maintenance_message)
         except AlreadyClosingException as ace:
