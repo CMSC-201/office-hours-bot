@@ -1,5 +1,5 @@
 import locale
-from threading import Thread
+from threading import Thread, Lock
 from typing import Optional
 import paramiko
 from paramiko.ssh_exception import AuthenticationException, SSHException
@@ -17,12 +17,9 @@ from command.submit_interface import add_student, configure_assignment, get_stud
 import globals
 import mongo
 from channels import ChannelAuthority
+from close_extension import StudentExtensionClosureThread
 
-
-class AlreadyClosingException(Exception):
-    def __init__(self, message, assignment):
-        self.message = message
-        self.assignment = assignment
+from submit_exceptions import AlreadyClosingException
 
 
 class SubmitDaemon(Thread):
@@ -58,7 +55,7 @@ class SubmitDaemon(Thread):
         self.ssh_client: Optional[paramiko.client.SSHClient] = None
         self.event_loop = asyncio.get_event_loop()
 
-        self.lock = asyncio.Lock()
+        self.lock = Lock()
 
     def connect_ssh(self):
 
@@ -108,13 +105,7 @@ class SubmitDaemon(Thread):
                 asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send('Unable to message the TA.'), self.event_loop)
 
     async def close_extension(self, assignment):
-        await self.lock.acquire()
         try:
-            """
-            if 'closing' in assignment and assignment['closing']:
-                self.lock.release()
-                return
-            """
 
             logging.info('Starting Close Extension Function')
             ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
@@ -126,7 +117,7 @@ class SubmitDaemon(Thread):
             admin_group = mongo.db[self.__ADMIN_GROUP]
 
             if 'section' in assignment:
-                if not the_assignment['section-extensions'][assignment['section']]['open']: # 'closing' in the_assignment['section-extensions'][assignment['section']] or
+                if not the_assignment['section-extensions'][assignment['section']]['open']:
                     raise AlreadyClosingException(f'This extension has already started it\'s close function: {assignment["name"]}: {assignment["section"]}', assignment)
 
                 self.connect_ssh()
@@ -134,7 +125,6 @@ class SubmitDaemon(Thread):
                 update_open = f'section-extensions.{assignment["section"]}'
                 section_id = assignment['section']
                 due_date = assignment['due-date']
-                self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'section': section_id, 'due-date': due_date, 'name': assignment['name'], 'open': True, 'closing': True}}})
                 logging.info(f'closing {assignment["name"]} extension for section {assignment["section"]}')
                 print('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
                 _, std_output, _ = self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_SECTION_EXTENSION.format(assignment['name'], assignment['section'], self.__ROSTER_NAME))
@@ -154,51 +144,11 @@ class SubmitDaemon(Thread):
                 message = "Your section's extension for assignment {} is closed.  You should recopy the files and begin grading.".format(assignment['name'])
                 await self.send_extension_closure_messages(ca, ta_group.find({self.__SECTION: assignment['section']}), message)
                 await self.send_extension_closure_messages(ca, admin_group.find({self.__SECTION: assignment['section']}), message)
-
-            elif 'student' in assignment:
-                if not the_assignment['student-extensions'][assignment['student']]['open']: # 'closing' in the_assignment['student-extensions'][assignment['student']] or
-                    raise AlreadyClosingException(f'This extension has already started it\'s close function: {assignment["name"]}: {assignment["student"]}', assignment)
-
-                self.connect_ssh()
-
-                update_open = 'student-extensions.{}'.format(assignment['student'])
-                student_id = assignment['student']
-                due_date = assignment['due-date']
-                self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': True, 'closing': True}}})
-
-                logging.info('Closing {} extension for student {}'.format(assignment['name'], assignment['student']))
-                self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__CLOSE_STUDENT_EXTENSION.format(assignment['name'], assignment['student'], ''))
-
-                update_open = 'student-extensions.{}'.format(assignment['student'])
-                student_id = assignment['student']
-                due_date = assignment['due-date']
-                self.assignments.update_one({'name': assignment['name']}, {'$set': {update_open: {'student': student_id, 'due-date': due_date, 'name': assignment['name'], 'open': False}}})
-                await ca.get_maintenance_channel().send("Updated Database with Student Extension Closure ({}, {})".format(assignment['name'], student_id))
-
-                logging.info('{} extension closed for {}'.format(assignment['name'], assignment['student']))
-
-                the_student = students_group.find_one({self.__UID_FIELD: assignment['student']})
-                the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
-                message = '{} ({})\'s extension for assignment {} is now closed.  You should recopy the files and begin grading. '.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
-
-                # future code, but let's not complicate things right now.
-                # logging.info('Copying {} extension for student {}'.format(assignment['name'], assignment['student']))
-                # os.path.join(self.__BASE_SUBMIT_DIR, self.__)
-                # self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__COPY_STUDENT_EXTENSION.format(assignment['name'], assignment['student'], ''))
-
-                maintenance_message = '{} ({})\'s extension for assignment {} is now closed.'.format(the_student_name, the_student[self.__UID_FIELD], assignment['name'])
-
-                await self.send_extension_closure_messages(ca, ta_group.find({self.__SECTION: the_student[self.__SECTION]}), message)
-                await self.send_extension_closure_messages(ca, admin_group.find({self.__SECTION: the_student[self.__SECTION]}), message)
-
-                await ca.get_maintenance_channel().send(maintenance_message)
         except AlreadyClosingException as ace:
             logging.info('Preventing Multiple Runs: ' + ace.message)
         except Exception as e:
             logging.info('An exception has occured during an extension closure.')
             logging.error(str(type(e)) + " : " + str(e))
-        finally:
-            self.lock.release()
 
     async def close_assignment(self, assignment_name):
         ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
@@ -267,21 +217,67 @@ class SubmitDaemon(Thread):
         assignment_queue = self.get_assignment_queue()
         print('\n'.join(str(i) + ": " + str(a) for i, a in enumerate(assignment_queue)))
 
+    def close_student_extension(self, assignment_data):
+        admin = self.submit_admins.find_one()
+        ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
+        report_name = self.get_report_name(assignment_data)
+        status_report = {'assignment': assignment_data, 'closed': False, 'sent': False, 'thread': None}
+        closure_thread = StudentExtensionClosureThread(assignment_data['name'], assignment_data['student'], assignment_data['due-date'], admin, self.lock, self.event_loop, status_report, ca.get_maintenance_channel())
+        status_report['thread'] = closure_thread
+        logging.info('Created Thread for {} extension closure for {} .'.format(assignment_data['name'], assignment_data['student']))
+        closure_thread.start()
+        logging.info('Started Thread for {} extension closure for {} .'.format(assignment_data['name'], assignment_data['student']))
+        return report_name, status_report
+
+    def check_reports(self, current_reports):
+        ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+
+        sent_report_names = []
+        for report_name in current_reports:
+            report = current_reports[report_name]
+            if report['closed'] and not report['sent']:
+                asyncio.run_coroutine_threadsafe(self.send_extension_closure_messages(ca, ta_group.find({self.__SECTION: report['student-section']}), report["ta-message"]), self.event_loop)
+                asyncio.run_coroutine_threadsafe(self.send_extension_closure_messages(ca, admin_group.find({self.__SECTION: report['student-section']}), report["ta-message"]), self.event_loop)
+                report['sent'] = True
+                sent_report_names.append(report_name)
+            elif report['sent']:
+                sent_report_names.append(report_name)
+
+            if 'failed' in report and report['failed']:
+                sent_report_names.append(report)
+
+        for name in sent_report_names:
+            del current_reports[name]
+
+    @staticmethod
+    def get_report_name(assignment):
+        report_name = ''
+        if 'student' in assignment:
+            report_name = f'{assignment["name"]}.{assignment["student"]}.{assignment["due-date"].strftime("%Y.%m.%d.%H.%M.%S")}'
+
+        return report_name
+
     def run(self):
+        current_reports = {}
         while True:
             assignment_queue = self.get_assignment_queue()
             try:
                 for assignment in assignment_queue:
                     if assignment['due-date'] <= datetime.now():
-                        if 'student' in assignment:
-                            logging.info('Closing {} extension for {} in the thread.'.format(assignment['name'], assignment['student']))
-                            asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
+                        if 'student' in assignment and self.get_report_name(assignment) not in current_reports:
+                            logging.info('Detected new assignment {} extension for {} to close.'.format(assignment['name'], assignment['student']))
+                            report_name, report = self.close_student_extension(assignment)
+                            current_reports[report_name] = report
                         elif 'section' in assignment:
                             logging.info('Closing {} extension for section {} in the thread.'.format(assignment['name'], assignment['section']))
                             asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)
                         else:
                             logging.info('Closing the assignment: {}'.format(assignment['name']))
                             asyncio.run_coroutine_threadsafe(self.close_assignment(assignment['name']), self.event_loop)
+
+                self.check_reports(current_reports)
 
             except Exception as e:
                 # this may be overkill but basically any exception should be printed, then the loop should start again.
