@@ -110,9 +110,11 @@ class SubmitDaemon(Thread):
     async def close_extension(self, assignment):
         await self.lock.acquire()
         try:
+            """
             if 'closing' in assignment and assignment['closing']:
                 self.lock.release()
                 return
+            """
 
             logging.info('Starting Close Extension Function')
             ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
