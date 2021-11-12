@@ -3,6 +3,8 @@
 """
 
 import re
+import socket
+
 from discord import Message, Client, User, TextChannel
 
 import mongo
@@ -26,6 +28,7 @@ class VerifyGLPermissions(command.Command):
 
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
+    __TIMEOUT = 10
 
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
 
@@ -35,10 +38,13 @@ class VerifyGLPermissions(command.Command):
         self.ssh_client = paramiko.client.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            self.ssh_client.connect('gl.umbc.edu', username=self.submit_admins['username'], password=self.submit_admins['password'], timeout=10)
+            self.ssh_client.connect('gl.umbc.edu', username=self.submit_admins['username'], password=self.submit_admins['password'], timeout=self.__TIMEOUT)
             logging.info('Logged into ssh on the GL server.')
         except AuthenticationException:
             logging.info('GL server not able to authenticate.')
+            self.ssh_client = None
+        except socket.gaierror:
+            self.ssh_client = None
 
         return self.ssh_client
 
@@ -56,6 +62,9 @@ class VerifyGLPermissions(command.Command):
 
         self.submit_admins = mongo.db[self.__SUBMIT_SYSTEM_ADMINS].find_one()
         ssh_client = self.connect_ssh()
+        if not ssh_client:
+            self.message.channel.send(f'Unable to log into the GL server after a timeout of {self.__TIMEOUT} seconds.')
+            return False
         _, std_out, _ = ssh_client.exec_command(f"fs la {path} {user}")
         response_lines = std_out.readlines()
         for line in response_lines:
