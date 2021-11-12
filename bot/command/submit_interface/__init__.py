@@ -12,8 +12,6 @@ import csv
 import json
 import time
 from datetime import datetime, timedelta
-
-from command.submit_interface import add_student, configure_assignment, get_student, grant_extension, setup_interface, remove_assignment, close_assignment, check_assignment
 import globals
 import mongo
 from channels import ChannelAuthority
