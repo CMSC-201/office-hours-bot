@@ -32,6 +32,9 @@ class CloseAssignment(command.Command):
     __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
     __CLOSE_SECTION_EXTENSION = '/admin/close_extension.py {} section={} {}'
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
+
     def close_assignment(self, assignment_name):
         assignment = self.assignments.find_one({'name': assignment_name})
 
@@ -51,7 +54,6 @@ class CloseAssignment(command.Command):
             for assignment in self.assignments.find():
                 extensions_json[assignment['name']] = {'section-extensions': {},
                                                        'student-extensions': {}}
-
                 for student in assignment['student-extensions']:
                     print(assignment['student-extensions'][student])
                     due_date = assignment['student-extensions'][student]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
@@ -75,26 +77,23 @@ class CloseAssignment(command.Command):
         self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN__CLOSE_ASSIGNMENT.format(assignment_name, roster_path, extensions_path))
         self.assignments.update_one({'name': assignment_name}, {'$set': {'open': False}})
 
+    @command.Command.authenticate
+    @command.Command.require_maintenance
     async def handle(self):
-        ca: ChannelAuthority = ChannelAuthority(self.guild)
-        ra: RoleAuthority = RoleAuthority(self.guild)
-        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
-            match = re.match(self.__COMMAND_REGEX, self.message.content)
-            submit_col = mongo.db[self.__SUBMIT_SYSTEM_ADMINS]
-            assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        # emergency return, do nothing here.  This function is not functional
+        return
+        match = re.match(self.__COMMAND_REGEX, self.message.content)
+        submit_col = mongo.db[self.__SUBMIT_SYSTEM_ADMINS]
+        assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
 
-            # keep this for when we need to update on the server.
-            if match.group('admin'):
-                admin_match = submit_col.find_one({'username': match.group('admin')})
-            else:
-                admin_match = submit_col.find_one({})
+        admin_match = submit_col.find_one({})
 
-            assignment_name = match.group('assign_name')
+        assignment_name = match.group('assign_name')
 
-            self.close_assignment(assignment_name)
+        self.close_assignment(assignment_name)
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if re.match(r"!submit\s+close\s+(?P<assign_name>\w+)(\s+(?P<admin>--admin=\w+))?", message.content):
+        if re.match(r"!submit\s+close\s+assignment\s+(?P<assign_name>\w+)", message.content):
             return True
         return False
