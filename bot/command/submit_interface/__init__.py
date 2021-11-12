@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 import globals
 import mongo
 from channels import ChannelAuthority
-from close_extension import StudentExtensionClosureThread
+from submit_interface.close_extension import StudentExtensionClosureThread
 
 from submit_exceptions import AlreadyClosingException
 
