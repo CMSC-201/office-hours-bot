@@ -18,7 +18,7 @@ import paramiko
 from paramiko.ssh_exception import AuthenticationException, SSHException
 
 from channels import ChannelAuthority
-from submit_exceptions import AlreadyClosingException
+from submit_interface.submit_exceptions import AlreadyClosingException
 
 
 class StudentExtensionClosureThread(Thread):
