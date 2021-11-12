@@ -16,8 +16,7 @@ import globals
 import mongo
 from channels import ChannelAuthority
 from submit_interface.close_extension import StudentExtensionClosureThread
-
-from submit_exceptions import AlreadyClosingException
+from submit_interface.submit_exceptions import AlreadyClosingException
 
 
 class SubmitDaemon(Thread):
