@@ -55,6 +55,8 @@ class GrantAssignmentExtension(command.Command):
     __FIRST_NAME = 'First-Name'
     __LAST_NAME = 'Last-Name'
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
     @staticmethod
     def create_extensions_json(assignments, new_due_date):
         extensions_json = {}
@@ -77,36 +79,35 @@ class GrantAssignmentExtension(command.Command):
 
         return json.dumps(extensions_json, indent='\t')
 
+    @command.Command.authenticate
+    @command.Command.require_maintenance
     async def handle(self):
-        ca: ChannelAuthority = ChannelAuthority(self.guild)
-        ra: RoleAuthority = RoleAuthority(self.guild)
-        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
-            match = re.match(self.__COMMAND_REGEX, self.message.content)
-            if not match:
-                await self.message.channel.send("Usage: !submit extend assignment=[assignment name] [due date format MM-DD-YYYY HH:MM:SS]")
-                return
-            submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
-            assignment_name = match.group('assign_name')
-            assignment = submit_assign.find_one({'name': match.group('assign_name')})
-            if assignment:
-                due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
-                # update the server side database
-                assignment['due-date'] = due_date
-                # reopen the assignment if it's closed.
-                assignment['open'] = True
+        match = re.match(self.__COMMAND_REGEX, self.message.content)
+        if not match:
+            await self.message.channel.send("Usage: !submit extend assignment=[assignment name] [due date format MM-DD-YYYY HH:MM:SS]")
+            return
+        submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        assignment_name = match.group('assign_name')
+        assignment = submit_assign.find_one({'name': match.group('assign_name')})
+        if assignment:
+            due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
+            # update the server side database
+            assignment['due-date'] = due_date
+            # reopen the assignment if it's closed.
+            assignment['open'] = True
 
-                submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
-                # create new GL side extensions json
-                extension_json = self.create_extensions_json(submit_assign, due_date)
-                # create temporary file to send to the GL server
-                if not os.path.exists('csv_dump'):
-                    os.makedirs('csv_dump')
-                extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
-                AssignmentExtensionThread(self.client, assignment_name).start()
-                with open(extension_path, 'w') as json_extensions_file:
-                    json_extensions_file.write(extension_json)
-                await self.message.channel.send('Granting Extension for {} on GL until {}.'.format(assignment_name, due_date))
-            # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
+            submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
+            # create new GL side extensions json
+            extension_json = self.create_extensions_json(submit_assign, due_date)
+            # create temporary file to send to the GL server
+            if not os.path.exists('csv_dump'):
+                os.makedirs('csv_dump')
+            extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
+            AssignmentExtensionThread(self.client, assignment_name).start()
+            with open(extension_path, 'w') as json_extensions_file:
+                json_extensions_file.write(extension_json)
+            await self.message.channel.send('Granting Extension for {} on GL until {}.'.format(assignment_name, due_date))
+        # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
