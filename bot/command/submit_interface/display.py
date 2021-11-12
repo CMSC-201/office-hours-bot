@@ -56,11 +56,16 @@ class DisplayAssignment(command.Command):
 
             for assignment in assignments.find():
                 if assignment[self.__ASSIGNMENT_NAME].lower() == assignment_name.lower().strip():
-                    print(assignment)
+
                     printable_string = "\n\t".join([assignment[self.__ASSIGNMENT_NAME], 'Due Date: {}'.format(assignment[self.__DUE_DATE].strftime('%Y-%m-%d %H:%M:%S')), 'Open: {}'.format(str(assignment[self.__OPEN]))])
                     if assignment[self.__STUDENT_EXT]:
                         for student in assignment[self.__STUDENT_EXT]:
                             printable_string += "\nStudent: {}\tDue Date: {}\t Open: {}".format(student, assignment[self.__STUDENT_EXT][student][self.__DUE_DATE].strftime('%Y-%m-%d %H:%M:%S'), assignment[self.__STUDENT_EXT][student][self.__OPEN])
+
+                    if assignment[self.__SECTION_EXT]:
+                        for section in assignment[self.__SECTION_EXT]:
+                            printable_string += "\nSection: {}\tDue Date: {}\t Open: {}".format(section, assignment[self.__SECTION_EXT][section][self.__DUE_DATE].strftime('%Y-%m-%d %H:%M:%S'), assignment[self.__SECTION_EXT][section][self.__OPEN])
+
                     assignment_embed = Embed(description=printable_string, timestamp=datetime.now() + timedelta(hours=4), colour=Colour(0).teal())
                     await self.message.channel.send(embed=assignment_embed)
 
