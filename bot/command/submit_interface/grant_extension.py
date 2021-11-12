@@ -13,7 +13,6 @@ import asyncio
 from threading import Thread
 from datetime import datetime
 from channels import ChannelAuthority
-from roles import RoleAuthority
 
 
 class ExtensionThread(Thread):
@@ -21,9 +20,11 @@ class ExtensionThread(Thread):
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
 
-    def __init__(self, client):
+    def __init__(self, client, maintenance_channel=None, main_loop=None):
         super().__init__(daemon=True)
         self.client = client
+        self.maintenance_channel = maintenance_channel
+        self.main_loop = main_loop
 
     def run(self):
         extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
@@ -31,16 +32,14 @@ class ExtensionThread(Thread):
         ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
         server_roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
         server_extension_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
-        # ca: ChannelAuthority = ChannelAuthority()
         try:
             sftp_client: SFTPClient = ssh_client.open_sftp()
             sftp_client.put(extension_path, server_extension_path)
             sftp_client.close()
 
             ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
-            # maintenance_channel = ca.get_maintenance_channel()
-
-            # asyncio.run(maintenance_channel.send('SSH Command Executed, Extension Granted'))
+            if self.maintenance_channel and self.main_loop:
+                asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'SSH Command Executed, Extensions Granted'), self.main_loop)
         except Exception as e:
             print(e)
 
@@ -153,7 +152,7 @@ class GrantIndividualExtension(command.Command):
 
         await self.message.channel.send('Granting Extension on GL.')
         # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
-        ExtensionThread(self.client).start()
+        ExtensionThread(self.client, ca.get_maintenance_channel(), asyncio.get_event_loop()).start()
 
         if student_id:
             the_student = student_col.find_one({self.__UID_FIELD: student_id})
