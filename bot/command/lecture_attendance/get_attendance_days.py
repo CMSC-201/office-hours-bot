@@ -76,7 +76,7 @@ class StartAttendance(command.Command):
             await self.safe_send(self.message.channel, 'This was not a valid lecture name.  ')
             return False
 
-        lecture_attendance_sessions = lecture_attendance_sections_db.find_one({self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name})
+        lecture_attendance_sessions = lecture_attendance_sections_db.find_one({self.__KEY_TYPE: self.__DAY_LIST, self.__LECTURE_NAME: lecture_name})
         if not lecture_attendance_sessions:
             self.message.channel.send(f'There are no lectures with the name {lecture_name}')
             return False

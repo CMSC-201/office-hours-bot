@@ -82,9 +82,9 @@ class StartAttendance(command.Command):
         timer_numbers = [int(x) for x in time_string.split(':')]
         timer_amount = timedelta(hours=timer_numbers[0], minutes=timer_numbers[1], seconds=timer_numbers[2])
 
-        lecture_attendance_sessions = lecture_attendance_sections_db.find_one({self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name})
+        lecture_attendance_sessions = lecture_attendance_sections_db.find_one({self.__KEY_TYPE: self.__DAY_LIST, self.__LECTURE_NAME: lecture_name})
         if not lecture_attendance_sessions:
-            lecture_attendance_sessions = {self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name, self.__SESSIONS: {}}
+            lecture_attendance_sessions = {self.__KEY_TYPE: self.__DAY_LIST, self.__LECTURE_NAME: lecture_name, self.__SESSIONS: {}}
             lecture_attendance_sections_db.insert_one(lecture_attendance_sessions)
 
         # check for a currently running attendance session for the lecture
@@ -110,7 +110,7 @@ class StartAttendance(command.Command):
 
         new_attendance_record = {self.__SESSION_KEY: new_session_key, self.__START_TIME: start_time, self.__DURATION: timer_amount.seconds,
                                  self.__REGULAR_CODE: regular_code, self.__OVERRIDE_CODE: override_code, self.__STUDENT_LIST: student_list}
-        lecture_attendance_sections_db.update_one({self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name}, {'$set': {f"{self.__SESSIONS}": lecture_attendance_sessions[self.__SESSIONS]}})
+        lecture_attendance_sections_db.update_one({self.__KEY_TYPE: self.__DAY_LIST, self.__LECTURE_NAME: lecture_name}, {'$set': {f"{self.__SESSIONS}": lecture_attendance_sessions[self.__SESSIONS]}})
         lecture_attendance_db.insert_one(new_attendance_record)
 
         await self.message.channel.send(f'Starting a new attendance session for lecture {lecture_name} with a duration of {timer_amount.seconds} seconds, the code for the session is {regular_code}.')
