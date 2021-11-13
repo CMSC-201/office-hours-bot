@@ -38,14 +38,13 @@ class StudentSignIn(command.Command):
     permissions = {'student': True, 'ta': True, 'admin': True}
 
     async def sign_in_database_update(self, the_database, the_student, session_key, lecture_name, the_session):
-        the_session[self.STUDENT_LIST][the_student[self.__USERNAME]][self.__SIGNED_IN] = True
-        the_session[self.STUDENT_LIST][the_student[self.__USERNAME]][self.__TIMESTAMP] = datetime.now().strftime(self.__TIME_CODE)
+        the_session[self.__STUDENT_LIST][the_student[self.__USERNAME]][self.__SIGNED_IN] = True
+        the_session[self.__STUDENT_LIST][the_student[self.__USERNAME]][self.__TIMESTAMP] = datetime.now().strftime(self.__TIME_CODE)
         # perhaps use a mutex to prevent multiple updates from colliding
         await self.sign_in_lock.acquire()
-        the_database.update_one({self.__KEY_TYPE: self.__DAY_LIST, self.__LECTURE_NAME: lecture_name},
-                                                  {'$set': {f"{self.__SESSIONS}.{session_key}.{self.__STUDENT_LIST}.{the_student[self.__USERNAME]}":
-                                                                the_session[self.__STUDENT_LIST][the_student[self.__USERNAME]]}})
+        result = the_database.update_one({self.__SESSION_KEY: session_key}, {'$set': {f"{self.__STUDENT_LIST}.{the_student[self.__USERNAME]}": the_session[self.__STUDENT_LIST][the_student[self.__USERNAME]]}})
         self.sign_in_lock.release()
+        return result
 
     @command.Command.authenticate
     async def handle(self, new_message=None):
