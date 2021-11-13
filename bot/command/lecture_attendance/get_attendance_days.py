@@ -25,6 +25,9 @@ class StartAttendance(command.Command):
     __SECTION_LIST = 'section-list'
     __DAY_LIST = 'day-list'
 
+    __REGULAR_CODE = 'regular-code'
+    __OVERRIDE_CODE = 'override-code'
+
     __COMMAND_REGEX = r'!attendance\s+list\s+sessions\s+lecture\s*=\s*(?P<lecture_name>[\w_-]+)'
 
     __FIRST_NAME = 'First-Name'
@@ -81,7 +84,8 @@ class StartAttendance(command.Command):
         color = Color.purple()
         embedded_message = Embed(description=f'Sessions for Lecture {lecture_name}', timestamp=datetime.now() + timedelta(hours=5), colour=color)
         for session_key in lecture_attendance_sessions[self.__SESSIONS]:
-            embedded_message.add_field(name=session_key, value=f'Start Time: {lecture_attendance_sessions[self.__START_TIME]}\tDuration:{lecture_attendance_sessions[self.__DURATION]}')
+            session = lecture_attendance_sessions[self.__SESSIONS][session_key]
+            embedded_message.add_field(name=session_key, value=f'Start Time: {session[self.__START_TIME]}\tDuration:{session[self.__DURATION]}\tRegular Code:{session[self.__REGULAR_CODE]}\tOverride Code:{session[self.__OVERRIDE_CODE]}')
 
         await self.message.channel.send(embed=embedded_message)
 
