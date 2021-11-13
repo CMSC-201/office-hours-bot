@@ -51,7 +51,7 @@ class StudentSignIn(command.Command):
     async def handle(self, new_message=None):
         regex_match = re.match(self.__COMMAND_REGEX, self.message.content)
         if not regex_match:
-            await self.safe_send(self.message.channel, 'Unable to create the new lecture attendance section.  Invalid command format. \nShould be !attendance register lecture [lec_name] sections = 11, 12, 13, 14, 15, 16')
+            await self.safe_send(self.message.channel, 'Unable to sign in, command does not match. !sign in 3424 (your actual code instead)')
             return False
 
         lecture_attendance_sections_db = mongo.db[self.__LECTURE_ATTENDANCE_SECTIONS]
