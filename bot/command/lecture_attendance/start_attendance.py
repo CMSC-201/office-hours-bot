@@ -80,7 +80,7 @@ class StartAttendance(command.Command):
 
         lecture_attendance_sessions = lecture_attendance_sections_db.find_one({self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name})
         if not lecture_attendance_sessions:
-            lecture_attendance_sessions = {self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name, self.__SESSIONS: []}
+            lecture_attendance_sessions = {self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name, self.__SESSIONS: {}}
             lecture_attendance_sections_db.insert_one(lecture_attendance_sessions)
 
         # check for a currently running attendance session for the lecture
@@ -99,7 +99,7 @@ class StartAttendance(command.Command):
             student_list.update({student[self.__USERNAME]: self.reduced_student_record(student) for student in students_group.find({self.__STUDENT_SECTION: str(section_num)})})
 
         new_session_key, start_time = self.get_attendance_instance_key(lecture_name, timer_amount)
-        lecture_attendance_sessions[self.__SESSIONS].append(new_session_key)
+        lecture_attendance_sessions[self.__SESSIONS][new_session_key] = {self.__START_TIME: start_time, self.__DURATION: timer_amount.seconds}
 
         new_attendance_record = {self.__SESSION_KEY: new_session_key, self.__START_TIME: start_time, self.__DURATION: timer_amount.seconds, self.__STUDENT_LIST: student_list}
         lecture_attendance_sections_db.update_one({self.__KEY_TYPE: self.__SECTION_LIST, self.__LECTURE_NAME: lecture_name}, {'$set': {f"{self.__SESSIONS}": lecture_attendance_sessions[self.__SESSIONS]}})
