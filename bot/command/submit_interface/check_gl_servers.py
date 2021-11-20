@@ -48,8 +48,11 @@ class GLCheckThread(Thread):
                 logging.info('Logged into ssh on the GL server.')
             except socket.timeout:
                 self.ssh_client = None
+            except socket.gaierror:
+                self.ssh_client = None
             except AuthenticationException:
                 logging.info('GL server not able to authenticate.')
+                self.ssh_client = None
 
         return self.ssh_client
 
@@ -57,10 +60,10 @@ class GLCheckThread(Thread):
         self.connect_ssh(self.server_number)
         if self.ssh_client:
             self.ssh_client.exec_command(f'ls {self.__BASE_SUBMIT_DIR}')
-            self.gl_embed.set_field_at(self.server_number - 1, name=f'Linux {self.server_number}', value='Online')
+            self.gl_embed.set_field_at(self.server_number - 1, name=f'Linux {self.server_number}', value='\u2705 Online')
             asyncio.run_coroutine_threadsafe(self.embed_message.edit(embed=self.gl_embed), self.main_event_loop)
         else:
-            self.gl_embed.set_field_at(self.server_number - 1, name=f'Linux {self.server_number}', value='Offline')
+            self.gl_embed.set_field_at(self.server_number - 1, name=f'Linux {self.server_number}', value='\u274c Offline')
             asyncio.run_coroutine_threadsafe(self.embed_message.edit(embed=self.gl_embed), self.main_event_loop)
 
 
@@ -74,7 +77,7 @@ class CheckGLServers(Command):
     @Command.authenticate
     @Command.require_maintenance
     async def handle(self):
-        gl_embed = Embed(description='GL System Test', color=Color.dark_green())
+        gl_embed = Embed(title='GL System Test', color=Color.dark_green())
         for i in range(1, 6 + 1):
             gl_embed.insert_field_at(i - 1, name=f'Linux {i}', value='pending...')
         embed_message = await self.message.channel.send(embed=gl_embed)
