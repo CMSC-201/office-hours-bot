@@ -28,7 +28,7 @@ class VerifyGLPermissions(command.Command):
 
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
-    __TIMEOUT = 10
+    __TIMEOUT = 5
 
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
 
