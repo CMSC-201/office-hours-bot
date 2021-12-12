@@ -3,23 +3,19 @@
 """
 
 import re
-import socket
-
 from discord import Message, Client, User, TextChannel
-
 import mongo
-import command
+from command import command_class, Command
 import globals
 import logging
 from typing import Optional, Union
-import paramiko
-from paramiko.ssh_exception import AuthenticationException, SSHException
+from submit_interface.gl_server_monitor import GLSSHClient
 
 
-@command.command_class
-class VerifyGLPermissions(command.Command):
+@command_class
+class VerifyGLPermissions(Command, GLSSHClient):
     """
-        For some reason this command among all the commands won't load...
+        This will verify that GL has granted the appropriate permissions for a student or all students on a given assignment.
     """
 
     __COMMAND_REGEX = r"!submit\s+verify\s+permissions\s+(?P<assign_name>\w+)\s+(?P<student_id>\w+)"
@@ -34,22 +30,8 @@ class VerifyGLPermissions(command.Command):
 
     permissions = {'student': False, 'ta': False, 'admin': True}
 
-    def connect_ssh(self):
-        self.ssh_client = paramiko.client.SSHClient()
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            self.ssh_client.connect('gl.umbc.edu', username=self.submit_admins['username'], password=self.submit_admins['password'], timeout=self.__TIMEOUT)
-            logging.info('Logged into ssh on the GL server.')
-        except AuthenticationException:
-            logging.info('GL server not able to authenticate.')
-            self.ssh_client = None
-        except socket.gaierror:
-            self.ssh_client = None
-
-        return self.ssh_client
-
-    @command.Command.authenticate
-    @command.Command.require_maintenance
+    @Command.authenticate
+    @Command.require_maintenance
     async def handle(self):
         regex_match = re.match(self.__COMMAND_REGEX, self.message.content)
         if not regex_match:
@@ -60,7 +42,7 @@ class VerifyGLPermissions(command.Command):
         path = f"{self.__BASE_SUBMIT_DIR}/{assignment_name}/{user}"
         found = False
 
-        self.submit_admins = mongo.db[self.__SUBMIT_SYSTEM_ADMINS].find_one()
+        self.login_info = mongo.db[self.__SUBMIT_SYSTEM_ADMINS].find_one()
         ssh_client = self.connect_ssh()
         if not ssh_client:
             self.message.channel.send(f'Unable to log into the GL server after a timeout of {self.__TIMEOUT} seconds.')
