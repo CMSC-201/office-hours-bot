@@ -6,7 +6,6 @@ import time
 import re
 from datetime import datetime, timedelta
 from discord import Message, Client, User, TextChannel
-
 import command
 import mongo
 import globals
@@ -15,21 +14,22 @@ import logging
 from threading import Thread
 from typing import Optional, Union
 import paramiko
-from paramiko.ssh_exception import AuthenticationException, SSHException
-
+from submit_interface.gl_server_monitor import GLSSHClient
 from channels import ChannelAuthority
 from submit_interface.submit_exceptions import AlreadyClosingException
 
 
-class StudentExtensionClosureThread(Thread):
+class StudentExtensionClosureThread(Thread, GLSSHClient):
     """
-        Under construction, undergoing testing.
-
+        Next step is to make ExtensionClosureThread which is then inherited by:
+            StudentExtensionClosureThread
+            SectionExtensionClosureThread
     """
     __ADMIN_GROUP = 'admin'
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
+    __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
 
     __USERNAME = 'UMBC-Name-Id'
     __SECTION = 'Section'
@@ -65,28 +65,6 @@ class StudentExtensionClosureThread(Thread):
         self.assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
         self.maintenance_channel = maintenance_channel
 
-    def connect_ssh(self):
-        """
-        Attempt to connect to the GL server via ssh.
-
-        Requires the self.login_info to be set.
-
-        :return: the ssh_client
-        """
-        if self.ssh_client and (not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active()):
-            self.ssh_client = None
-
-        if not self.ssh_client:
-            self.ssh_client = paramiko.client.SSHClient()
-            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            try:
-                self.ssh_client.connect('gl.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=10)
-                logging.info('Logged into ssh on the GL server.')
-            except AuthenticationException:
-                logging.info('GL server not able to authenticate.')
-
-        return self.ssh_client
-
     def threadsafe_send_message(self, channel: Union[User, TextChannel], message: str):
         """
         In order to send discord messages from a non-prime thread you need to use the asyncio library and run the method from the primary event-loop.
@@ -99,9 +77,13 @@ class StudentExtensionClosureThread(Thread):
 
     def run(self) -> None:
         students_group = mongo.db[self.__STUDENTS_GROUP]
+        ta_group = mongo.db[self.__TA_GROUP]
+        admin_group = mongo.db[self.__ADMIN_GROUP]
+
         if self.lock:
             self.lock.acquire()
         try:
+            self.login_info = mongo.db[self.__SUBMIT_SYSTEM_ADMINS].find_one()
             attempt_count = 0
             while not self.connect_ssh() and attempt_count < 5:
                 # determine whether to terminate the thread based on number of attempts to log into the ssh server.
@@ -123,6 +105,10 @@ class StudentExtensionClosureThread(Thread):
             self.assignments.update_one({'name': self.assignment}, {'$set': {f'student-extensions.{self.student}': the_assignment['student-extensions'][self.student]}})
 
             the_student = students_group.find_one({self.__UID_FIELD: self.student})
+            if not the_student:
+                the_student = ta_group.find_one({self.__UID_FIELD: self.student})
+            if not the_student:
+                the_student = admin_group.find_one({self.__UID_FIELD: self.student})
             the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
             maintenance_message = f'{the_student_name} ({the_student[self.__UID_FIELD]})\'s extension for assignment {self.assignment} is now closed.'
             message = f'{self.student} ({the_student[self.__UID_FIELD]})\'s extension for assignment {self.assignment} is now closed.  You should recopy the files and begin grading. '
