@@ -16,11 +16,14 @@ from discord import Color
 
 
 class GLSSHClient:
+    # ensure that when the constructor is not run, this is still set to None
+    ssh_client: Optional[paramiko.client.SSHClient] = None
+
     def __init__(self):
         self.ssh_client: Optional[paramiko.client.SSHClient] = None
         self.login_info = {'username': '', 'password': ''}
 
-    def connect_ssh(self, server_number, timeout=10):
+    def connect_ssh(self, server_number=0, timeout=10):
         """
         Attempt to connect to the GL server via ssh.
 
@@ -35,7 +38,10 @@ class GLSSHClient:
             self.ssh_client = paramiko.client.SSHClient()
             self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             try:
-                self.ssh_client.connect(f'linux{server_number}.gl.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
+                if not server_number:
+                    self.ssh_client.connect(f'gl.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
+                else:
+                    self.ssh_client.connect(f'linux{server_number}.gl.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
                 logging.info('Logged into ssh on the GL server.')
             except socket.timeout:
                 self.ssh_client = None
@@ -121,7 +127,7 @@ class GLMonitorMaster(Thread):
         return asyncio.run_coroutine_threadsafe(channel.send(message, embed=embed), self.main_event_loop).result()
 
     def run(self) -> None:
-        self.gl_monitor_embed = Embed(title='GL System Test', color=Color.dark_green())
+        self.gl_monitor_embed = Embed(title='GL System Monitor', color=Color.dark_green())
         for i in self.server_numbers:
             self.gl_monitor_embed.insert_field_at(i - 1, name=f'Linux {i}', value='pending...')
         self.gl_monitor_message = self.asyncio_send_message(self.display_channel, "", self.gl_monitor_embed)
