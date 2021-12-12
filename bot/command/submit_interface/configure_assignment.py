@@ -66,7 +66,7 @@ class AssignmentCreationThread(Thread):
 
 @command.command_class
 class ConfigureAssignment(command.Command):
-    __COMMAND_REGEX = r"!submit\s+configure\s+(?P<assign_name>(\w|-)+)\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+(?P<no_create>--nocreate))?(\s+--admin=(?P<admin>\w+))?"
+    __COMMAND_REGEX = r"!submit\s+configure\s+(?P<assign_name>(\w|-)+)\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+(?P<no_create>--nocreate))?"
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
 
@@ -75,51 +75,42 @@ class ConfigureAssignment(command.Command):
     __STUDENTS_GROUP = 'student'
     __UID_FIELD = 'UMBC-Name-Id'
 
+    permissions = {'student': False, 'ta': False, 'admin': True}
+
     def create_assignment_on_GL(self, assignment_name, due_date):
         AssignmentCreationThread(self.guild, self.client, assignment_name, due_date).start()
 
+    @command.Command.require_maintenance
+    @command.Command.authenticate
     async def handle(self):
-        ca: ChannelAuthority = ChannelAuthority(self.guild)
-        ra: RoleAuthority = RoleAuthority(self.guild)
-        if ra.is_admin(self.message.author) and ca.is_maintenance_channel(self.message.channel):
-            match = re.match(self.__COMMAND_REGEX, self.message.content)
-            if not match:
-                print('Some kind of match error')
-                return
-            submit_col = mongo.db[self.__SUBMIT_SYSTEM_ADMINS]
-            assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        match = re.match(self.__COMMAND_REGEX, self.message.content)
+        if not match:
+            print('Some kind of match error')
+            return
 
-            # keep this for when we need to update on the server.
-            if match.group('admin'):
-                admin_match = submit_col.find_one({'username': match.group('admin')})
+        assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        assignment_name = match.group('assign_name')
+        due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
+        duplicate = assignments.find_one({'name': assignment_name})
+        if duplicate:
+            if duplicate['due-date'] == due_date:
+                await self.message.channel.send('There is a duplicate assignment')
             else:
-                admin_match = submit_col.find_one({})
-
-            assignment_name = match.group('assign_name')
-            due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
-            duplicate = assignments.find_one({'name': assignment_name})
-            if duplicate:
-                if duplicate['due-date'] == due_date:
-                    await self.message.channel.send('There is a duplicate assignment')
+                await self.message.channel.send('Updating due date for {} to {}'.format(assignment_name, due_date.strftime('%m-%d-%Y %H:%M:%S')))
+                assignments.update_one({'name': assignment_name}, {'$set': {'due-date': due_date}})
+        else:
+            await self.message.channel.send('Configuring Assignment {}...'.format(assignment_name))
+            ir = assignments.insert_one({'name': assignment_name, 'due-date': due_date, 'open': True, 'student-extensions': {}, 'section-extensions': {}})
+            if ir.inserted_id:
+                await self.message.channel.send('Assignment {} added to database.'.format(assignment_name))
+                if not match.group('no_create'):
+                    await self.message.channel.send('Creating {} assignment on GL.'.format(assignment_name))
+                    self.create_assignment_on_GL(assignment_name, due_date)
+                    await self.message.channel.send('Assignment {} created on GL.'.format(assignment_name))
                 else:
-                    await self.message.channel.send('Updating due date for {} to {}'.format(assignment_name, due_date.strftime('%m-%d-%Y %H:%M:%S')))
-                    assignments.update_one({'name': assignment_name}, {'$set': {'due-date': due_date}})
-                    self.client.submit_daemon.updated = True
+                    await self.message.channel.send('Assignment {} GL creation skipped.'.format(assignment_name))
             else:
-                await self.message.channel.send('Configuring Assignment {}...'.format(assignment_name))
-                ir = assignments.insert_one({'name': assignment_name, 'due-date': due_date, 'open': True, 'student-extensions': {}, 'section-extensions': {}})
-                if ir.inserted_id:
-                    await self.message.channel.send('Assignment {} added to database.'.format(assignment_name))
-                    self.client.submit_daemon.updated = True
-                    if True or match.group('no_create'):
-                        await self.message.channel.send('Creating {} assignment on GL.'.format(assignment_name))
-                        self.create_assignment_on_GL(assignment_name, due_date)
-                        await self.message.channel.send('Assignment {} created on GL.'.format(assignment_name))
-                    else:
-                        await self.message.channel.send('Assignment {} GL creation skipped.'.format(assignment_name))
-                else:
-                    await self.message.channel.send('Error: Assignment {} not added to database.'.format(assignment_name))
-
+                await self.message.channel.send('Error: Assignment {} not added to database.'.format(assignment_name))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
