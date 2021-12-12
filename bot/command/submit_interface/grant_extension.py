@@ -19,53 +19,14 @@ class ExtensionThread(Thread):
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
+    __SUBMIT_ASSIGNMENTS = 'submit-assignments'
 
-    def __init__(self, client, maintenance_channel=None, main_loop=None):
+    def __init__(self, client, maintenance_channel=None, main_loop=None, assignments=None):
         super().__init__(daemon=True)
         self.client = client
         self.maintenance_channel = maintenance_channel
         self.main_loop = main_loop
-
-    def run(self):
-        extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
-        # open the sftp connection and transfer the file to the GL server.
-        ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
-        server_roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
-        server_extension_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
-        try:
-            sftp_client: SFTPClient = ssh_client.open_sftp()
-            sftp_client.put(extension_path, server_extension_path)
-            sftp_client.close()
-
-            ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
-            if self.maintenance_channel and self.main_loop:
-                asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'SSH Command Executed, Extensions Granted'), self.main_loop)
-        except Exception as e:
-            print(e)
-
-
-@command.command_class
-class GrantIndividualExtension(command.Command):
-    __COMMAND_REGEX = r"!submit\s+(grant|give)\s+extension\s+(?P<assign_name>\w+)\s+((section\s*=\s*(?P<section_id>\w+))|(student\s*=\s*(?P<student_id>\w+)))\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+--admin=(?P<admin>\w+))?"
-
-    __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
-    __SUBMIT_ASSIGNMENTS = 'submit-assignments'
-
-    __ADMIN_GROUP = 'admin'
-    __TA_GROUP = 'ta'
-    __STUDENTS_GROUP = 'student'
-    __UID_FIELD = 'UMBC-Name-Id'
-
-    __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
-    __ROSTER_NAME = 'submit_roster.csv'
-    __EXTENSIONS_NAME = 'extensions.json'
-    __MONGO_ID = '_id'
-    __DISCORD_ID = 'discord'
-    __FIRST_NAME = 'First-Name'
-    __LAST_NAME = 'Last-Name'
-    __SECTION = 'Section'
-
-    permissions = {'student': False, 'ta': False, 'admin': True}
+        self.assignments = assignments if assignments else mongo.db[self.__SUBMIT_ASSIGNMENTS]
 
     @staticmethod
     def create_extensions_json(assignments):
@@ -94,8 +55,44 @@ class GrantIndividualExtension(command.Command):
                     due_date = assignment['section-extensions'][section].strftime('%Y.%m.%d.%H.%M.%S')
                     extensions_json[assignment['name']]['section-extensions'][section] = due_date
 
-
         return json.dumps(extensions_json, indent='\t')
+
+    def run(self):
+        ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
+        server_roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
+        server_extension_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
+        try:
+            extension_json = self.create_extensions_json(self.assignments)
+            ssh_client.exec_command(f'echo {extension_json} > {os.path.join(self.__BASE_SUBMIT_DIR, "admin", "extensions.json")}')
+            ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
+            if self.maintenance_channel and self.main_loop:
+                asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Extension Thread: SSH Command Executed'), self.main_loop)
+        except Exception as e:
+            print(e)
+
+
+@command.command_class
+class GrantIndividualExtension(command.Command):
+    __COMMAND_REGEX = r"!submit\s+(grant|give)\s+extension\s+(?P<assign_name>\w+)\s+((section\s*=\s*(?P<section_id>\w+))|(student\s*=\s*(?P<student_id>\w+)))\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+--admin=(?P<admin>\w+))?"
+
+    __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
+    __SUBMIT_ASSIGNMENTS = 'submit-assignments'
+
+    __ADMIN_GROUP = 'admin'
+    __TA_GROUP = 'ta'
+    __STUDENTS_GROUP = 'student'
+    __UID_FIELD = 'UMBC-Name-Id'
+
+    __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
+    __ROSTER_NAME = 'submit_roster.csv'
+    __EXTENSIONS_NAME = 'extensions.json'
+    __MONGO_ID = '_id'
+    __DISCORD_ID = 'discord'
+    __FIRST_NAME = 'First-Name'
+    __LAST_NAME = 'Last-Name'
+    __SECTION = 'Section'
+
+    permissions = {'student': False, 'ta': False, 'admin': True}
 
     @command.Command.authenticate
     @command.Command.require_maintenance
@@ -135,24 +132,16 @@ class GrantIndividualExtension(command.Command):
 
         # update the server side database
         submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
-        # create new GL side extensions json
-        extension_json = self.create_extensions_json(submit_assign)
-        # create temporary file to send to the GL server
-
-        if not os.path.exists('csv_dump'):
-            os.makedirs('csv_dump')
-        extension_path = os.path.join('csv_dump', self.__EXTENSIONS_NAME)
-        with open(extension_path, 'w') as json_extensions_file:
-            json_extensions_file.write(extension_json)
+        the_extension_thread = ExtensionThread(self.client, ca.get_maintenance_channel(), asyncio.get_event_loop(), submit_assign)
 
         # find and message the TA that an extension has been granted for a student
         student_col = mongo.db[self.__STUDENTS_GROUP]
         ta_collection = mongo.db[self.__TA_GROUP]
         admin_collection = mongo.db[self.__ADMIN_GROUP]
 
-        await self.message.channel.send('Granting Extension on GL.')
+        await self.message.channel.send('Starting Extension Process...')
         # We use a separate thread because the discord bot main thread doesn't like it if it takes the scp/ssh commands more than a few seconds to execute.
-        ExtensionThread(self.client, ca.get_maintenance_channel(), asyncio.get_event_loop()).start()
+        the_extension_thread.start()
 
         if student_id:
             the_student = student_col.find_one({self.__UID_FIELD: student_id})
@@ -185,7 +174,7 @@ class GrantIndividualExtension(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if message.content.startswith("!submit grant extension"):
+        __COMMAND_REGEX = r"!submit\s+(grant|give)\s+extension\s+(?P<assign_name>\w+)\s+((section\s*=\s*(?P<section_id>\w+))|(student\s*=\s*(?P<student_id>\w+)))\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})"
+        if re.match(__COMMAND_REGEX, message.content):
             return True
         return False
-
