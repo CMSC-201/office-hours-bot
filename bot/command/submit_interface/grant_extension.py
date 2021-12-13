@@ -31,40 +31,45 @@ class ExtensionThread(Thread):
     @staticmethod
     def create_extensions_json(assignments):
         extensions_json = {}
+
         for assignment in assignments.find():
-            extensions_json[assignment['name']] = {'section-extensions': {},
-                                                   'student-extensions': {}}
+            extensions_json[assignment['name']] = {'section-extensions': {}, 'student-extensions': {}}
 
             for student in assignment['student-extensions']:
-                if isinstance(assignment['student-extensions'][student], dict):
-                    # old database entries are simply datetime objects rather than dictionaries with the due-date, open, name, and student/section
-                    if assignment['student-extensions'][student].get('open', True):
-                        due_date = assignment['student-extensions'][student]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
-                        extensions_json[assignment['name']]['student-extensions'][student] = due_date
-                else:
-                    # old database compatibility
-                    due_date = assignment['student-extensions'][student].strftime('%Y.%m.%d.%H.%M.%S')
+                due_date = assignment['student-extensions'][student]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
+                if assignment['student-extensions'][student]['due-date'] > datetime.now():
                     extensions_json[assignment['name']]['student-extensions'][student] = due_date
             for section in assignment['section-extensions']:
-                if isinstance(assignment['section-extensions'][section], dict):
-                    due_date = assignment['section-extensions'][section]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
-                    if assignment['section-extensions'][section]['open']:
-                        extensions_json[assignment['name']]['section-extensions'][section] = due_date
-                else:
-                    # old database compatibility
-                    due_date = assignment['section-extensions'][section].strftime('%Y.%m.%d.%H.%M.%S')
+                due_date = assignment['section-extensions'][section]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
+                if assignment['section-extensions'][section]['due-date'] > datetime.now():
                     extensions_json[assignment['name']]['section-extensions'][section] = due_date
 
         return json.dumps(extensions_json, indent='\t')
+
+    def write_extension_file(self, assignments):
+        extension_json = self.create_extensions_json(assignments)
+        extension_path = os.path.join('csv_dump/', 'extensions.json')
+
+        if not os.path.exists('csv_dump'):
+            os.makedirs('csv_dump')
+
+        with open(extension_path, 'w') as extension_file:
+            extension_file.write(extension_json)
+        return extension_path
 
     def run(self):
         ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
         server_roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
         server_extension_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
         try:
-            extension_json = self.create_extensions_json(self.assignments)
-            ssh_client.exec_command(f'echo {extension_json} > {os.path.join(self.__BASE_SUBMIT_DIR, "admin", "extensions.json")}')
-            ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
+            extension_path = self.write_extension_file(self.assignments)
+            sftp_client: SFTPClient = ssh_client.open_sftp()
+            sftp_client.put(extension_path, server_extension_path)
+            sftp_client.close()
+
+            _, output, errors = ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
+            print(output.read())
+            print(errors.read())
             if self.maintenance_channel and self.main_loop:
                 asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Extension Thread: SSH Command Executed'), self.main_loop)
         except Exception as e:

@@ -1,15 +1,17 @@
-import locale
+"""
+    The SubmitDaemon is the manager class which generates section extension, student extension and assignment closures.
+
+    It runs as it's own thread so that the rest of the discord bot can continue to receive and process messages.
+
+"""
+
 from threading import Thread, Lock
 from typing import Optional
 import paramiko
-from paramiko.ssh_exception import AuthenticationException, SSHException
 from discord import User
 from discord.errors import Forbidden
 import logging
 import asyncio
-import os
-import csv
-import json
 import time
 from datetime import datetime, timedelta
 import globals
@@ -18,9 +20,10 @@ from channels import ChannelAuthority
 from submit_interface.close_extension import StudentExtensionClosureThread
 from submit_interface.submit_exceptions import AlreadyClosingException
 from submit_interface.close_assignment import CloseAssignmentThread
+from submit_interface.gl_server_monitor import GLSSHClient
 
 
-class SubmitDaemon(Thread):
+class SubmitDaemon(Thread, GLSSHClient):
     __ADMIN_GROUP = 'admin'
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
@@ -51,27 +54,10 @@ class SubmitDaemon(Thread):
         self.updated = False
         self.client = client
         self.ssh_client: Optional[paramiko.client.SSHClient] = None
+        self.login_info = self.submit_admins.find_one()
+
         self.event_loop = asyncio.get_event_loop()
-
         self.lock = Lock()
-
-    def connect_ssh(self):
-
-        if self.ssh_client and (not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active()):
-            self.ssh_client = None
-
-        if not self.ssh_client:
-            self.ssh_client = paramiko.client.SSHClient()
-            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            admin = self.submit_admins.find_one()
-            try:
-                self.ssh_client.connect('gl.umbc.edu', username=admin['username'], password=admin['password'], timeout=10)
-                logging.info('Logged into ssh on the GL server.')
-            except AuthenticationException:
-                logging.info('GL server not able to authenticate.')
-
-        return self.ssh_client
-
 
     async def send_extension_closure_messages(self, ca: ChannelAuthority, search_group, message: str):
         """
@@ -142,23 +128,6 @@ class SubmitDaemon(Thread):
         status_report['thread'] = close_assignment_thread
         close_assignment_thread.start()
         return self.get_report_name(assignment), status_report
-
-    def write_extension_file(self):
-        extensions_json = {}
-        with open(os.path.join('csv_dump', self.__EXTENSIONS_NAME), 'w') as json_extensions_file:
-            for assignment in self.assignments.find():
-                extensions_json[assignment['name']] = {'section-extensions': {},
-                                                       'student-extensions': {}}
-
-                for student in assignment['student-extensions']:
-                    due_date = assignment['student-extensions'][student]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
-                    if assignment['student-extensions'][student]['due-date'] > datetime.now():
-                        extensions_json[assignment['name']]['student-extensions'][student] = due_date
-                for section in assignment['section-extensions']:
-                    due_date = assignment['section-extensions'][section]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
-                    extensions_json[assignment['name']]['section-extensions'][section] = due_date
-
-            json_extensions_file.write(json.dumps(extensions_json, indent='\t'))
 
     def get_assignment_queue(self):
         assignment_queue = []
@@ -238,10 +207,11 @@ class SubmitDaemon(Thread):
             assignment_queue = self.get_assignment_queue()
             for assignment in assignment_queue:
                 if assignment['due-date'] <= datetime.now():
-                    if 'student' in assignment and self.get_report_name(assignment) not in current_reports:
-                        logging.info('Detected new assignment {} extension for {} to close.'.format(assignment['name'], assignment['student']))
-                        report_name, report = self.close_student_extension(assignment)
-                        current_reports[report_name] = report
+                    if 'student' in assignment:
+                        if self.get_report_name(assignment) not in current_reports:
+                            logging.info('Detected new assignment {} extension for {} to close.'.format(assignment['name'], assignment['student']))
+                            report_name, report = self.close_student_extension(assignment)
+                            current_reports[report_name] = report
                     elif 'section' in assignment:
                         logging.info('Closing {} extension for section {} in the thread.'.format(assignment['name'], assignment['section']))
                         asyncio.run_coroutine_threadsafe(self.close_extension(assignment), self.event_loop)

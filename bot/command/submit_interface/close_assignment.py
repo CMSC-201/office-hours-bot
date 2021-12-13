@@ -114,7 +114,8 @@ class CloseAssignmentThread(Thread):
                         extensions_json[assignment['name']]['student-extensions'][student] = due_date
                 for section in assignment['section-extensions']:
                     due_date = assignment['section-extensions'][section]['due-date'].strftime('%Y.%m.%d.%H.%M.%S')
-                    extensions_json[assignment['name']]['section-extensions'][section] = due_date
+                    if assignment['student-extensions'][section]['due-date'] > datetime.now():
+                        extensions_json[assignment['name']]['section-extensions'][section] = due_date
 
             json_extensions_file.write(json.dumps(extensions_json, indent='\t'))
 
