@@ -1,6 +1,7 @@
 import logging
 
 from discord import Message, Client, Member, TextChannel, CategoryChannel, PermissionOverwrite, Role, Permissions
+from typing import Optional
 
 import command
 import mongo
@@ -8,6 +9,7 @@ from channels import ChannelAuthority
 from roles import RoleAuthority
 
 logger = logging.getLogger(__name__)
+
 
 @command.command_class
 class SetupCommand(command.Command):
@@ -59,7 +61,7 @@ class SetupCommand(command.Command):
             },
             admin_category: {
                 "text": ['maintenance', 'course-admin', 'instructor-lounge'],
-                "voice": ['maintenance', 'instructor-lounge']
+                "voice": ['instructor-lounge']
             },
             staff_category: {
                 "text": ["ta-announcements", 'ta-general', 'grading', 'random-and-meme', queue_room_name],
@@ -73,10 +75,10 @@ class SetupCommand(command.Command):
 
         categories = {}
         all_channels = {}  # Replicates channel_structure, but with Channel objects
-        waiting_room: TextChannel = None
-        queue_room: TextChannel = None
-        auth_room: TextChannel = None
-        maintenance_room: TextChannel = None
+        waiting_room: Optional[TextChannel] = None
+        queue_room: Optional[TextChannel] = None
+        auth_room: Optional[TextChannel] = None
+        maintenance_room: Optional[TextChannel] = None
         for category, channels in channel_structure.items():
             text, voice = (channels["text"], channels["voice"])
             category_channel: CategoryChannel = await self.guild.create_category(category)
@@ -106,10 +108,12 @@ class SetupCommand(command.Command):
 
         logger.info("Setting up channel overrides for {} and {}".format(categories[staff_category].name,
                                                                         categories[student_category].name))
-        everyone_role: Role = None
+        everyone_role: Optional[Role] = None
         for role in self.guild.roles:
             if role.name == "@everyone":
                 everyone_role = role
+                break
+
         remove_read: PermissionOverwrite = PermissionOverwrite(read_messages=False)
         add_read: PermissionOverwrite = PermissionOverwrite(read_messages=True)
         remove_media: PermissionOverwrite = PermissionOverwrite(attach_files=False, embed_links=False)
