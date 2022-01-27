@@ -20,7 +20,7 @@ class RoleAuthority:
 
         self.role_db = mongo.db[self.__ROLE_COLLECTION]
 
-        self.role_map = {}
+        self.role_map = {x: None for x in self.__ROLE_LIST}
 
         for role_name in self.__ROLE_LIST:
             role_data = self.role_db.find_one({'role-name': role_name})
