@@ -173,7 +173,11 @@ class Command:
         """
 
         async def authentication_wrapper(self, *args, **kwargs):
-            ra: RoleAuthority = RoleAuthority(self.guild)
+            if self.guild:
+                ra: RoleAuthority = RoleAuthority(self.guild)
+            else:
+                ra: RoleAuthority = RoleAuthority(the_guild)
+
             if await ra.has_permission(self.message.author, self.permissions):
                 return await the_method(self, *args, **kwargs)
             else:
