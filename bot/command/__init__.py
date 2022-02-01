@@ -96,6 +96,7 @@ class Command:
                 In order to be able to ensure that code will execute even if a DM doesn't send properly, this method should be used.
         :param destination: should be a TextChannel or Author/User object (something with a send method)
         :param message: the string message to send
+        :param backup: the backup channel on which to send the message.
         :param kwargs:
             'backup': an alternative author/channel to send the message if the first is Forbidden
         :return: True if message sent, otherwise False
