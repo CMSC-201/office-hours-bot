@@ -173,6 +173,8 @@ class SendInvites(command.Command):
             await self.message.channel.send('Email invite sent to %s' % student_name)
             self.update_user_email_status(user, 1)
 
+        self.message.channel.send('Invite Process Complete')
+
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!send invites update"):
