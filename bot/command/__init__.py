@@ -89,7 +89,7 @@ class Command:
     async def handle(self):
         raise AttributeError("Must be overwritten by command class")
 
-    async def safe_send(self, destination, message: str, **kwargs) -> bool:
+    async def safe_send(self, destination, message: str, backup=None, **kwargs) -> bool:
         """
             Generally, messages will send and not be rejected.  However, even if some users haven't disabled DMs from the server, they may
                 occasionally generate a discord.errors.Forbidden exception, which will cause further code not to execute.
@@ -101,17 +101,12 @@ class Command:
         :return: True if message sent, otherwise False
         """
         try:
-
-            new_kwargs = dict(kwargs)
-            if 'backup' in kwargs:
-                del new_kwargs['backup']
-
-            await destination.send(message, **new_kwargs)
+            await destination.send(message, **kwargs)
             return True
         except Forbidden as f:
             logging.info(repr(f))
-            if kwargs.get('backup', None):
-                return await self.safe_send(kwargs['backup'], message, **kwargs)
+            if backup is not None:
+                return await self.safe_send(backup, message, **kwargs)
             return False
         except Exception as e:
             logging.info(repr(e))
