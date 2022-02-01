@@ -101,7 +101,12 @@ class Command:
         :return: True if message sent, otherwise False
         """
         try:
-            await destination.send(message, **kwargs)
+
+            new_kwargs = dict(kwargs)
+            if 'backup' in kwargs:
+                del new_kwargs['backup']
+
+            await destination.send(message, **new_kwargs)
             return True
         except Forbidden as f:
             logging.info(repr(f))
