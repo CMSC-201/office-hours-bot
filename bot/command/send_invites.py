@@ -160,20 +160,20 @@ class SendInvites(command.Command):
                 server.sendmail(self.state_variables['email-username'], response['To'], response.as_string())
                 await asyncio.sleep(4)
             except smtplib.SMTPRecipientsRefused as smtp_recipients_refused:
-                print(smtp_recipients_refused)
+                await self.message.channel.send(smtp_recipients_refused)
             except smtplib.SMTPHeloError as smtp_helo_error:
-                print(smtp_helo_error)
+                await self.message.channel.send(smtp_helo_error)
             except smtplib.SMTPSenderRefused as smtp_sender_refused:
-                print(smtp_sender_refused)
+                await self.message.channel.send(smtp_sender_refused)
             except smtplib.SMTPDataError as smtp_data_error:
-                print(smtp_data_error)
+                await self.message.channel.send(smtp_data_error)
             except smtplib.SMTPNotSupportedError as smtp_not_supported:
-                print(smtp_not_supported)
+                await self.message.channel.send(smtp_not_supported)
 
             await self.message.channel.send('Email invite sent to %s' % student_name)
             self.update_user_email_status(user, 1)
 
-        self.message.channel.send('Invite Process Complete')
+        await self.message.channel.send('Invite Process Complete')
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
