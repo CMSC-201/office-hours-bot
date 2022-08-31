@@ -49,6 +49,7 @@ class UpdateUsers(command.Command):
                     first_line[name]
                 comma_csv = True
                 default_col_names = True
+                return True, True
             except KeyError:
                 pass
 
@@ -57,10 +58,10 @@ class UpdateUsers(command.Command):
                     first_line[name]
                 comma_csv = True
                 default_col_names = False
+                return True, default_col_names
             except KeyError:
                 pass
-        if comma_csv:
-            return True, default_col_names
+
 
         with open(file_name) as csv_file:
             first_line = next(csv.DictReader(csv_file))
@@ -69,6 +70,7 @@ class UpdateUsers(command.Command):
                     first_line[name]
                 comma_csv = False
                 default_col_names = True
+                return comma_csv, default_col_names
             except KeyError:
                 pass
 
@@ -77,12 +79,10 @@ class UpdateUsers(command.Command):
                     first_line[name]
                 comma_csv = False
                 default_col_names = False
+                return comma_csv, default_col_names
             except KeyError:
-                pass
+                    pass
 
-        await self.message.channel.send('Detected tab separated tsv.')
-
-        return comma_csv, default_col_names
 
     @command.Command.authenticate
     @command.Command.require_maintenance
@@ -119,7 +119,11 @@ class UpdateUsers(command.Command):
         students_group = mongo.db[self.__STUDENTS_GROUP]
 
         for line in users_reader:
-            current_student = {self.__COLUMN_NAME_MAP[key]: line[key].strip() for key in self.__ALT_COLUMN_NAMES}
+            try:
+                current_student = {self.__COLUMN_NAME_MAP[key]: line[key].strip() for key in self.__ALT_COLUMN_NAMES}
+            except KeyError as key_error:
+                await self.message.channel.send(f'Key Error while Parsing Rex File: {key_error}.')
+                return
             # if they're being loaded from rex, they're students
             current_student[self.__ROLE] = self.__STUDENTS_GROUP
             # add any new data elements to the current student's record before inserting
