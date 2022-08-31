@@ -64,7 +64,7 @@ class UpdateUsers(command.Command):
 
 
         with open(file_name) as csv_file:
-            first_line = next(csv.DictReader(csv_file))
+            first_line = next(csv.DictReader(csv_file, delimiter='\t'))
             try:
                 for name in self.__COLUMN_NAMES:
                     first_line[name]
@@ -83,6 +83,8 @@ class UpdateUsers(command.Command):
             except KeyError:
                     pass
 
+        raise ValueError("Did not detect column headers with tabs or commas.  ")
+
 
     @command.Command.authenticate
     @command.Command.require_maintenance
@@ -95,15 +97,24 @@ class UpdateUsers(command.Command):
             return
         try:
             csv_file_name = 'update_users.csv'
-            comma_csv, default_col_names = await self.get_dict_reader(csv_file_name)
+            try:
+                comma_csv, default_col_names = await self.get_dict_reader(csv_file_name)
+            except ValueError as ve:
+                await self.message.channel.send(ve)
+                return
+
+            await self.message.channel.send(f'Update Users: \n\tDetected Comma Delimiter: {comma_csv}\n\tDetected REX Type: {not default_col_names}')
             with open(csv_file_name) as csv_file:
                 users_reader = csv.DictReader(csv_file, delimiter="," if comma_csv else '\t')
                 ignore_duplicates = False if '--show-duplicates' in self.message.content else True
 
                 if default_col_names:
+                    await self.message.channel.send('Update Users: Starting User-Add from Default CSV')
                     await self.load_default_data(users_reader, ignore_duplicates)
                 else:
+                    await self.message.channel.send('Update Users: Starting User-Add from REX-formatted CSV')
                     await self.load_rex_data(users_reader, ignore_duplicates)
+                await self.message.channel.send('Update Users: Process Complete')
 
         except OSError:
             logger.info('Unable to open file user_database.csv')
