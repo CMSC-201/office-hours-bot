@@ -62,13 +62,12 @@ class UpdateUsers(command.Command):
             except KeyError:
                 pass
 
-
+        comma_csv = False
         with open(file_name) as csv_file:
             first_line = next(csv.DictReader(csv_file, delimiter='\t'))
             try:
                 for name in self.__COLUMN_NAMES:
                     first_line[name]
-                comma_csv = False
                 default_col_names = True
                 return comma_csv, default_col_names
             except KeyError:
@@ -77,7 +76,7 @@ class UpdateUsers(command.Command):
             try:
                 for name in self.__ALT_COLUMN_NAMES:
                     first_line[name]
-                comma_csv = False
+
                 default_col_names = False
                 return comma_csv, default_col_names
             except KeyError:
@@ -108,18 +107,22 @@ class UpdateUsers(command.Command):
                 users_reader = csv.DictReader(csv_file, delimiter="," if comma_csv else '\t')
                 ignore_duplicates = False if '--show-duplicates' in self.message.content else True
 
+                add_suppressed_section = False
+                if '--add-mod-zero-sections' in self.message.content.split():
+                    add_suppressed_section = True
+
                 if default_col_names:
                     await self.message.channel.send('Update Users: Starting User-Add from Default CSV')
                     await self.load_default_data(users_reader, ignore_duplicates)
                 else:
                     await self.message.channel.send('Update Users: Starting User-Add from REX-formatted CSV')
-                    await self.load_rex_data(users_reader, ignore_duplicates)
+                    await self.load_rex_data(users_reader, ignore_duplicates, add_suppressed_section)
                 await self.message.channel.send('Update Users: Process Complete')
 
         except OSError:
             logger.info('Unable to open file user_database.csv')
 
-    async def load_rex_data(self, users_reader, ignore_duplicates):
+    async def load_rex_data(self, users_reader, ignore_duplicates, add_suppressed_section):
         """
         Loading rex data is specifically student data, so we don't need to worry about the ta or admin groups.
 
@@ -147,7 +150,7 @@ class UpdateUsers(command.Command):
             name_id = current_student[self.__UID_FIELD]
 
             if current_student[self.__ROLE] == self.__STUDENTS_GROUP:
-                if int(current_student[self.__SECTION]) % 10 != 0:
+                if int(current_student[self.__SECTION]) % 10 != 0 or add_suppressed_section:
                     if students_group.find_one({self.__UID_FIELD: current_student[self.__UID_FIELD]}):
                         if not ignore_duplicates:
                             await self.message.channel.send('Duplicate Student found: %s' % name_id)
