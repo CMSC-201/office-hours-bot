@@ -15,7 +15,7 @@ logger = logging.getLogger('bot_main')
 
 class MyClient(discord.Client):
     def __init__(self, **options):
-        intents = Intents.default()
+        intents = Intents.all()
         # you must enable the member intents in the app/bot settings or else this will crash the bot.
         # but you must also set intents.members = True otherwise you cannot get any member data.
         intents.members = True
