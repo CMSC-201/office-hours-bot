@@ -19,6 +19,9 @@ class MyClient(discord.Client):
         # you must enable the member intents in the app/bot settings or else this will crash the bot.
         # but you must also set intents.members = True otherwise you cannot get any member data.
         intents.members = True
+        intents.typing = True
+        intents.presences = True
+        intents.guilds = True
         super().__init__(intents=intents)
         self.channel_authority: ChannelAuthority = None
         self.submit_daemon = SubmitDaemon(self) if options.get('submit_daemon', False) else None
@@ -50,8 +53,8 @@ class MyClient(discord.Client):
         global_info = get_globals()
         class_name = global_info['props'].get('class_name', 'CMSC 201')
         bot_name = global_info['props'].get('bot_name', 'CMSC 201 Bot')
-        await member.send('Welcome to Discord Office Hours for {}}\n '
-                          'I am the {}}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.'.format(class_name, bot_name))
+        await member.send(f'Welcome to Discord Office Hours for {class_name}\n '
+                          f'I am the {bot_name}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
 
 
 def set_up_logs():
