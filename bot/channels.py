@@ -1,4 +1,3 @@
-import json
 import logging
 
 from discord import Guild, TextChannel, Message, Client, CategoryChannel, PermissionOverwrite, Role
@@ -44,7 +43,7 @@ class ChannelAuthority:
         channels = mongo.db[self.__CHANNEL_COLLECTION].find_one()
         if not channels:
             logger.warning("Unable to load channel authority!  Run setup!")
-            return
+
         try:
             waiting_uuid = channels[self.__WAITING_CHANNEL_KEY]
             queue_uuid = channels[self.__QUEUE_CHANNEL_KEY]
@@ -183,7 +182,9 @@ class ChannelAuthority:
     def is_maintenance_channel(self, channel):
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         channels = collection.find_one({})
-        if channel.id == channels.get(self.__MAINT_CHANNEL_KEY, -1):
+        if channels.get(self.__MAINT_CHANNEL_KEY, -1) == -1:
+            return True
+        elif channel.id == channels.get(self.__MAINT_CHANNEL_KEY, -1):
             if not self.maintenance_channel:
                 self.maintenance_channel = channel
             return True
