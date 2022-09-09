@@ -97,6 +97,8 @@ class RoleAuthority:
 
         if 'all' in permission_object and permission_object['all']:
             return True
+        if not self.role_db.find_one({'role-name': 'admin'}):
+            return True
 
         # in the case of a DM, instead of being given a Member, the author is in fact a User (who doesn't have roles since they aren't
         #       associated with a guild at the time.  fetch the member by their id, and determine if they have permission to execute
