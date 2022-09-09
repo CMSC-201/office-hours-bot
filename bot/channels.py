@@ -43,6 +43,7 @@ class ChannelAuthority:
         channels = mongo.db[self.__CHANNEL_COLLECTION].find_one()
         if not channels:
             logger.warning("Unable to load channel authority!  Run setup!")
+            channels = {}
 
         try:
             waiting_uuid = channels[self.__WAITING_CHANNEL_KEY]
