@@ -50,18 +50,25 @@ class AssignmentCreationThread(Thread):
         ftp_client: SFTPClient = ssh_client.open_sftp()
 
         if not os.path.exists('csv_dump'):
+            self.async_message_send('\tCreating new csv_dump directory. ')
             os.makedirs('csv_dump')
+
         with open(os.path.join('csv_dump', self.__ROSTER_NAME), 'w', newline='') as csv_file:
             roster = csv.writer(csv_file)
             roster_list = [[student[self.__USERNAME], student[self.__SECTION]] for student in students_group.find()]
             roster_list.extend([[ta[self.__USERNAME], ta[self.__SECTION]] for ta in ta_group.find()])
             roster_list.extend([[admin[self.__USERNAME], 0] for admin in admin_group.find()])
             roster.writerows(roster_list)
+            self.async_message_send('\tWriting New Roster. ')
 
+        self.async_message_send('\tFTP: Pushing New Roster... ')
         ftp_client.put(os.path.join('csv_dump', self.__ROSTER_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME)
         ftp_client.close()
+        self.async_message_send('\tFTP: Complete')
 
+        self.async_message_send('\tExecuting create assignment on GL server.  ')
         ssh_client.exec_command('python3 {}/admin/create_assignment.py {} {} {}'.format(self.__BASE_SUBMIT_DIR, self.assignment_name, self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME, self.due_time.strftime('%m/%d/%Y')))
+        self.async_message_send('\tComplete.')
 
 
 @command.command_class
@@ -104,9 +111,8 @@ class ConfigureAssignment(command.Command):
             if ir.inserted_id:
                 await self.message.channel.send('Assignment {} added to database.'.format(assignment_name))
                 if not match.group('no_create'):
-                    await self.message.channel.send('Creating {} assignment on GL.'.format(assignment_name))
+                    await self.message.channel.send('Starting assignment {} creation thread.'.format(assignment_name))
                     self.create_assignment_on_GL(assignment_name, due_date)
-                    await self.message.channel.send('Assignment {} created on GL.'.format(assignment_name))
                 else:
                     await self.message.channel.send('Assignment {} GL creation skipped.'.format(assignment_name))
             else:
