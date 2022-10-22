@@ -12,7 +12,7 @@ from roles import RoleAuthority
 
 @command.command_class
 class RemoveAssignment(command.Command):
-    __COMMAND_REGEX = r"!submit\s+configure\s+(?P<assign_name>\w+)\s+remove"
+    __COMMAND_REGEX = r"!submit\s+remove\s+assignment\s+(?P<assign_name>\w+)"
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
 
@@ -33,6 +33,6 @@ class RemoveAssignment(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if re.match(r"!submit\s+configure\s+(?P<assign_name>\w+)\s+remove", message.content):
+        if re.match(r"!submit\s+remove\s+assignment\s+(?P<assign_name>\w+)", message.content):
             return True
         return False
