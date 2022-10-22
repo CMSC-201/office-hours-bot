@@ -12,6 +12,7 @@ from discord import User
 from discord.errors import Forbidden
 import logging
 import asyncio
+from asyncio.locks import Lock
 import time
 from datetime import datetime, timedelta
 import globals
@@ -56,8 +57,10 @@ class SubmitDaemon(Thread, GLSSHClient):
         self.ssh_client: Optional[paramiko.client.SSHClient] = None
         self.login_info = self.submit_admins.find_one()
 
-        self.event_loop = asyncio.get_event_loop()
+        self.event_loop = None
         self.lock = Lock()
+
+        self.creation_lock = Lock()
 
     async def send_extension_closure_messages(self, ca: ChannelAuthority, search_group, message: str):
         """
@@ -117,14 +120,14 @@ class SubmitDaemon(Thread, GLSSHClient):
         except AlreadyClosingException as ace:
             logging.info('Preventing Multiple Runs: ' + ace.message)
         except Exception as e:
-            logging.info('An exception has occured during an extension closure.')
+            logging.info('An exception has occurred during an extension closure.')
             logging.error(str(type(e)) + " : " + str(e))
 
     def close_assignment(self, assignment, event_loop):
         ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
         print(assignment)
         status_report = {'assignment': assignment, 'closed': False, 'sent': False, 'thread': None}
-        close_assignment_thread = CloseAssignmentThread(assignment['name'], assignment['due-date'], self.lock, event_loop, status_report, ca.get_maintenance_channel())
+        close_assignment_thread = CloseAssignmentThread(assignment['name'], assignment['due-date'], self.lock, self.event_loop, status_report, ca.get_maintenance_channel())
         status_report['thread'] = close_assignment_thread
         close_assignment_thread.start()
         return self.get_report_name(assignment), status_report
@@ -203,9 +206,30 @@ class SubmitDaemon(Thread, GLSSHClient):
 
     def run(self):
         current_reports = {}
+        notified_assignments = {}
+
+        ca: ChannelAuthority = ChannelAuthority(self.client.guilds[0])
+
         while True:
             assignment_queue = self.get_assignment_queue()
             for assignment in assignment_queue:
+                if self.client.event_loop:
+                    if assignment['due-date'] - timedelta(minutes=10) <= datetime.now() < assignment['due-date'] - timedelta(minutes=9):
+                        if assignment["name"] not in notified_assignments:
+                            asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send(f'{assignment["name"]} will close in 10 minutes'), self.client.event_loop)
+                            notified_assignments[assignment["name"]] = [10]
+                    elif assignment['due-date'] - timedelta(minutes=5) <= datetime.now() < assignment['due-date'] - timedelta(minutes=4):
+                        if assignment["name"] not in notified_assignments:
+                            notified_assignments[assignment["name"]] = [10]
+                        if 5 not in notified_assignments[assignment["name"]]:
+                            asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send(f'{assignment["name"]} will close in 5 minutes'), self.client.event_loop)
+                            notified_assignments[assignment["name"]].append(5)
+                    elif assignment['due-date'] - timedelta(minutes=1) <= datetime.now() < assignment['due-date'] - timedelta(seconds=30):
+                        if assignment["name"] not in notified_assignments:
+                            notified_assignments[assignment["name"]] = [10, 5]
+                        if 1 not in notified_assignments[assignment["name"]]:
+                            asyncio.run_coroutine_threadsafe(ca.get_maintenance_channel().send(f'{assignment["name"]} will close in 1 minute'), self.client.event_loop)
+                            notified_assignments[assignment["name"]].append(1)
                 if assignment['due-date'] <= datetime.now():
                     if 'student' in assignment:
                         if self.get_report_name(assignment) not in current_reports:
