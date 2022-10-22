@@ -120,6 +120,7 @@ class CloseAssignmentThread(Thread):
             json_extensions_file.write(json.dumps(extensions_json, indent='\t'))
 
     def run(self):
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Submit Close Assignment: Beginning Close Process for {self.assignment} '), self.event_loop)
         assignment_name = self.assignment
         assignment = self.assignments.find_one({'name': assignment_name})
         if not assignment:
@@ -137,15 +138,15 @@ class CloseAssignmentThread(Thread):
         ftp_client.put(os.path.join('csv_dump', self.__ROSTER_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME)
         ftp_client.put(os.path.join('csv_dump', self.__EXTENSIONS_NAME), self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME)
         ftp_client.close()
-        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('New roster and extension files written to GL server by FTP. '), self.event_loop)
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('\tNew roster and extension files written to GL server by FTP. '), self.event_loop)
         roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
         extensions_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
         logging.info('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN__CLOSE_ASSIGNMENT.format(assignment_name, roster_path, extensions_path))
-        self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN__CLOSE_ASSIGNMENT.format(assignment_name, roster_path, extensions_path))
+        _, output_stream, error_stream = self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__ADMIN__CLOSE_ASSIGNMENT.format(assignment_name, roster_path, extensions_path))
         self.status_report['closed'] = True
-        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('Sending ssh command to close assignment {} on the GL server. '.format(assignment_name)), self.event_loop)
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('\tSending ssh command to close assignment {} on the GL server. '.format(assignment_name)), self.event_loop)
         self.assignments.update_one({'name': assignment_name}, {'$set': {'open': False}})
-        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('Updating Database with assignment {} closure. '.format(assignment_name)), self.event_loop)
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('\tUpdating Database with assignment {} closure. '.format(assignment_name)), self.event_loop)
         self.status_report['sent'] = True
 
 
