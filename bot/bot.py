@@ -1,8 +1,11 @@
 import logging
 
 import time
+import asyncio
 import discord
-from discord import Message, Guild, Member, User, Intents
+from discord import Message, Guild, Member, User, Intents, Interaction
+import discord.app_commands
+from discord.app_commands import Command, CommandTree
 
 from channels import ChannelAuthority
 from command import handle_message, set_default_guild
@@ -22,6 +25,7 @@ class MyClient(discord.Client):
         intents.typing = True
         intents.presences = True
         intents.guilds = True
+        self.event_loop = None
         super().__init__(intents=intents)
         self.channel_authority: ChannelAuthority = None
         self.submit_daemon = SubmitDaemon(self) if options.get('submit_daemon', False) else None
@@ -31,10 +35,16 @@ class MyClient(discord.Client):
         if len(self.guilds) > 1:
             raise ValueError("Bot cannot manage more than one guild at this time.")
 
+        self.event_loop = asyncio.get_event_loop()
+        self.submit_daemon.event_loop = self.event_loop
+
         set_default_guild(self.guilds[0])
         logger.info("Bot started.  Waiting for messages.")
         if self.submit_daemon and not self.submit_daemon.is_alive():
             self.submit_daemon.start()
+
+    async def ping_command(self, interaction: Interaction, message: Message):
+        await message.channel.send('ping pong')
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
