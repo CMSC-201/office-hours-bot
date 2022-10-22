@@ -10,10 +10,10 @@ from pymongo.results import InsertOneResult, UpdateResult
 import command
 import mongo
 import asyncio
+from asyncio import Lock
 from paramiko.client import SSHClient
 from paramiko import SFTPClient
 from channels import ChannelAuthority
-from roles import RoleAuthority
 
 from threading import Thread
 
@@ -95,28 +95,30 @@ class ConfigureAssignment(command.Command):
             print('Some kind of match error')
             return
 
-        assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
-        assignment_name = match.group('assign_name')
-        due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
-        duplicate = assignments.find_one({'name': assignment_name})
-        if duplicate:
-            if duplicate['due-date'] == due_date:
-                await self.message.channel.send('There is a duplicate assignment')
-            else:
-                await self.message.channel.send('Updating due date for {} to {}'.format(assignment_name, due_date.strftime('%m-%d-%Y %H:%M:%S')))
-                assignments.update_one({'name': assignment_name}, {'$set': {'due-date': due_date}})
-        else:
-            await self.message.channel.send('Configuring Assignment {}...'.format(assignment_name))
-            ir = assignments.insert_one({'name': assignment_name, 'due-date': due_date, 'open': True, 'student-extensions': {}, 'section-extensions': {}})
-            if ir.inserted_id:
-                await self.message.channel.send('Assignment {} added to database.'.format(assignment_name))
-                if not match.group('no_create'):
-                    await self.message.channel.send('Starting assignment {} creation thread.'.format(assignment_name))
-                    self.create_assignment_on_GL(assignment_name, due_date)
+        self.client.submit_daemon.creation_lock: Lock
+        async with self.client.submit_daemon.creation_lock:
+            assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
+            assignment_name = match.group('assign_name')
+            due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
+            duplicate = assignments.find_one({'name': assignment_name})
+            if duplicate:
+                if duplicate['due-date'] == due_date:
+                    await self.message.channel.send('There is a duplicate assignment')
                 else:
-                    await self.message.channel.send('Assignment {} GL creation skipped.'.format(assignment_name))
+                    await self.message.channel.send('Updating due date for {} to {}'.format(assignment_name, due_date.strftime('%m-%d-%Y %H:%M:%S')))
+                    assignments.update_one({'name': assignment_name}, {'$set': {'due-date': due_date}})
             else:
-                await self.message.channel.send('Error: Assignment {} not added to database.'.format(assignment_name))
+                await self.message.channel.send('Configuring Assignment {}...'.format(assignment_name))
+                ir = assignments.insert_one({'name': assignment_name, 'due-date': due_date, 'open': True, 'student-extensions': {}, 'section-extensions': {}})
+                if ir.inserted_id:
+                    await self.message.channel.send('Assignment {} added to database.'.format(assignment_name))
+                    if not match.group('no_create'):
+                        await self.message.channel.send('Starting assignment {} creation thread.'.format(assignment_name))
+                        self.create_assignment_on_GL(assignment_name, due_date)
+                    else:
+                        await self.message.channel.send('Assignment {} GL creation skipped.'.format(assignment_name))
+                else:
+                    await self.message.channel.send('Error: Assignment {} not added to database.'.format(assignment_name))
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
