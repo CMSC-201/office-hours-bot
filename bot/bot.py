@@ -4,8 +4,7 @@ import time
 import asyncio
 import discord
 from discord import Message, Guild, Member, User, Intents
-import discord.app_commands
-from discord.app_commands import Command, CommandTree
+# from discord.app_commands import Command, CommandTree
 
 from channels import ChannelAuthority
 from command import handle_message, set_default_guild
