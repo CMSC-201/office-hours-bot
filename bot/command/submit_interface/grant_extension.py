@@ -26,7 +26,7 @@ class ExtensionThread(Thread):
         self.client = client
         self.maintenance_channel = maintenance_channel
         self.main_loop = main_loop
-        self.assignments = assignments if assignments else mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        self.assignments = assignments if assignments is not None else mongo.db[self.__SUBMIT_ASSIGNMENTS]
 
     @staticmethod
     def create_extensions_json(assignments):
