@@ -3,7 +3,7 @@ import logging
 import time
 import asyncio
 import discord
-from discord import Message, Guild, Member, User, Intents, Interaction
+from discord import Message, Guild, Member, User, Intents
 import discord.app_commands
 from discord.app_commands import Command, CommandTree
 
@@ -42,9 +42,6 @@ class MyClient(discord.Client):
         logger.info("Bot started.  Waiting for messages.")
         if self.submit_daemon and not self.submit_daemon.is_alive():
             self.submit_daemon.start()
-
-    async def ping_command(self, interaction: Interaction, message: Message):
-        await message.channel.send('ping pong')
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
