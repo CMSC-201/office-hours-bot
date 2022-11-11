@@ -15,8 +15,13 @@ class RoleAuthority:
 
     __ROLE_COLLECTION = 'role-collection'
 
+    role_guild = []
+
     def __init__(self, guild: Guild):
-        self.guild = guild
+        if guild and not self.role_guild:
+            self.role_guild.append(guild)
+
+        self.guild = self.role_guild[0]
 
         self.role_db = mongo.db[self.__ROLE_COLLECTION]
 
