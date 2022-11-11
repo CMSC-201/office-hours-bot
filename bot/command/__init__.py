@@ -83,7 +83,9 @@ class Command:
         if not message:
             raise ValueError("You must issue a command with a message or guild")
         self.message: Message = message
-        self.guild: Guild = guild if guild else the_guild
+        self.guild: Guild = guild if guild else message.guild
+        if self.guild is None:
+            self.guild = the_guild
         self.client = client
 
     async def handle(self):
