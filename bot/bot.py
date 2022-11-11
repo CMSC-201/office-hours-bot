@@ -35,11 +35,11 @@ class MyClient(discord.Client):
             raise ValueError("Bot cannot manage more than one guild at this time.")
 
         self.event_loop = asyncio.get_event_loop()
-        self.submit_daemon.event_loop = self.event_loop
 
         set_default_guild(self.guilds[0])
         logger.info("Bot started.  Waiting for messages.")
         if self.submit_daemon and not self.submit_daemon.is_alive():
+            self.submit_daemon.event_loop = self.event_loop
             self.submit_daemon.start()
 
     async def on_message(self, message: Message):
