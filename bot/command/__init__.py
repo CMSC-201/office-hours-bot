@@ -83,7 +83,7 @@ class Command:
         if not message:
             raise ValueError("You must issue a command with a message or guild")
         self.message: Message = message
-        self.guild: Guild = guild if guild else message.guild
+        self.guild: Guild = guild if guild else the_guild
         self.client = client
 
     async def handle(self):
@@ -174,10 +174,7 @@ class Command:
         """
 
         async def authentication_wrapper(self, *args, **kwargs):
-            if self.guild:
-                ra: RoleAuthority = RoleAuthority(self.guild)
-            else:
-                ra: RoleAuthority = RoleAuthority(the_guild)
+            ra: RoleAuthority = RoleAuthority(self.guild)
 
             if await ra.has_permission(self.message.author, self.permissions):
                 return await the_method(self, *args, **kwargs)
