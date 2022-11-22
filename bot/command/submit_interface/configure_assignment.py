@@ -19,7 +19,6 @@ from threading import Thread
 
 
 class AssignmentCreationThread(Thread):
-
     __ADMIN_GROUP = 'admin'
     __TA_GROUP = 'ta'
     __STUDENTS_GROUP = 'student'
@@ -29,17 +28,17 @@ class AssignmentCreationThread(Thread):
     __ROSTER_NAME = 'submit_roster.csv'
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
 
-    def __init__(self, guild, client, assignment_name, due_time):
+    def __init__(self, guild, client, assignment_name, due_time, message_loop):
         super().__init__(daemon=True)
         self.assignment_name = assignment_name
         self.guild = guild
         self.client = client
         self.due_time = due_time
         self.channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
+        self.message_loop = message_loop
 
     def async_message_send(self, message):
-        message_loop = asyncio.new_event_loop()
-        asyncio.run_coroutine_threadsafe(self.channel_authority.maintenance_channel.send(message), message_loop)
+        asyncio.run_coroutine_threadsafe(self.channel_authority.maintenance_channel.send(message), self.message_loop)
 
     def run(self):
         ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
@@ -85,7 +84,7 @@ class ConfigureAssignment(command.Command):
     permissions = {'student': False, 'ta': False, 'admin': True}
 
     def create_assignment_on_GL(self, assignment_name, due_date):
-        AssignmentCreationThread(self.guild, self.client, assignment_name, due_date).start()
+        AssignmentCreationThread(self.guild, self.client, assignment_name, due_date, asyncio.get_event_loop()).start()
 
     @command.Command.require_maintenance
     @command.Command.authenticate
@@ -108,12 +107,12 @@ class ConfigureAssignment(command.Command):
                     await self.message.channel.send('Updating due date for {} to {}'.format(assignment_name, due_date.strftime('%m-%d-%Y %H:%M:%S')))
                     assignments.update_one({'name': assignment_name}, {'$set': {'due-date': due_date}})
             else:
-                await self.message.channel.send('Configuring Assignment {}...'.format(assignment_name))
+                await self.message.channel.send(f'Configuring Assignment {assignment_name}...')
                 ir = assignments.insert_one({'name': assignment_name, 'due-date': due_date, 'open': True, 'student-extensions': {}, 'section-extensions': {}})
                 if ir.inserted_id:
-                    await self.message.channel.send('Assignment {} added to database.'.format(assignment_name))
+                    await self.message.channel.send(f'Assignment {assignment_name} added to database.')
                     if not match.group('no_create'):
-                        await self.message.channel.send('Starting assignment {} creation thread.'.format(assignment_name))
+                        await self.message.channel.send(f'Starting assignment {assignment_name} creation thread.')
                         self.create_assignment_on_GL(assignment_name, due_date)
                     else:
                         await self.message.channel.send('Assignment {} GL creation skipped.'.format(assignment_name))
@@ -125,5 +124,3 @@ class ConfigureAssignment(command.Command):
         if re.match(r"!submit\s+configure\s+(?P<assign_name>(\w|-)+)\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+(?P<admin>--admin=\w+))?", message.content):
             return True
         return False
-
-
