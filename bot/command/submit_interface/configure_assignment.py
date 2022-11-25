@@ -66,7 +66,7 @@ class AssignmentCreationThread(Thread):
         self.async_message_send('\tFTP: Complete')
 
         self.async_message_send('\tExecuting create assignment on GL server.  ')
-        ssh_client.exec_command('python3 {}/admin/create_assignment.py {} {} {}'.format(self.__BASE_SUBMIT_DIR, self.assignment_name, self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME, self.due_time.strftime('%m/%d/%Y')))
+        ssh_client.exec_command(f'python3 {self.__BASE_SUBMIT_DIR}/admin/create_assignment.py {self.assignment_name} {self.__BASE_SUBMIT_DIR + "/admin/" + self.__ROSTER_NAME} {self.due_time.strftime("%m/%d/%Y")}')
         self.async_message_send('\tComplete.')
 
 
@@ -104,7 +104,7 @@ class ConfigureAssignment(command.Command):
                 if duplicate['due-date'] == due_date:
                     await self.message.channel.send('There is a duplicate assignment')
                 else:
-                    await self.message.channel.send('Updating due date for {} to {}'.format(assignment_name, due_date.strftime('%m-%d-%Y %H:%M:%S')))
+                    await self.message.channel.send(f'Updating due date for {assignment_name} to {due_date.strftime("%m-%d-%Y %H:%M:%S")}')
                     assignments.update_one({'name': assignment_name}, {'$set': {'due-date': due_date}})
             else:
                 await self.message.channel.send(f'Configuring Assignment {assignment_name}...')
@@ -115,9 +115,9 @@ class ConfigureAssignment(command.Command):
                         await self.message.channel.send(f'Starting assignment {assignment_name} creation thread.')
                         self.create_assignment_on_GL(assignment_name, due_date)
                     else:
-                        await self.message.channel.send('Assignment {} GL creation skipped.'.format(assignment_name))
+                        await self.message.channel.send(f'Assignment {assignment_name} GL creation skipped.')
                 else:
-                    await self.message.channel.send('Error: Assignment {} not added to database.'.format(assignment_name))
+                    await self.message.channel.send(f'Error: Assignment {assignment_name} not added to database.')
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
