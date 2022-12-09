@@ -38,12 +38,12 @@ class Who(command.Command):
 
         found_section_leaders = []
         for ta in ta_collection.find():
-            for section in ta['Section'].split(','):
+            for section in ta.get('Section', "").split(','):
                 if section.strip() == section_num:
                     found_section_leaders.append(ta)
 
         for admin in admin_collection.find():
-            for section in admin['Section'].split(','):
+            for section in admin.get('Section', "").split(','):
                 if section.strip() == section_num:
                     found_section_leaders.append(admin)
 
