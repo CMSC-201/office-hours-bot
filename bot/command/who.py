@@ -29,6 +29,35 @@ class Who(command.Command):
     __AVAILABLE_TAS = 'available_tas'
     __OFFICE_HOURS_OPEN = 'open'
 
+    async def who_is_my_ta(self):
+        ta_collection = mongo.db[self.__TA_GROUP]
+        admin_collection = mongo.db[self.__ADMIN_GROUP]
+
+        match = re.match(r'!who\s+is\s+the\s+ta\s+for\s+section\s+(?P<section_num>\d+)', self.message.content)
+        section_num = match.group('section_num')
+
+        found_section_leaders = []
+        for ta in ta_collection.find():
+            for section in ta['Section'].split(','):
+                if section.strip() == section_num:
+                    found_section_leaders.append(ta)
+
+        for admin in admin_collection.find():
+            for section in admin['Section'].split(','):
+                if section.strip() == section_num:
+                    found_section_leaders.append(admin)
+
+        if found_section_leaders:
+            if len(found_section_leaders) == 1:
+                the_ta = found_section_leaders[0]
+                ta_name = ' '.join([the_ta[self.__FIRST_NAME], the_ta[self.__LAST_NAME]])
+                await self.message.channel.send(f'The TA for section {section_num} is {ta_name}')
+            else:
+                the_names = ', '.join([' '.join([the_ta[self.__FIRST_NAME], the_ta[self.__LAST_NAME]]) for the_ta in found_section_leaders])
+                await self.message.channel.send(f'The TAs for section {section_num} are {the_names}')
+        else:
+            await self.message.channel.send(f'Unable to find ta for section {section_num}')
+
     async def handle(self):
 
         ra: RoleAuthority = RoleAuthority(self.guild)
@@ -83,18 +112,7 @@ class Who(command.Command):
             else:
                 await self.message.channel.send('No TAs are on duty.  ')
         elif self.message.content.startswith('!who is the ta for section') and ra.ta_or_higher(self.message.author):
-            match = re.match(r'!who\s+is\s+the\s+ta\s+for\s+section\s+(?P<section_num>\d+)', self.message.content)
-            section_num = match.group('section_num')
-            the_ta = ta_collection.find_one({self.__SECTION: section_num})
-            the_admin = admin_collection.find_one({self.__SECTION: section_num})
-            if the_ta:
-                ta_name = ' '.join([the_ta[self.__FIRST_NAME], the_ta[self.__LAST_NAME]])
-                await self.message.channel.send('The TA for section {} is {}'.format(section_num, ta_name))
-            elif the_admin:
-                ta_name = ' '.join([the_admin[self.__FIRST_NAME], the_admin[self.__LAST_NAME]])
-                await self.message.channel.send('The TA for section {} is {}'.format(section_num, ta_name))
-            else:
-                await self.message.channel.send('Unable to find ta for section {}'.format(section_num))
+            await self.who_is_my_ta()
 
 
     @staticmethod
