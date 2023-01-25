@@ -25,6 +25,7 @@ class AuthenticateStudent(command.Command):
         result = await ma.authenticate_member(member, key)
         # fetch again to get the nickname
         member: Member = await self.guild.fetch_member(self.message.author.id)
+        logger.info(str(member))
         if result == MemberAuthority.AUTHENTICATED:
             logger.info("Authenticated user {0.name} ({0.id}) as {0.display_name}".format(member))
             await self.safe_send(self.message.author, '''You are now authenticated!  You can return to the office hour server.\n  
