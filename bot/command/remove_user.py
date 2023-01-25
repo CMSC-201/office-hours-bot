@@ -39,6 +39,7 @@ class RemoveUser(command.Command):
             uid = match.group('user_identifier')
             umbc_id_list = [user for user in group.find({'UMBC-Name-Id': uid})]
 
+            # TODO: remove duplicates if found
             if umbc_id_list:
                 member_document = umbc_id_list[0]
                 member = await self.message.guild.fetch_member(member_document[self.__DISCORD_ID])
