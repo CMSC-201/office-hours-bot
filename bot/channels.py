@@ -78,7 +78,7 @@ class ChannelAuthority:
         }
 
         collection.delete_many({})
-        collection.insert(document)
+        collection.insert_one(document)
 
     def add_special_section(self, category_channel: CategoryChannel, student_role: Role, leader_role: Role):
         channel_entry = {self.__CHANNEL_NAME: category_channel.name, self.__CHANNEL_ID: category_channel.id,
