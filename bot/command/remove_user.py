@@ -41,7 +41,7 @@ class RemoveUser(command.Command):
 
             if umbc_id_list:
                 member_document = umbc_id_list[0]
-                member = self.message.guild.get_member(member_document[self.__DISCORD_ID])
+                member = await self.message.guild.fetch_member(member_document[self.__DISCORD_ID])
 
                 if member:
                     await self.message.channel.send('Deauthenticating User %s' % member.nick)
