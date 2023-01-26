@@ -65,7 +65,7 @@ class RecheckRoles(command.Command):
                     if person[self.__DISCORD_ID]:
                         if person[self.__ROLE] == self.__ADMIN_GROUP:
                             num_modified += await self.add_member_to_group(role_authority, person[self.__DISCORD_ID], __ADMIN_NAME, self.__ADMIN_GROUP)
-                        elif person[self.__ROLE] == self.__TA_GROUP:
+                        elif person[self.__ROLE] == self.__TA_GROUP.lower():
                             num_modified += await self.add_member_to_group(role_authority, person[self.__DISCORD_ID], __TA_NAME, self.__TA_GROUP)
                         elif person[self.__ROLE] == self.__STUDENTS_GROUP:
                             num_modified += await self.add_member_to_group(role_authority, person[self.__DISCORD_ID], __STUDENT_NAME, self.__STUDENTS_GROUP)
