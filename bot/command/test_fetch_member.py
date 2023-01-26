@@ -5,13 +5,7 @@ from discord import Message, Client, Colour, Embed
 import re
 import command
 import mongo
-from datetime import datetime as dt
-from datetime import timedelta
-from globals import get_globals
-from queues import QueueAuthority
-from roles import RoleAuthority
-from member import MemberAuthority
-from channels import ChannelAuthority
+
 
 logger = logging.getLogger(__name__)
 
