@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @command.command_class
 class RecheckRoles(command.Command):
     __ADMIN_GROUP = 'admin'
-    __TA_GROUP = 'ta'
+    __TA_GROUP = 'TA'
     __STUDENTS_GROUP = 'student'
     __UID_FIELD = 'UMBC-Name-Id'
     __DISCORD_ID = 'discord'
