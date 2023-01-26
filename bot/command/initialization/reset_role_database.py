@@ -1,8 +1,7 @@
 import logging
 
-from discord import Message, Client, Colour, Embed
+from discord import Message, Client
 
-import re
 import command
 import mongo
 
@@ -20,10 +19,9 @@ class ResetRoleDatabase(command.Command):
     __ROLE_LIST = [__ADMIN_NAME, __STUDENT_NAME, __UNAUTHED_NAME, __TA_NAME, __EVERYONE_NAME]
     __ROLE_COLLECTION = 'role-collection'
 
-    permissions = {'student': False, 'ta': False, 'admin': True}
-
     @command.Command.require_maintenance
     async def handle(self):
+        await self.message.channel.send('Role Database Reset Starting')
         role_db = mongo.db[self.__ROLE_COLLECTION]
         # empty this collection
         role_db.delete_many({})
@@ -41,6 +39,7 @@ class ResetRoleDatabase(command.Command):
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         if message.content.startswith("!reset role database"):
+            await message.channel.send('resetting roles invoked')
             return True
 
         return False
