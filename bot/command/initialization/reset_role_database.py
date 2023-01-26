@@ -29,11 +29,12 @@ class ResetRoleDatabase(command.Command):
         role_db.delete_many({})
         # rebuild the collection
         for role_name in self.__ROLE_LIST:
+            await self.message.channel.send(f'Searching for {role_name} role.')
             for role in self.guild.roles:
                 if role.name == role_name:
-                    await self.message.channel.send(f"Found {role_name}")
-                    self.role_map[role.name] = role
-                    self.role_db.insert_one({'role-name': role_name, 'role-id': role.id})
+                    await self.message.channel.send(f'Found Matching role: {role.name}.')
+                    role_db.insert_one({'role-name': role_name, 'role-id': role.id})
+                    await self.message.channel.send(f'Inserted {role.name} into database with {role.id}.')
                     break
 
 
