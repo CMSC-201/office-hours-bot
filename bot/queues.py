@@ -65,7 +65,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": True,
             }
-            collection.insert(document)
+            collection.insert_one(document)
         # doesn't work of course
         pass
 
@@ -78,7 +78,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": True,
             }
-            collection.insert(document)
+            collection.insert_one(document)
 
         print(member.id)
         document["queue"].append({
@@ -156,7 +156,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": True,
             }
-            collection.insert(document)
+            collection.insert_one(document)
 
         for queue_item in document["queue"]:
             if queue_item[self.__MEMBER_ID_FIELD] == member.id:
@@ -190,7 +190,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": False,
             }
-            collection.insert(document)
+            collection.insert_one(document)
 
         while len(document["queue"]) > 0:
             session = document["queue"][0]
@@ -227,7 +227,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": True,
             }
-            collection.insert(document)
+            collection.insert_one(document)
         if "available_tas" not in document:
             document["available_tas"] = []
         # Check if this is a new queue beginning and if new TA queueing
@@ -258,7 +258,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": False,
             }
-            collection.insert(document)
+            collection.insert_one(document)
 
         document["queue"] = []
         document["available_tas"] = []
@@ -275,7 +275,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": False,
             }
-            collection.insert(document)
+            collection.insert_one(document)
 
         was_removed = False
         tas = len(document["available_tas"])
@@ -296,7 +296,7 @@ class QueueAuthority:
                 "available_tas": [],
                 "open": True,
             }
-            collection.insert(document)
+            collection.insert_one(document)
 
         if ta_uid in document["available_tas"]:
             return True
