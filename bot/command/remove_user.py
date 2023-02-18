@@ -42,10 +42,14 @@ class RemoveUser(command.Command):
             # TODO: remove duplicates if found
             if umbc_id_list:
                 member_document = umbc_id_list[0]
-                member = await self.message.guild.fetch_member(member_document[self.__DISCORD_ID])
+                try:
+                    member = await self.message.guild.fetch_member(member_document[self.__DISCORD_ID])
+                except NotFound as not_found_error:
+                    logging.info(f'{uid} matched with a non-existent discord account.')
+                    member = None
 
                 if member:
-                    await self.message.channel.send('Deauthenticating User %s' % member.nick)
+                    await self.message.channel.send('Deauthenticating User %s' % member.display_name)
                     await ma.deauthenticate_member(member)
 
                 if match.group('reset'):
