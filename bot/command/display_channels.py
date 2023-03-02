@@ -28,11 +28,20 @@ class DisplayChannels(command.Command):
         try:
             channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
             maintenance_channel = channel_authority.get_maintenance_channel()
-            waiting_channel = self.guild.get_channel(channel_authority.waiting_channel.id)
-            queue_channel = self.guild.get_channel(channel_authority.queue_channel.id)
             message_text = f'{maintenance_channel.name}\t{maintenance_channel.id}\n'
-            message_text += f'{waiting_channel.name}\t{waiting_channel.id}\n'
-            message_text += f'{queue_channel.name}\t{queue_channel.id}\n'
+
+            try:
+                waiting_channel = self.guild.get_channel(channel_authority.waiting_channel.id)
+                message_text += f'{waiting_channel.name}\t{waiting_channel.id}\n'
+            except AttributeError as attribute_error:
+                await self.message.channel.send('Unable to find queue channel.')
+
+            try:
+                queue_channel = self.guild.get_channel(channel_authority.queue_channel.id)
+                message_text += f'{queue_channel.name}\t{queue_channel.id}\n'
+            except AttributeError as attribute_error:
+                await self.message.channel.send('Unable to find queue channel.')
+
             embedded_message = Embed(title=f"Primary Channels", description=message_text, timestamp=dt.datetime.now(), colour=Colour(0).teal())
             await self.message.channel.send(embed=embedded_message)
         except ReferenceError as ref_error:
