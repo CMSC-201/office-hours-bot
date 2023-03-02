@@ -78,6 +78,7 @@ async def handle_message(message: Message, client: Client):
 class Command:
     GUILD_MEMBERS = {}
     permissions = {}
+    commands = {}
 
     def __init__(self, message: Message = None, client: Client = None, guild: Guild = None):
         if not message:
@@ -202,16 +203,34 @@ class Command:
 
         async def channel_authentication_wrapper(self, *args, **kwargs):
             from channels import ChannelAuthority
-            ca: ChannelAuthority = ChannelAuthority(self.guild)
-            if ca.is_maintenance_channel(self.message.channel):
+            try:
+                ca: ChannelAuthority = ChannelAuthority(self.guild)
+                if ca.is_maintenance_channel(self.message.channel):
+                    return await the_method(self, *args, **kwargs)
+                else:
+                    await self.safe_send(
+                        self.message.channel,
+                        keyword_args.get('message', 'This command must be run on the maintenance channel. '))
+                    return False
+            except ReferenceError as ref_error:
+                await self.message.channel.send('Maintenance Channel Not Found, Running Command...')
                 return await the_method(self, *args, **kwargs)
-            else:
-                await self.safe_send(
-                    self.message.channel,
-                    keyword_args.get('message', 'This command must be run on the maintenance channel. '))
-                return False
 
         return channel_authentication_wrapper
+
+    @classmethod
+    def register_command(cls, command_class, invocation_parameters=None):
+        """
+            This will replace the current global scope package scan once we add the command registration to all of the
+            commands.  this should replace @command.command_class with @Command.register_command
+
+            We may even be able to include the command strings which would prevent us from having to call the is_invoked method most of the time.
+
+            :param invocation_parameters: a dictionary with invocation parameters.
+            :param command_class: adds the new command class to the internal dictionary of commands.
+        """
+        cls.commands[command_class.__name__] = command_class
+
 
 
 ## DO NOT MOVE THIS CODE
