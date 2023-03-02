@@ -42,14 +42,15 @@ class ChannelAuthority:
         self.maintenance_channel: TextChannel = None
         channels = mongo.db[self.__CHANNEL_COLLECTION].find_one()
         if not channels:
-            logger.warning("Unable to load channel authority!  Run setup!")
+            logger.warning("Unable to load channels from database. ")
             channels = {}
 
         try:
             waiting_uuid = channels[self.__WAITING_CHANNEL_KEY]
             queue_uuid = channels[self.__QUEUE_CHANNEL_KEY]
-            self.bulletin_category = self.guild.get_channel(channels[self.__BULLETIN_CHANNEL_KEY])
-            self.auth_channel: TextChannel = self.guild.get_channel(channels[self.__AUTH_CHANNEL_KEY])
+            bulletin_channel = channels.get(self.__BULLETIN_CHANNEL_KEY, -1)
+
+            self.bulletin_category = self.guild.get_channel(bulletin_channel)
             self.waiting_channel = self.guild.get_channel(waiting_uuid)
             self.queue_channel = self.guild.get_channel(queue_uuid)
 
@@ -59,21 +60,19 @@ class ChannelAuthority:
                     self.maintenance_channel = channel
                 if self.__LAB_CATEGORY_NAME in channel.name:
                     self.lab_sections[channel.name] = channel
-        except KeyError:
-            logger.warning("Unable to load channel authority!  Run setup!")
+        except KeyError as ke:
+            logger.warning(f"Unable to find a channel: {ke}")
 
     def save_channels(self, bulletin_category, waiting_channel, queue_channel, auth_channel, maintenance_channel) -> None:
         self.bulletin_category = bulletin_category
         self.waiting_channel = waiting_channel
         self.queue_channel = queue_channel
         self.maintenance_channel = maintenance_channel
-        self.auth_channel = auth_channel
         collection = mongo.db[self.__CHANNEL_COLLECTION]
         document = {
             self.__BULLETIN_CHANNEL_KEY: self.bulletin_category.id,
             self.__WAITING_CHANNEL_KEY: self.waiting_channel.id,
             self.__QUEUE_CHANNEL_KEY: self.queue_channel.id,
-            self.__AUTH_CHANNEL_KEY: self.auth_channel.id,
             self.__MAINT_CHANNEL_KEY: self.maintenance_channel.id,
         }
 
@@ -193,16 +192,15 @@ class ChannelAuthority:
         return False
 
     def get_maintenance_channel(self):
-        # collection = mongo.db[self.__CHANNEL_COLLECTION]
-        # channels = collection.find_one({})
-
-        # collection = mongo.db[self.__CHANNEL_COLLECTION]
-        # channels = collection.find_one()
-        # print(channels)
-
-        # this is a janky solution to fix this until we get the channel situation fixed.
-        for channel in self.guild.text_channels:
-            if channel.name == 'maintenance':
-                return self.maintenance_channel
+        collection = mongo.db[self.__CHANNEL_COLLECTION]
+        channels = collection.find_one({})
+        maintenance_channel_id = channels.get(self.__MAINT_CHANNEL_KEY)
+        if maintenance_channel_id != 0:
+            return self.guild.get_channel(maintenance_channel_id)
+        else:
+            # this is a janky solution to fix this until we get the channel situation fixed.
+            for channel in self.guild.text_channels:
+                if channel.name == 'maintenance':
+                    return self.maintenance_channel
 
         return None
