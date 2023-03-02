@@ -55,6 +55,14 @@ class RecheckRoles(command.Command):
             embedded_message = Embed(title=f"{the_role.name}", description=message_text, timestamp=dt.datetime.now() + dt.timedelta(hours=4), colour=color)
             await self.message.channel.send(embed=embedded_message)
 
+        await self.message.channel.send('Listing Other Roles...')
+
+        for other_role in self.guild.roles:
+            message_text = f"{other_role.name}\n\tid = {other_role.id}\n\tguild = {other_role.guild}"
+            embedded_message = Embed(title=f"{other_role.name}", description=message_text, timestamp=dt.datetime.now() + dt.timedelta(hours=4), colour=color)
+            await self.message.channel.send(embed=embedded_message)
+
+
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
