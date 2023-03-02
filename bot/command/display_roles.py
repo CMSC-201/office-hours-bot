@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @command.command_class
-class RecheckRoles(command.Command):
+class DisplayRoles(command.Command):
     __ADMIN_GROUP = 'admin'
     __TA_GROUP = 'TA'
     __STUDENTS_GROUP = 'student'
@@ -36,14 +36,14 @@ class RecheckRoles(command.Command):
         color = Colour(0).dark_gold()
         for the_role in [admin_role, ta_role, student_role, unauthenticated_role]:
             message_text = f"{the_role.name}\n\tid = {the_role.id}\n\tguild = {the_role.guild}"
-            embedded_message = Embed(title=f"{the_role.name}", description=message_text, timestamp=dt.datetime.now() + dt.timedelta(hours=4), colour=color)
+            embedded_message = Embed(title=f"{the_role.name}", description=message_text, timestamp=dt.datetime.now(), colour=color)
             await self.message.channel.send(embed=embedded_message)
 
         await self.message.channel.send('Listing Other Roles...')
 
         for other_role in self.guild.roles:
             message_text = f"{other_role.name}\n\tid = {other_role.id}\n\tguild = {other_role.guild}"
-            embedded_message = Embed(title=f"{other_role.name}", description=message_text, timestamp=dt.datetime.now() + dt.timedelta(hours=4), colour=color)
+            embedded_message = Embed(title=f"{other_role.name}", description=message_text, timestamp=dt.datetime.now(), colour=color)
             await self.message.channel.send(embed=embedded_message)
 
 
