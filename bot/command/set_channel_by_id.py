@@ -53,7 +53,7 @@ class DetectChannels(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        if message.content.startswith("!detect channels"):
+        if message.content.startswith("!set channel"):
             return True
 
         return False
