@@ -28,8 +28,8 @@ class DisplayChannels(command.Command):
         try:
             channel_authority: ChannelAuthority = ChannelAuthority(self.guild)
             maintenance_channel = channel_authority.get_maintenance_channel()
-            waiting_channel = channel_authority.waiting_channel.id
-            queue_channel = channel_authority.queue_channel.id
+            waiting_channel = self.guild.get_channel(channel_authority.waiting_channel.id)
+            queue_channel = self.guild.get_channel(channel_authority.queue_channel.id)
             message_text = f'{maintenance_channel.name}\t{maintenance_channel.id}\n'
             message_text += f'{waiting_channel.name}\t{waiting_channel.id}\n'
             message_text += f'{queue_channel.name}\t{queue_channel.id}\n'
