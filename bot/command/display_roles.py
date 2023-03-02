@@ -23,22 +23,6 @@ class RecheckRoles(command.Command):
 
     permissions = {'student': False, 'ta': False, 'admin': True}
 
-    async def add_member_to_group(self, role_authority: RoleAuthority, discord_id, discord_group_name, group_name):
-        """
-            :param role_authority:
-            :param member: the member to check
-            :param group_name: the discord name for the group
-            :param group_string: the internal name of the group
-            :return: 1 if done, 0 if not
-        """
-        member: Member = await self.guild.fetch_member(discord_id)
-        if not any(role.name == discord_group_name for role in member.roles):
-            await role_authority.add_role(member, group_name)
-            await self.message.channel.send(f'{discord_group_name} was not in {member.display_name}\'s list of roles, added.')
-            return 1
-        return 0
-
-
     @command.Command.authenticate
     @command.Command.require_maintenance
     async def handle(self):
