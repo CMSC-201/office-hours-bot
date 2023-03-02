@@ -33,7 +33,7 @@ class DisplayChannels(command.Command):
             message_text = f'{maintenance_channel.name}\t{maintenance_channel.id}\n'
             message_text += f'{waiting_channel.name}\t{waiting_channel.id}\n'
             message_text += f'{queue_channel.name}\t{queue_channel.id}\n'
-            embedded_message = Embed(title=f"Primary Channels", description=message_text, timestamp=dt.datetime.now() + dt.timedelta(hours=4), colour=Colour(0).teal())
+            embedded_message = Embed(title=f"Primary Channels", description=message_text, timestamp=dt.datetime.now(), colour=Colour(0).teal())
             await self.message.channel.send(embed=embedded_message)
         except ReferenceError as ref_error:
             await self.message.channel.send(f"Unable to load channels from database.  {ref_error}")
@@ -44,7 +44,7 @@ class DisplayChannels(command.Command):
                 message_text = f'{category.name}\tid={category.id}\n'
                 for channel in category.text_channels:
                     message_text += f"{channel.name}\tid = {channel.id}\tguild = {channel.guild.id}\n"
-                embedded_message = Embed(title=f"{category.name}", description=message_text, timestamp=dt.datetime.now() + dt.timedelta(hours=4), colour=Colour(0).teal())
+                embedded_message = Embed(title=f"{category.name}", description=message_text, timestamp=dt.datetime.now(), colour=Colour(0).teal())
                 await self.message.channel.send(embed=embedded_message)
 
     @staticmethod
