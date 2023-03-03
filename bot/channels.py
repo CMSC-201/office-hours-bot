@@ -44,7 +44,7 @@ class ChannelAuthority:
         if not channels:
             logger.warning("Unable to load channels from database. ")
             # raise ReferenceError("Unable to load channels from database. ")
-
+            return
         try:
             waiting_uuid = channels[self.__WAITING_CHANNEL_KEY]
             queue_uuid = channels[self.__QUEUE_CHANNEL_KEY]
