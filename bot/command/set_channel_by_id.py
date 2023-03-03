@@ -37,6 +37,16 @@ class DetectChannels(command.Command):
             collection = mongo.db[self.__CHANNEL_COLLECTION]
             channel_ids = collection.find_one()
 
+            if not channel_ids:
+                await self.message.channel.send('Unable to find database entry for primary channels, creating... ')
+                collection.insert_one({
+                    self.__BULLETIN_CHANNEL_KEY: 0,
+                    self.__WAITING_CHANNEL_KEY: 0,
+                    self.__QUEUE_CHANNEL_KEY: 0,
+                    self.__MAINT_CHANNEL_KEY: 0,
+                })
+                channel_ids = collection.find_one()
+
             channel_id = the_match.group('channel_id')
             if the_match.group('channel_name') == self.__BULLETIN_NAME:
                 collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__BULLETIN_CHANNEL_KEY: channel_id}})
