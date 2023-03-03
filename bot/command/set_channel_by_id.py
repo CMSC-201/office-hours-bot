@@ -49,13 +49,17 @@ class DetectChannels(command.Command):
 
             channel_id = the_match.group('channel_id')
             if the_match.group('channel_name') == self.__BULLETIN_NAME:
-                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__BULLETIN_CHANNEL_KEY: channel_id}})
+                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__BULLETIN_CHANNEL_KEY: int(channel_id)}})
+                await self.message.channel.send('Setting Bulletin Channel')
             elif the_match.group('channel_name') == self.__MAINTENANCE_NAME:
-                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__MAINT_CHANNEL_KEY: channel_id}})
+                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__MAINT_CHANNEL_KEY: int(channel_id)}})
+                await self.message.channel.send('Setting Maintenance Channel')
+                maintenance_channel = self.guild.get_channel(channel_id)
+                await self.message.channel.send('Testing Maintenance Channel...')
             elif the_match.group('channel_name') == self.__STUDENT_REQUESTS:
-                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__QUEUE_CHANNEL_KEY: channel_id}})
+                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__QUEUE_CHANNEL_KEY: int(channel_id)}})
             elif the_match.group('channel_name') == self.__WAITING_ROOM_NAME:
-                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__WAITING_CHANNEL_KEY: channel_id}})
+                collection.update_one({'_id': channel_ids['_id']}, {'$set': {self.__WAITING_CHANNEL_KEY: int(channel_id)}})
             else:
                 await self.message.channel.send('Room name not recognized, options are: bulletin, maintenance, waiting-room, or student-request. ')
         else:
