@@ -87,9 +87,17 @@ class SearchUsers(command.Command):
             umbc_id_list = []
 
             for group in [students_group, ta_group, admin_group]:
-                first_name_list.extend([first_name_user for first_name_user in group.find({'First-Name': general_match.group('user_identifier').strip()})])
-                last_name_list.extend([first_name_user for first_name_user in group.find({'Last-Name': general_match.group('user_identifier').strip()})])
-                umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': general_match.group('user_identifier').strip()})])
+                search_id = general_match.group('user_identifier').strip()
+                if len(search_id.split()) >= 2:
+                    first_name = search_id.split()[0]
+                    last_name = search_id.split()[1]
+                else:
+                    first_name = search_id
+                    last_name = search_id
+
+                first_name_list.extend([first_name_user for first_name_user in group.find({'First-Name': first_name})])
+                last_name_list.extend([first_name_user for first_name_user in group.find({'Last-Name': last_name})])
+                umbc_id_list.extend([user for user in group.find({'UMBC-Name-Id': search_id})])
 
             combined_list = first_name_list + last_name_list + umbc_id_list
 
