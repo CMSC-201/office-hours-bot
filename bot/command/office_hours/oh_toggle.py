@@ -18,12 +18,7 @@ async def is_oh_command(client, message, types):
             has_command = True
     if command.is_bot_mentioned(message, client) and "oh" in message.content.lower() and has_command:
         if message.channel == ca.queue_channel:
-            ra: RoleAuthority = RoleAuthority(message.guild)
-            if ra.ta_or_higher(message.author):
-                return True
-            else:
-                await message.channel.send("You can't do this, " + message.author.mention)
-                return False
+            return True
         else:
             await message.channel.send(f"You have to be in {ca.queue_channel.mention} to {types} office hours.")
             return False
@@ -32,6 +27,9 @@ async def is_oh_command(client, message, types):
 
 @command.command_class
 class StartOfficeHours(command.Command):
+    permissions = {'student': False, 'ta': True, 'admin': True}
+
+    @command.Command.authenticate
     async def handle(self):
         qa: QueueAuthority = QueueAuthority(self.guild)
         ca: ChannelAuthority = ChannelAuthority(self.guild)
@@ -50,7 +48,6 @@ class StartOfficeHours(command.Command):
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
         return await is_oh_command(client, message, ["start", "open"])
-
 
 
 @command.command_class
