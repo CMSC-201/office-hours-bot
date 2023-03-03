@@ -63,12 +63,14 @@ class MyClient(discord.Client):
                           f'I am the {bot_name}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
 
 
-def set_up_logs():
+def set_up_logs(bot_prefix):
     FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
     logging.basicConfig(format=FORMAT, level=logging.INFO)
 
-    handler = logging.FileHandler(filename='discord.log', encoding='utf-8',
-                                  mode='a')
+    try:
+        handler = logging.FileHandler(filename=f'/etc/log_data/{bot_prefix}.log', encoding='utf-8', mode='a')
+    except FileNotFoundError:
+        handler = logging.FileHandler(filename=f'discord.log', encoding='utf-8', mode='a')
     handler.setFormatter(logging.Formatter(FORMAT))
     handler.setLevel(logging.INFO)
 
@@ -78,8 +80,8 @@ def set_up_logs():
 
 
 if __name__ == '__main__':
-    set_up_logs()
     info = get_globals()
+    set_up_logs(info['props']['prefix'])
 
     logger.info(str(info['props']))
 
@@ -104,6 +106,5 @@ if __name__ == '__main__':
                 logger.error(repr(e))
                 logger.info('Restarting Bot from Exception Failure...')
                 time.sleep(5)
-
     else:
         logger.error("Something failed (this is very vague)")
