@@ -31,6 +31,8 @@ class AcceptStudent(command.Command):
             return
         # get oldest queue item (and also remove it)
         session: OHSession = await qa.dequeue(self.message.author)
+        if debug_mode:
+            await self.message.channel.send(f"accept request dequeued {self.message.author.nick}, {self.message.author.id}")
         if not session:
             msg = await self.message.channel.send("No one is in the queue.  Perhaps you're lonely?\n"
                                                   "https://giphy.com/gifs/30-rock-liz-lemon-jack-donaghy-VuWtVHkMjrz2w")
