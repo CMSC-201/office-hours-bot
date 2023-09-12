@@ -20,6 +20,11 @@ class AcceptStudent(command.Command):
 
     @command.Command.authenticate
     async def handle(self):
+        debug_mode = False
+        if '--debug' in self.message.content:
+            debug_mode = True
+            await self.message.channel.send('accepted session, debug enabled')
+
         qa: QueueAuthority = QueueAuthority(self.guild)
         if not qa.is_ta_on_duty(self.message.author.id):
             await self.message.channel.send("You must be on duty to accept a request!")
@@ -39,7 +44,7 @@ class AcceptStudent(command.Command):
             role = None
             while not role:
                 try:
-                    role: Role = await self.guild.create_role(name="{}'s OH session".format(command.name(session.member)), hoist=True)
+                    role: Role = await self.guild.create_role(name=f"{command.name(session.member)}'s OH session", hoist=True)
 
                     session.role = role
                     await session.member.add_roles(session.role)
@@ -48,7 +53,7 @@ class AcceptStudent(command.Command):
                     await self.message.channel.send('Unable to create the OH session role.')
 
             session_category: CategoryChannel = await self.guild.create_category_channel(
-                "Session for {}".format(command.name(session.member)),
+                f"Session for {command.name(session.member)}",
                 overwrites={
                     role: PermissionOverwrite(read_messages=True, attach_files=True, embed_links=True),
                     ra.get_student_role(): PermissionOverwrite(read_messages=False),
