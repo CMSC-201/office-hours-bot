@@ -63,11 +63,17 @@ class AcceptStudent(command.Command):
                 })
             text_channel: TextChannel = await session_category.create_text_channel("Text Chat")
             await session_category.create_voice_channel("Voice Chat")
+            if debug_mode:
+                await self.message.channel.send('Channels Created')
+
             session.room = session_category
             # attach user ids and channel ids to OH room info in channel authority
             ca: ChannelAuthority = ChannelAuthority(self.guild)
 
             await self.safe_delete(session.announcement)
+
+            if debug_mode:
+                await self.message.channel.send('Announcement Deleted')
 
             ca.add_oh_session(session)
             await text_channel.send("Hi, {} and {}!  Let the learning commence!  Type !close to end the session!".format(
