@@ -39,9 +39,9 @@ class GLSSHClient:
             self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             try:
                 if not server_number:
-                    self.ssh_client.connect(f'gl.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
+                    self.ssh_client.connect(f'linuxserver1.cs.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
                 else:
-                    self.ssh_client.connect(f'linux{server_number}.gl.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
+                    self.ssh_client.connect(f'linuxserver{server_number}.cs.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
                 logging.info('Logged into ssh on the GL server.')
             except socket.timeout:
                 self.ssh_client = None
