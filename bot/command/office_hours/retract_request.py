@@ -24,6 +24,10 @@ class RetractRequest(command.Command):
             await self.safe_delete(session.announcement)
             await self.safe_send(self.message.author, "You have been removed from the office hour queue.  ")
             await self.safe_delete(self.message, delay=7)
+            return False
+        elif new_message and new_message.content.strip().lower() not in ['y', 'yes']:
+            await self.safe_send(self.message.author, "You will not be removed from the queue.  ")
+            return False
         else:
             await self.safe_send(self.message.channel, 'Are you sure you wish to remove yourself from the office hour queue? (y/yes) or (n/no)')
             return True
