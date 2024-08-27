@@ -84,7 +84,7 @@ class MemberAuthority:
 
                     pa: PermissionAuthority = PermissionAuthority()
                     # add lab authorization.
-                    if found_person[self.__SECTION].strip():
+                    if found_person.get(self.__SECTION, '').strip():
                         section_name = found_person[self.__SECTION].strip()
                         if self.__LAB.format(section_name) in ca.lab_sections:
                             if found_group == ta_group:
