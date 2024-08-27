@@ -180,13 +180,13 @@ class UpdateUsers(command.Command):
                         await self.message.channel.send('Duplicate Student found: %s' % name_id)
                     else:
                         await self.message.channel.send('Added student: %s' % name_id)
-                    students_group.insert_one(current_student)
+                        students_group.insert_one(current_student)
                 elif current_student[self.__ROLE] == self.__TA_GROUP:
                     if ta_group.find_one({self.__UID_FIELD: current_student[self.__UID_FIELD]}):
                         await self.message.channel.send('Duplicate TA found: %s' % name_id)
                     else:
                         await self.message.channel.send('Added TA: %s' % name_id)
-                    ta_group.insert_one(current_student)
+                        ta_group.insert_one(current_student)
                 elif current_student[self.__ROLE] == self.__ADMIN_GROUP:
                     if admin_group.find_one({self.__UID_FIELD: current_student[self.__UID_FIELD]}):
                         await self.message.channel.send('Duplicate Admin Found: %s' % name_id)
