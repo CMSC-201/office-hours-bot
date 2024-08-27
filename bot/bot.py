@@ -34,7 +34,7 @@ class MyClient(discord.Client):
         if len(self.guilds) > 1:
             raise ValueError("Bot cannot manage more than one guild at this time.")
         elif len(self.guilds) == 0:
-            print('The bot is not a member of any guilds.')
+            logger.info('The bot is not a member of any guilds. Exiting...')
             return
 
         self.event_loop = asyncio.get_event_loop()
