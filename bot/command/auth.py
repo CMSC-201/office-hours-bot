@@ -1,5 +1,6 @@
 import logging
 
+import discord
 from discord import Message, Client, Member, TextChannel, CategoryChannel, PermissionOverwrite, Role, Permissions
 
 import globals
@@ -20,25 +21,33 @@ class AuthenticateStudent(command.Command):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
         key = self.message.content.split()[1]
         # fetch to start the auth process.
-        await self.message.author.send('Starting your authentication process...')
+        try:
+            await self.message.author.send('Starting your authentication process...')
+        except discord.Forbidden:
+            logger.error("Unable to send message, possibly blocked by discord")
+
         member: Member = await self.guild.fetch_member(self.message.author.id)
         result = await ma.authenticate_member(member, key)
         # fetch again to get the nickname
         member: Member = await self.guild.fetch_member(self.message.author.id)
         logger.info(str(member))
-        if result == MemberAuthority.AUTHENTICATED:
-            logger.info("Authenticated user {0.name} ({0.id}) as {0.display_name}".format(member))
-            await self.safe_send(self.message.author, '''You are now authenticated!  You can return to the office hour server.\n  
-                                I live here so I won't actually be going anywhere, but you don't have to talk to me anymore.''')
-            await self.safe_send(ca.get_maintenance_channel(), "Authenticated user {0.name} ({0.id}) as {0.display_name}".format(member))
-        elif result == MemberAuthority.SAME_ACCOUNT:
-            await self.message.author.send("This account has already been authenticated, go to the discord server for your class and you should see the rooms.")
-        elif result == MemberAuthority.DUPLICATE_ACCOUNT:
-            await self.message.author.send("This key has already been used to authenticate, and is no longer valid.\n\tIf you want to use a different account, contact course staff and tell them that you have already authenticated and want to switch accounts.")
-        elif result == MemberAuthority.UNABLE_TO_UPDATE:
-            await self.message.author.send("There was an internal database error, unable to update with new discord id.  Try again. ")
-        else:
-            await self.message.author.send("There is no user account associated with this key.\n\tTry again, make sure to copy and paste the key with !auth.\n\tIf you're still having trouble, please contact course staff.")
+        try:
+            if result == MemberAuthority.AUTHENTICATED:
+                logger.info("Authenticated user {0.name} ({0.id}) as {0.display_name}".format(member))
+                await self.safe_send(self.message.author, '''You are now authenticated!  You can return to the office hour server.\n  
+                                    I live here so I won't actually be going anywhere, but you don't have to talk to me anymore.''')
+                await self.safe_send(ca.get_maintenance_channel(), "Authenticated user {0.name} ({0.id}) as {0.display_name}".format(member))
+            elif result == MemberAuthority.SAME_ACCOUNT:
+                await self.message.author.send("This account has already been authenticated, go to the discord server for your class and you should see the rooms.")
+            elif result == MemberAuthority.DUPLICATE_ACCOUNT:
+                await self.message.author.send("This key has already been used to authenticate, and is no longer valid.\n\tIf you want to use a different account, contact course staff and tell them that you have already authenticated and want to switch accounts.")
+            elif result == MemberAuthority.UNABLE_TO_UPDATE:
+                await self.message.author.send("There was an internal database error, unable to update with new discord id.  Try again. ")
+            else:
+                await self.message.author.send("There is no user account associated with this key.\n\tTry again, make sure to copy and paste the key with !auth.\n\tIf you're still having trouble, please contact course staff.")
+        except discord.Forbidden:
+            logger.error("Unable to send message, possibly blocked by discord")
+
         if self.message.guild:
             await self.message.delete()
 
