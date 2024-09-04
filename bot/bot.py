@@ -59,12 +59,16 @@ class MyClient(discord.Client):
         await handle_message(message, self)
 
     async def on_member_join(self, member: Member):
-        global_info = get_globals()
-        class_name = global_info['props'].get('class_name', 'CMSC 201')
-        bot_name = global_info['props'].get('bot_name', 'CMSC 201 Bot')
-        await member.send(f'Welcome to Discord Office Hours for {class_name}\n '
-                          f'I am the {bot_name}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
-
+        """
+            We would like to send the users messages, but I've commented this out because there has been a change
+            where the bots are being flagged as spam.
+        """
+        # global_info = get_globals()
+        # class_name = global_info['props'].get('class_name', 'CMSC 201')
+        # bot_name = global_info['props'].get('bot_name', 'CMSC 201 Bot')
+        # await member.send(f'Welcome to Discord Office Hours for {class_name}\n '
+        #                  f'I am the {bot_name}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.')
+        pass
 
 def set_up_logs(bot_prefix):
     FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
