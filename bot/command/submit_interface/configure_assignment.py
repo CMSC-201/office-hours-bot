@@ -24,6 +24,8 @@ class AssignmentCreationThread(Thread):
     __STUDENTS_GROUP = 'student'
     __USERNAME = 'UMBC-Name-Id'
     __SECTION = 'Section'
+    __FIRST_NAME = 'First-Name'
+    __LAST_NAME = 'Last-Name'
 
     __ROSTER_NAME = 'submit_roster.csv'
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
@@ -54,9 +56,9 @@ class AssignmentCreationThread(Thread):
 
         with open(os.path.join('csv_dump', self.__ROSTER_NAME), 'w', newline='') as csv_file:
             roster = csv.writer(csv_file)
-            roster_list = [[student[self.__USERNAME], student[self.__SECTION]] for student in students_group.find()]
-            roster_list.extend([[ta[self.__USERNAME], ta[self.__SECTION]] for ta in ta_group.find()])
-            roster_list.extend([[admin[self.__USERNAME], 0] for admin in admin_group.find()])
+            roster_list = [[student[self.__USERNAME], student[self.__SECTION], f"{student[self.__FIRST_NAME]} {student[self.__LAST_NAME]}"] for student in students_group.find()]
+            roster_list.extend([[ta[self.__USERNAME], ta[self.__SECTION] if ta[self.__SECTION].strip() else '0', f"{ta[self.__FIRST_NAME]} {ta[self.__LAST_NAME]}"] for ta in ta_group.find()])
+            roster_list.extend([[admin[self.__USERNAME], 0, f"{admin[self.__FIRST_NAME]} {admin[self.__LAST_NAME]}"] for admin in admin_group.find()])
             roster.writerows(roster_list)
             self.async_message_send('\tWriting New Roster. ')
 
