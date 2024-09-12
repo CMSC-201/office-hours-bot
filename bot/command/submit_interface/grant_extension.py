@@ -68,12 +68,14 @@ class ExtensionThread(Thread):
             sftp_client.close()
 
             _, output, errors = ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
+
             print(output.read())
             print(errors.read())
             if self.maintenance_channel and self.main_loop:
                 asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Extension Thread: SSH Command Executed'), self.main_loop)
         except Exception as e:
-            print(e)
+            if self.maintenance_channel and self.main_loop:
+                asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(e), self.main_loop)
 
 
 @command.command_class
