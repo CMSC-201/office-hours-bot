@@ -40,6 +40,7 @@ class StudentExtensionClosureThread(Thread, GLSSHClient):
 
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __CLOSE_STUDENT_EXTENSION = '/admin/close_extension.py {} student={}'
+    __COPY_STUDENT_EXTENSION = '/admin/copy_extension.py {} {} {}'
 
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
@@ -114,8 +115,15 @@ class StudentExtensionClosureThread(Thread, GLSSHClient):
             message = f'{self.student} ({the_student[self.__UID_FIELD]})\'s extension for assignment {self.assignment} is now closed.  You should recopy the files and begin grading. '
             self.threadsafe_send_message(self.maintenance_channel, maintenance_message)
 
-            # logging.info('Copying {} extension for student {}'.format(assignment['name'], assignment['student']))
-            # self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__COPY_STUDENT_EXTENSION.format(assignment['name'], assignment['student'], ''))
+            ta = ta_group.find_one({self.__SECTION: the_student[self.__SECTION]})
+            if ta:
+                ta_username = ta[self.__USERNAME]
+            else:
+                ta_username = ""
+
+            logging.info('Copying {} extension for student {}'.format(self.assignment, self.student))
+            self.ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + self.__COPY_STUDENT_EXTENSION
+                                         .format(self.assignment, self.student, ta_username))
 
             # maybe stick these into a database to be safe, but for now let's just try to get this new process working
             self.status_report['student-section'] = the_student[self.__SECTION]
