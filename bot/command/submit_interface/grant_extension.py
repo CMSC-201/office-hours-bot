@@ -1,5 +1,6 @@
 import re
 import os
+import logging
 from discord import Message, Client, User
 
 from paramiko.client import SSHClient
@@ -15,18 +16,22 @@ from datetime import datetime
 from channels import ChannelAuthority
 
 
+logger = logging.getLogger('bot_main')
+
+
 class ExtensionThread(Thread):
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
     __ROSTER_NAME = 'submit_roster.csv'
     __EXTENSIONS_NAME = 'extensions.json'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
 
-    def __init__(self, client, maintenance_channel=None, main_loop=None, assignments=None):
+    def __init__(self, client, maintenance_channel=None, main_loop=None, assignments=None, **kwargs):
         super().__init__(daemon=True)
         self.client = client
         self.maintenance_channel = maintenance_channel
         self.main_loop = main_loop
         self.assignments = assignments if assignments is not None else mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        self.debug_level = kwargs.get('debug_level', 0)
 
     @staticmethod
     def create_extensions_json(assignments):
@@ -57,22 +62,40 @@ class ExtensionThread(Thread):
             extension_file.write(extension_json)
         return extension_path
 
+    def send_maintenance_message(self, message):
+        if self.maintenance_channel and self.main_loop:
+            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(message), self.main_loop)
+
     def run(self):
+        if self.debug_level >= 1:
+            logger.info('Extension SSH Login Starting')
         ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
-        server_roster_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__ROSTER_NAME
-        server_extension_path = self.__BASE_SUBMIT_DIR + '/admin/' + self.__EXTENSIONS_NAME
+        if self.debug_level >= 1:
+            logger.info('Extension SSH Login Complete')
+        server_roster_path = os.path.join(self.__BASE_SUBMIT_DIR, 'admin', self.__ROSTER_NAME)
+        server_extension_path = os.path.join(self.__BASE_SUBMIT_DIR, 'admin', self.__EXTENSIONS_NAME)
         try:
             extension_path = self.write_extension_file(self.assignments)
+            if self.debug_level >= 2:
+                logger.info(f'Extension Path {extension_path}')
+
+            if self.debug_level >= 1:
+                logger.info('Starting FTP of Extension File')
             sftp_client: SFTPClient = ssh_client.open_sftp()
             sftp_client.put(extension_path, server_extension_path)
             sftp_client.close()
+            if self.debug_level >= 1:
+                logger.info('Ending FTP of Extension File, Executing server command to extend')
 
-            _, output, errors = ssh_client.exec_command('python3 ' + self.__BASE_SUBMIT_DIR + '/admin/grant_extension.py {} {}'.format(server_roster_path, server_extension_path))
+            _, output, errors = ssh_client.exec_command(f'python {os.path.join(self.__BASE_SUBMIT_DIR, "admin", "grant_extension.py")} {server_roster_path} {server_extension_path}')
 
-            print(output.read())
-            print(errors.read())
-            if self.maintenance_channel and self.main_loop:
-                asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Extension Thread: SSH Command Executed'), self.main_loop)
+            if self.debug_level >= 1:
+                logger.info('Extension Command sent to server.')
+
+            logging.info(output.read())
+            logging.info(errors.read())
+
+            self.send_maintenance_message(f'Extension Thread: SSH Command Executed, Extension Granted on Server')
         except Exception as e:
             if self.maintenance_channel and self.main_loop:
                 asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(e), self.main_loop)
@@ -80,7 +103,7 @@ class ExtensionThread(Thread):
 
 @command.command_class
 class GrantIndividualExtension(command.Command):
-    __COMMAND_REGEX = r"!submit\s+(grant|give)\s+extension\s+(?P<assign_name>\w+)\s+((section\s*=\s*(?P<section_id>\w+))|(student\s*=\s*(?P<student_id>\w+)))\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+--admin=(?P<admin>\w+))?"
+    __COMMAND_REGEX = r"!submit\s+(grant|give)\s+extension\s+(?P<assign_name>\w+)\s+((section\s*=\s*(?P<section_id>\w+))|(student\s*=\s*(?P<student_id>\w+)))\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+--debug-level\s*=\s*(?P<debug_level>\d+))?"
 
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
@@ -125,6 +148,7 @@ class GrantIndividualExtension(command.Command):
             return
         section_id = match.group('section_id')
         student_id = match.group('student_id')
+        debug_level = int(match.group('debug_level')) if match.group('debug_level') else 0
         due_date = datetime.strptime(' '.join([match.group('due_date'), match.group('due_time')]), '%m-%d-%Y %H:%M:%S')
 
         if 'student-extensions' not in assignment:
@@ -139,7 +163,7 @@ class GrantIndividualExtension(command.Command):
 
         # update the server side database
         submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
-        the_extension_thread = ExtensionThread(self.client, ca.get_maintenance_channel(), asyncio.get_event_loop(), submit_assign)
+        the_extension_thread = ExtensionThread(self.client, ca.get_maintenance_channel(), asyncio.get_event_loop(), submit_assign, debug_level=debug_level)
 
         # find and message the TA that an extension has been granted for a student
         student_col = mongo.db[self.__STUDENTS_GROUP]
@@ -155,7 +179,7 @@ class GrantIndividualExtension(command.Command):
             if the_student:
 
                 the_student_name = ' '.join([the_student[self.__FIRST_NAME], the_student[self.__LAST_NAME]])
-                message = '{} ({}) has been granted an extension until {} for assignment {}.'.format(the_student_name, student_id, due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+                message = f'{the_student_name} ({student_id}) will be granted an extension until {due_date.strftime("%m-%d-%Y %H:%M:%S")} for assignment {assignment["name"]}. \n Extension is granted if the next message appears. '
                 await ca.get_maintenance_channel().send(message)
 
                 for admin in admin_collection.find({self.__SECTION: the_student[self.__SECTION]}):
@@ -169,7 +193,7 @@ class GrantIndividualExtension(command.Command):
                 await self.message.channel.send('Unable to find the student {}, no extension was granted. '.format(student_id))
         # if it's a section extension, send the TA an update on their section's extension
         elif section_id:
-            message = 'Your section has been granted an extension until {} for assignment {}.'.format(due_date.strftime('%m-%d-%Y %H:%M:%S'), assignment['name'])
+            message = f'Your section will be granted an extension until {due_date.strftime("%m-%d-%Y %H:%M:%S")} for assignment {assignment["name"]}.\n Extension is granted if the next message appears. '
 
             for admin in admin_collection.find({self.__SECTION: section_id}):
                 ta_discord_user: User = await self.client.fetch_user(admin[self.__DISCORD_ID])
@@ -181,7 +205,7 @@ class GrantIndividualExtension(command.Command):
 
     @staticmethod
     async def is_invoked_by_message(message: Message, client: Client):
-        __COMMAND_REGEX = r"!submit\s+(grant|give)\s+extension\s+(?P<assign_name>\w+)\s+((section\s*=\s*(?P<section_id>\w+))|(student\s*=\s*(?P<student_id>\w+)))\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})"
+        __COMMAND_REGEX = r"!submit\s+(grant|give)\s+extension\s+(?P<assign_name>\w+)\s+((section\s*=\s*(?P<section_id>\w+))|(student\s*=\s*(?P<student_id>\w+)))\s+(?P<due_date>\d{2}-\d{2}-\d{4})\s+(?P<due_time>\d{2}:\d{2}:\d{2})(\s+--debug-level\s*=\s*(?P<debug_level>\d+))?"
         if re.match(__COMMAND_REGEX, message.content):
             return True
         return False
