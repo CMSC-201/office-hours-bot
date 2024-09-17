@@ -133,10 +133,8 @@ class GrantIndividualExtension(command.Command):
             await self.message.channel.send("Usage: !submit grant extension [assignment] [student=[student_username]] [section=section_number] [MM-DD-YYYY] [HH:MM:SS]")
             return
         submit_col = mongo.db[self.__SUBMIT_SYSTEM_ADMINS]
-        if match.group('admin'):
-            admin_match = submit_col.find_one({'username': match.group('admin')})
-        else:
-            admin_match = submit_col.find_one({})
+
+        admin_match = submit_col.find_one({})
         if not admin_match:
             await self.message.channel.send('Unable to find administrator account, terminating.')
             return
