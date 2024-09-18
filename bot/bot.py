@@ -32,7 +32,7 @@ class MyClient(discord.Client):
     async def on_ready(self):
         logger.info('Logged on as {0}!'.format(self.user))
         if len(self.guilds) > 1:
-            raise ValueError("Bot cannot manage more than one guild at this time.")
+            logger.info("Bot cannot manage more than one guild at this time, probably.")
         elif len(self.guilds) == 0:
             logger.info('The bot is not a member of any guilds. Exiting...')
             return
