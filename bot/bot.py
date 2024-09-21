@@ -1,5 +1,6 @@
 import logging
 
+import mongo
 import time
 import asyncio
 import discord
@@ -35,6 +36,12 @@ class MyClient(discord.Client):
             logger.info("Bot cannot manage more than one guild at this time, probably.")
             for guild in self.guilds:
                 logger.info(f"{guild.name} has id {guild.id}")
+            logger.info("Checking for default server in database...")
+            approved_guilds = mongo.db['approved-guilds']
+            for guild in self.guilds:
+                if guild.id != approved_guilds.find_one({'guild-id': guild.id}):
+                    logger.info(f"Leaving unapproved guild {guild.name} with id {guild.id}")
+                    await guild.leave()
         elif len(self.guilds) == 0:
             logger.info('The bot is not a member of any guilds. Exiting...')
             return
