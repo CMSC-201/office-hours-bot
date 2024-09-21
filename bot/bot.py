@@ -33,6 +33,8 @@ class MyClient(discord.Client):
         logger.info('Logged on as {0}!'.format(self.user))
         if len(self.guilds) > 1:
             logger.info("Bot cannot manage more than one guild at this time, probably.")
+            for guild in self.guilds:
+                logger.info(f"{guild.name} has id {guild.id}")
         elif len(self.guilds) == 0:
             logger.info('The bot is not a member of any guilds. Exiting...')
             return
