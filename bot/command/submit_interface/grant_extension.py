@@ -32,6 +32,8 @@ class ExtensionThread(Thread):
         self.main_loop = main_loop
         self.assignments = assignments if assignments is not None else mongo.db[self.__SUBMIT_ASSIGNMENTS]
         self.debug_level = kwargs.get('debug_level', 0)
+        self.student_id = kwargs.get('student_id', '')
+        self.assignment_name = kwargs.get('assignment_name', '')
 
     @staticmethod
     def create_extensions_json(assignments):
@@ -89,13 +91,20 @@ class ExtensionThread(Thread):
 
             _, output, errors = ssh_client.exec_command(f'python {os.path.join(self.__BASE_SUBMIT_DIR, "admin", "grant_extension.py")} {server_roster_path} {server_extension_path}')
 
+            self.send_maintenance_message(f'Extension Thread: SSH Command Executed, Extension Granted on Server')
+
+            if self.student_id and self.assignment_name:
+                path = f"{self.__BASE_SUBMIT_DIR}/{self.assignment_name}/{self.student_id}"
+                _, std_out, _ = ssh_client.exec_command(f"fs la {path} {self.student_id}")
+                if f"{self.student_id} rlidwk" in std_out.read().decode('utf-8'):
+                    self.send_maintenance_message(f'Extension Thread: Write Permissions Verified for {self.student_id} on assignment {self.assignment_name}')
+
             if self.debug_level >= 1:
                 logger.info('Extension Command sent to server.')
 
             logging.info(output.read())
             logging.info(errors.read())
 
-            self.send_maintenance_message(f'Extension Thread: SSH Command Executed, Extension Granted on Server')
         except Exception as e:
             if self.maintenance_channel and self.main_loop:
                 asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(e), self.main_loop)
@@ -140,6 +149,7 @@ class GrantIndividualExtension(command.Command):
             return
 
         submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
+        assignment_name = match.group('assign_name')
         assignment = submit_assign.find_one({'name': match.group('assign_name')})
         if not assignment:
             await self.message.channel.send('Assignment {} not found'.format(match.group('assign_name')))
@@ -161,7 +171,8 @@ class GrantIndividualExtension(command.Command):
 
         # update the server side database
         submit_assign.replace_one({self.__MONGO_ID: assignment[self.__MONGO_ID]}, assignment)
-        the_extension_thread = ExtensionThread(self.client, ca.get_maintenance_channel(), asyncio.get_event_loop(), submit_assign, debug_level=debug_level)
+        the_extension_thread = ExtensionThread(self.client, ca.get_maintenance_channel(), asyncio.get_event_loop(), submit_assign,
+                                               debug_level=debug_level, student_id=student_id, assignment_name=assignment_name)
 
         # find and message the TA that an extension has been granted for a student
         student_col = mongo.db[self.__STUDENTS_GROUP]
