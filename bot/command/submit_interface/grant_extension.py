@@ -94,8 +94,10 @@ class ExtensionThread(Thread):
             self.send_maintenance_message(f'Extension Thread: SSH Command Executed, Extension Granted on Server')
 
             if self.student_id and self.assignment_name:
+                logging.info("Entering extension verification...")
                 path = f"{self.__BASE_SUBMIT_DIR}/{self.assignment_name}/{self.student_id}"
                 _, std_out, _ = ssh_client.exec_command(f"fs la {path} {self.student_id}")
+                logging.info(std_out.read().decode('utf-8'))
                 if f"{self.student_id} rlidwk" in std_out.read().decode('utf-8'):
                     self.send_maintenance_message(f'Extension Thread: Write Permissions Verified for {self.student_id} on assignment {self.assignment_name}')
 
