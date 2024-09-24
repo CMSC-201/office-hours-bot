@@ -34,6 +34,12 @@ class GLSSHClient:
         if self.ssh_client and (not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active()):
             self.ssh_client = None
 
+        if self.ssh_client:
+            try:
+                _, standard_out, _ = self.ssh_client.exec_command("pwd", timeout=5.0)
+            except socket.timeout:
+                self.ssh_client = None
+
         if not self.ssh_client:
             self.ssh_client = paramiko.client.SSHClient()
             self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -46,8 +52,6 @@ class GLSSHClient:
             except socket.timeout:
                 self.ssh_client = None
             except socket.gaierror:
-                self.ssh_client = None
-            except TimeoutError:
                 self.ssh_client = None
             except AuthenticationException:
                 logging.info('GL server not able to authenticate.')
