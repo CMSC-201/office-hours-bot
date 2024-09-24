@@ -32,15 +32,18 @@ class GLSSHClient:
         :return: the ssh_client
         """
         if self.ssh_client and (not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active()):
+            logging.info('ssh_client: not active, resetting the client')
             self.ssh_client = None
 
         if self.ssh_client:
             try:
                 _, standard_out, _ = self.ssh_client.exec_command("pwd", timeout=5.0)
             except socket.timeout:
+                logging.info('ssh_client: test command timed out, resetting')
                 self.ssh_client = None
 
         if not self.ssh_client:
+            logging.info('ssh_client: reassigning ssh client and logging in')
             self.ssh_client = paramiko.client.SSHClient()
             self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             try:
@@ -50,6 +53,7 @@ class GLSSHClient:
                     self.ssh_client.connect(f'linux{server_number}.gl.umbc.edu', username=self.login_info['username'], password=self.login_info['password'], timeout=timeout)
                 logging.info('Logged into ssh on the GL server.')
             except socket.timeout:
+                logging.info('ssh_client: timed out on reassign')
                 self.ssh_client = None
             except socket.gaierror:
                 self.ssh_client = None
