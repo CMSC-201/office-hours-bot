@@ -135,7 +135,7 @@ class StudentExtensionClosureThread(Thread, GLSSHClient):
         except AlreadyClosingException as ace:
             logging.info('Preventing Multiple Runs: ' + ace.message)
         finally:
-            if self.lock:
+            if self.lock.locked():
                 self.lock.release()
 
 
