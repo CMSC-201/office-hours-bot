@@ -6,6 +6,8 @@ from discord import Message, Client, User
 from paramiko.client import SSHClient
 from paramiko import SFTPClient
 
+from socket import timeout
+
 import command
 import globals
 import mongo
@@ -69,27 +71,25 @@ class ExtensionThread(Thread):
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(message), self.main_loop)
 
     def run(self):
-        if self.debug_level >= 1:
-            logger.info('Extension SSH Login Starting')
+        logger.info('Extension SSH Login Starting')
         ssh_client: SSHClient = self.client.submit_daemon.connect_ssh()
-        if self.debug_level >= 1:
-            logger.info('Extension SSH Login Complete')
+        logger.info('Extension SSH Login Complete')
+
         server_roster_path = os.path.join(self.__BASE_SUBMIT_DIR, 'admin', self.__ROSTER_NAME)
         server_extension_path = os.path.join(self.__BASE_SUBMIT_DIR, 'admin', self.__EXTENSIONS_NAME)
         try:
             extension_path = self.write_extension_file(self.assignments)
-            if self.debug_level >= 2:
-                logger.info(f'Extension Path {extension_path}')
 
-            if self.debug_level >= 1:
-                logger.info('Starting FTP of Extension File')
+            logger.info(f'Extension Path {extension_path}')
+            logger.info('Starting FTP of Extension File')
+
             sftp_client: SFTPClient = ssh_client.open_sftp()
             sftp_client.put(extension_path, server_extension_path)
             sftp_client.close()
-            if self.debug_level >= 1:
-                logger.info('Ending FTP of Extension File, Executing server command to extend')
 
-            _, output, errors = ssh_client.exec_command(f'python {os.path.join(self.__BASE_SUBMIT_DIR, "admin", "grant_extension.py")} {server_roster_path} {server_extension_path}')
+            logger.info('Ending FTP of Extension File, Executing server command to extend')
+
+            _, output, errors = ssh_client.exec_command(f'python {os.path.join(self.__BASE_SUBMIT_DIR, "admin", "grant_extension.py")} {server_roster_path} {server_extension_path}', timeout=5.0)
 
             self.send_maintenance_message(f'Extension Thread: SSH Command Executed, Extension Granted on Server')
 
@@ -101,12 +101,13 @@ class ExtensionThread(Thread):
                 if f"{self.student_id} rlidwk" in std_out.read().decode('utf-8'):
                     self.send_maintenance_message(f'Extension Thread: Write Permissions Verified for {self.student_id} on assignment {self.assignment_name}')
 
-            if self.debug_level >= 1:
-                logger.info('Extension Command sent to server.')
+            logger.info('Extension Command sent to server.')
 
             logging.info(output.read())
             logging.info(errors.read())
-
+        except timeout:
+            if self.maintenance_channel and self.main_loop:
+                asyncio.run_coroutine_threadsafe(self.maintenance_channel.send("Connection or command timed out, extension not granted."), self.main_loop)
         except Exception as e:
             if self.maintenance_channel and self.main_loop:
                 asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(e), self.main_loop)
@@ -152,9 +153,9 @@ class GrantIndividualExtension(command.Command):
 
         submit_assign = mongo.db[self.__SUBMIT_ASSIGNMENTS]
         assignment_name = match.group('assign_name')
-        assignment = submit_assign.find_one({'name': match.group('assign_name')})
+        assignment = submit_assign.find_one({'name': assignment_name})
         if not assignment:
-            await self.message.channel.send('Assignment {} not found'.format(match.group('assign_name')))
+            await self.message.channel.send(f'Assignment {assignment_name} not found.')
             return
         section_id = match.group('section_id')
         student_id = match.group('student_id')
