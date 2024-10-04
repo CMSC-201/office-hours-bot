@@ -33,6 +33,7 @@ class GLSSHClient:
         """
         if self.ssh_client and (not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active()):
             logging.info('ssh_client: not active, resetting the client')
+            self.ssh_client.close()
             self.ssh_client = None
 
         if self.ssh_client:
@@ -40,6 +41,7 @@ class GLSSHClient:
                 _, standard_out, _ = self.ssh_client.exec_command("pwd", timeout=5.0)
             except socket.timeout:
                 logging.info('ssh_client: test command timed out, resetting')
+                self.ssh_client.close()
                 self.ssh_client = None
 
         if not self.ssh_client:
