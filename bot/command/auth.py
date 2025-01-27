@@ -75,10 +75,9 @@ class AuthenticateStudent(command.Command):
         class_name = globals.get_globals()['props'].get('class_name', 'CMSC 201')
         bot_name = globals.get_globals()['props'].get('class_name', '201Bot')
         if message.content.startswith("!auth resend"):
-            await message.author.send('Welcome to Discord Office Hours for {}\n I am the {}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.'.format(class_name, bot_name))
+            await message.channel.send('Welcome to Discord Office Hours for {}\n I am the {}.\n  Send me a message with !auth (your key pasted here), and we\'ll authenticate you on the channel.'.format(class_name, bot_name))
         elif message.content.startswith("!auth"):
-            await message.author.send("Don't share your key via any channel, only send it to me, the discord bot in a DM!")
-            await message.delete(delay=5)
+            return True
         return False
 
     @classmethod
