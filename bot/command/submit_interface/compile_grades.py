@@ -30,7 +30,7 @@ class CompileGradesThread(Thread):
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
 
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
-    __FINALIZE_GRADING_SCRIPT = '/admin/finalize_grading.py {} --{}'
+    __FINALIZE_GRADING_SCRIPT = '/admin/finalize_grading.py {} --{} --force'
 
     def __init__(self, assignment: str, suffix: str, message_event_loop, maintenance_channel):
         """
