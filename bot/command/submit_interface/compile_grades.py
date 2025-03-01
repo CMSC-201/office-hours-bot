@@ -30,7 +30,7 @@ class CompileGradesThread(Thread):
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
 
     __BASE_SUBMIT_DIR = globals.get_globals()['props']['base_submit_dir']
-    __FINALIZE_GRADING_SCRIPT = '/admin/finalize_grading.py {} {}'
+    __FINALIZE_GRADING_SCRIPT = '/admin/finalize_grading.py {} --{}'
 
     def __init__(self, assignment: str, suffix: str, message_event_loop, maintenance_channel):
         """
@@ -67,7 +67,7 @@ class CompileGradesThread(Thread):
 
     def run(self):
         asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Compiling Grades for {self.assignment} with suffix {self.suffix}'), self.event_loop)
-        assignment_name = self.assignment
+        assignment_name = self.assignment['name']
         assignment = self.assignments.find_one({'name': assignment_name})
         if not assignment:
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('Assignment {} was not found. '.format(assignment_name)), self.event_loop)
