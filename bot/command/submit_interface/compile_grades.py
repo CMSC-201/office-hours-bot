@@ -10,7 +10,7 @@ import csv
 import asyncio
 from typing import Optional
 from datetime import datetime, timedelta
-from discord import Message, Client
+from discord import Message, Client, File
 from channels import ChannelAuthority
 
 import paramiko
@@ -100,8 +100,9 @@ class CompileGradesThread(Thread):
 
         asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'FTP Operation Completed. '), self.event_loop)
         if os.path.isfile(file_destination):
-            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=file_destination),
-                                             self.event_loop)
+            with open(file_destination, 'rb') as grades_file:
+                asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=File(grades_file)),
+                                                 self.event_loop)
         else:
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} file was not found: '), self.event_loop)
 
