@@ -95,7 +95,7 @@ class CompileGradesThread(Thread):
         file_destination = os.path.join('csv_dump', f'{assignment_name}_{self.suffix.upper()}_grades.csv')
         ftp_client.get(os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name.upper()}_{self.suffix.upper()}',
                                     f'{assignment_name}_{self.suffix.upper()}_grades.csv'), file_destination)
-        if os.path.isfile(os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name}_{self.suffix.upper()}_grades.csv')):
+        if os.path.isfile(file_destination):
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=file_destination), self.event_loop)
         else:
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} file was not found: '), self.event_loop)
