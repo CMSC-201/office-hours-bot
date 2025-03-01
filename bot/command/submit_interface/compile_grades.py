@@ -93,8 +93,8 @@ class CompileGradesThread(Thread):
         # get the grades CSV file
         ftp_client = self.ssh_client.open_sftp()
         file_destination = os.path.join('csv_dump', f'{assignment_name}_{self.suffix.upper()}_grades.csv')
-        ftp_client.get(os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', '{assignment_name}_{self.suffix}_grades.csv'),
-                       file_destination)
+        ftp_client.get(os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name.upper()}_{self.suffix.upper()}',
+                                    f'{assignment_name}_{self.suffix.upper()}_grades.csv'), file_destination)
         if os.path.isfile(os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name}_{self.suffix.upper()}_grades.csv')):
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=file_destination), self.event_loop)
         else:
