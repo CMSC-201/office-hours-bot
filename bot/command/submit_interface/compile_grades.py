@@ -98,6 +98,7 @@ class CompileGradesThread(Thread):
         ftp_client.get(file_source, file_destination)
         ftp_client.close()
 
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'FTP Operation Completed. '), self.event_loop)
         if os.path.isfile(file_destination):
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=file_destination),
                                              self.event_loop)
