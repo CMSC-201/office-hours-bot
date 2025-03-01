@@ -66,14 +66,8 @@ class CompileGradesThread(Thread):
         return self.ssh_client
 
     def run(self):
-        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Compiling Grades for {self.assignment["name"]} with suffix {self.suffix}'), self.event_loop)
-        assignment_name = self.assignment['name']
-        assignment = self.assignments.find_one({'name': assignment_name})
-        if not assignment:
-            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('Assignment {} was not found. '.format(assignment_name)), self.event_loop)
-            logging.info(f'Assignment {assignment_name} was not found.')
-            return
-
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Compiling Grades for {self.assignment} with suffix {self.suffix}'), self.event_loop)
+        assignment_name = self.assignment
         logging.info(f'Running compile grade script for assignment {assignment_name}')
 
         self.ssh_client = self.connect_ssh()
@@ -96,9 +90,9 @@ class CompileGradesThread(Thread):
 
         # get the grades CSV file
         ftp_client = self.ssh_client.open_sftp()
-        file_source = os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name.upper()}_{self.suffix.upper()}',
-                                   f'{assignment_name}_{self.suffix.upper()}_grades.csv')
-        file_destination = os.path.join('csv_dump', f'{assignment_name}_{self.suffix.upper()}_grades.csv')
+        file_source = os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name.upper()}',
+                                   f'{assignment_name}_grades.csv')
+        file_destination = os.path.join('csv_dump', f'{assignment_name}_grades.csv')
 
         asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Looking for grades file at {file_source} saving to {file_destination} '), self.event_loop)
         ftp_client.get(file_source, file_destination)
@@ -113,7 +107,7 @@ class CompileGradesThread(Thread):
 
 @command.command_class
 class CompileGrades(command.Command):
-    __COMMAND_REGEX = r"!submit\s+compile\s+grades\s+(?P<assign_name>\w+) (?P<suffix>\w+)"
+    __COMMAND_REGEX = r"!submit\s+compile\s+grades\s+(?P<assign_name>(\w+|[_])) (?P<suffix>\w+)"
     __SUBMIT_SYSTEM_ADMINS = 'submit-system-admins'
     __SUBMIT_ASSIGNMENTS = 'submit-assignments'
 
@@ -131,17 +125,12 @@ class CompileGrades(command.Command):
     @command.Command.require_maintenance
     async def handle(self):
         ca: ChannelAuthority = ChannelAuthority(self.guild)
-        assignments = mongo.db[self.__SUBMIT_ASSIGNMENTS]
         the_match = re.match(self.__COMMAND_REGEX, self.message.content)
         if not the_match:
             await self.message.channel.send('Assignment Compile Grades Error: Does not match template.  !submit compile grades <assignment name>')
         assignment_name = the_match.group('assign_name')
         suffix = the_match.group('suffix')
-        assignment = assignments.find_one({'name': assignment_name})
-        if assignment:
-            CompileGradesThread(assignment, suffix, asyncio.get_event_loop(), ca.get_maintenance_channel()).start()
-        else:
-            await self.message.channel.send(f'Assignment {assignment_name} not found. ')
+        CompileGradesThread(assignment_name, suffix, asyncio.get_event_loop(), ca.get_maintenance_channel()).start()
 
     @classmethod
     async def is_invoked_by_message(cls, message: Message, client: Client):
