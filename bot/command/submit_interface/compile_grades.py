@@ -88,20 +88,28 @@ class CompileGradesThread(Thread):
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('\tCompiling the Grades for {} with {} Caused an Error '.format(assignment_name, self.suffix) +
                                                                            '\n' + error_string), self.event_loop)
         else:
-            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('\tCompiling the Grades for {} with {} Completed Successfully. '.format(assignment_name, self.suffix)), self.event_loop)
+            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('\tCompiling the Grades for {} with {} Completed Successfully. '.format(assignment_name, self.suffix)),
+                                             self.event_loop)
 
         if not os.path.isdir('csv_dump'):
             os.mkdir('csv_dump')
 
         # get the grades CSV file
         ftp_client = self.ssh_client.open_sftp()
+        file_source = os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name.upper()}_{self.suffix.upper()}',
+                                   f'{assignment_name}_{self.suffix.upper()}_grades.csv')
         file_destination = os.path.join('csv_dump', f'{assignment_name}_{self.suffix.upper()}_grades.csv')
-        ftp_client.get(os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name.upper()}_{self.suffix.upper()}',
-                                    f'{assignment_name}_{self.suffix.upper()}_grades.csv'), file_destination)
+
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Looking for grades file at {file_source} saving to {file_destination} '), self.event_loop)
+        ftp_client.get(file_source, file_destination)
+        ftp_client.close()
+
         if os.path.isfile(file_destination):
-            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=file_destination), self.event_loop)
+            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=file_destination),
+                                             self.event_loop)
         else:
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} file was not found: '), self.event_loop)
+
 
 @command.command_class
 class CompileGrades(command.Command):
