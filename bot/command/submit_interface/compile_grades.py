@@ -90,6 +90,9 @@ class CompileGradesThread(Thread):
         else:
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send('\tCompiling the Grades for {} with {} Completed Successfully. '.format(assignment_name, self.suffix)), self.event_loop)
 
+        if not os.path.isdir('csv_dump'):
+            os.mkdir('csv_dump')
+
         # get the grades CSV file
         ftp_client = self.ssh_client.open_sftp()
         file_destination = os.path.join('csv_dump', f'{assignment_name}_{self.suffix.upper()}_grades.csv')
