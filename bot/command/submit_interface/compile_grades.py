@@ -66,7 +66,7 @@ class CompileGradesThread(Thread):
         return self.ssh_client
 
     def run(self):
-        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Compiling Grades for {self.assignment} with suffix {self.suffix}'), self.event_loop)
+        asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'Compiling Grades for {self.assignment["name"]} with suffix {self.suffix}'), self.event_loop)
         assignment_name = self.assignment['name']
         assignment = self.assignments.find_one({'name': assignment_name})
         if not assignment:
@@ -97,6 +97,8 @@ class CompileGradesThread(Thread):
                        file_destination)
         if os.path.isfile(os.path.join(self.__BASE_SUBMIT_DIR, 'admin', 'grades', f'{assignment_name}_{self.suffix.upper()}_grades.csv')):
             asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} are here: ', file=file_destination), self.event_loop)
+        else:
+            asyncio.run_coroutine_threadsafe(self.maintenance_channel.send(f'The grades for {assignment_name} with {self.suffix.upper()} file was not found: '), self.event_loop)
 
 @command.command_class
 class CompileGrades(command.Command):
