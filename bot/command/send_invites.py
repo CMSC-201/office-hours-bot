@@ -4,15 +4,12 @@ from discord import Message, Client, Attachment
 import ssl
 import smtplib
 import asyncio
-import hashlib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import re
 import command
 import mongo
-from globals import get_globals
-from queues import QueueAuthority
 from roles import RoleAuthority
 from channels import ChannelAuthority
 
@@ -32,6 +29,7 @@ class SendInvites(command.Command):
     __TYPE = 'type'
     __EMAIL_SENT = 'email-sent'
     __MONGO_ID = '_id'
+    __DISCORD_ID = 'discord'
 
     permissions = {'student': False, 'ta': False, 'admin': True}
     state_variables = {__EMAIL_USERNAME: '', __EMAIL_PASSWORD: ''}
@@ -45,7 +43,7 @@ class SendInvites(command.Command):
             self.state_variables[self.__EMAIL_USERNAME] = email_settings[self.__EMAIL_USERNAME]
             self.state_variables[self.__EMAIL_PASSWORD] = email_settings[self.__EMAIL_PASSWORD]
 
-    def get_user_send_group(self, group, new=False):
+    def get_user_send_group(self, group, new=False, unauthed=False):
         students_group = mongo.db[self.__STUDENTS_GROUP]
         ta_group = mongo.db[self.__TA_GROUP]
         admin_group = mongo.db[self.__ADMIN_GROUP]
@@ -56,6 +54,8 @@ class SendInvites(command.Command):
 
         if new:
             restrictions[self.__EMAIL_SENT] = 0
+        if unauthed:
+            restrictions[self.__DISCORD_ID] = 0  # if they haven't logged in yet, their discord ID will be zero.
 
         if group == 'students' or group == 'all':
             users_to_send.extend(list(students_group.find(restrictions)))
@@ -141,7 +141,7 @@ class SendInvites(command.Command):
 
         users_to_send = []
         if group in ['all', 'admin', 'tas', 'students']:
-            users_to_send = self.get_user_send_group(group, new=('--new' in self.message.content))
+            users_to_send = self.get_user_send_group(group, new=('--new' in self.message.content), unauthed=('--unauthed' in self.message.content))
         else:
             if '-to' in self.message.content:
                 users_to_send = self.find_users(self.message.content.split('-to')[1])
