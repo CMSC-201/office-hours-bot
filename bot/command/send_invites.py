@@ -55,7 +55,7 @@ class SendInvites(command.Command):
         if new:
             restrictions[self.__EMAIL_SENT] = 0
         if unauthed:
-            restrictions[self.__DISCORD_ID] = 0  # if they haven't logged in yet, their discord ID will be zero.
+            restrictions[self.__DISCORD_ID] = ''  # if they haven't logged in yet, their discord ID will be an empty string, not zero, let's try again.
 
         if group == 'students' or group == 'all':
             users_to_send.extend(list(students_group.find(restrictions)))
