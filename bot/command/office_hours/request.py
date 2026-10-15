@@ -43,7 +43,7 @@ class EnterQueue(command.Command):
 
         announcement = await ca.queue_channel.send(embed=embeddedMsg)
 
-        await self.safe_send(self.message.author, 'You are now entered in the queue.  A TA should be available to help you shortly.', backup=self.message.channel)
+        await self.safe_send(self.message.channel, '<@{}>, you are now entered in the queue.  A TA should be available to help you shortly.'.format(self.message.author.id))
         request_id = 0
 
         qa.add_to_queue(author, request, announcement)
