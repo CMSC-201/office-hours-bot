@@ -45,10 +45,10 @@ class QueueStatus(command.Command):
         for i, student_data in enumerate(queue):
             if student_data[self.__MEMBER_ID_FIELD] == self.message.author.id:
                 time_waited = datetime.now() - student_data[self.__REQUEST_TIME]
-                await self.message.author.send('You are in the {} position and have been waiting for {}.'.format(self.ordinal(i + 1), self.format_time(time_waited)))
+                await self.message.channel.send(f'<@{self.message.author.id}>You are in the {self.ordinal(i + 1)} position and have been waiting for {self.format_time(time_waited)}.')
                 found_student = True
         if not found_student:
-            await self.message.author.send('You are not in the queue, use the !request <question> command to get in the queue')
+            await self.message.channel.send(f'<@{self.message.author.id}>You are not in the queue, use the !request <question> command to get in the queue')
 
         await self.message.delete(delay=3)
 
