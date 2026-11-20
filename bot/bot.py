@@ -56,21 +56,39 @@ class MyClient(discord.Client):
 
     async def on_message(self, message: Message):
         guild: Guild = message.guild
-        if message.guild:
-            logger.info('Message ({0.channel.name}):{0.author}: {0.content}'.format(message))
-        else:
-            logger.info('Message (DirectMsg, {0.channel.recipient}):{0.author}: {0.content}'.format(message))
+        try:
+            if message.guild:
+                logger.info('Message ({0.channel.name}):{0.author}: {0.content}'.format(message))
+            else:
+                logger.info('Message (DirectMsg, {0.channel.recipient}):{0.author}: {0.content}'.format(message))
+        except Exception as be:
+            # i think a key error caused this here. I'm not entirely sure if only key errors can be generated, we should obviously never allow exceptions
+            # to cause a crash of the overall bot, especially exceptions in logging string formatting.
+            logger.error('Message formatting failed for logging. ')
 
         # Ignore bot messages
         if message.author == self.user:
             return
 
         await handle_message(message, self)
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        # before = message as it was
+        # after  = message after the edit
+        pass
+
+    async def on_guild_join(self, guild: Guild):
+        """
+            :param guild: presumably the guild that was joined.  We should check to ensure that this guild is on an approved list of guilds
+                at which point we should leave any guild that is not approved.  There was a student or TA who added the bot to a different server
+                and interrupted authentication.
+        """
+        pass
+
 
     async def on_member_join(self, member: Member):
         """
             We would like to send the users messages, but I've commented this out because there has been a change
-            where the bots are being flagged as spam.
+            where the bots are being flagged as spam.  Unfortunately we have to ensure that bots don't send starting messages anymore...
         """
         # global_info = get_globals()
         # class_name = global_info['props'].get('class_name', 'CMSC 201')
